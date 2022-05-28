@@ -184,9 +184,6 @@ pndvk_df = baglib.fix_eendagsvlieg('pnd', pndvk_df, 'pndvkbg', 'pndvkeg')
 
 pnd_laagstevk_df = pndvk_df.sort_values('pndvkid', ascending=True).\
     drop_duplicates('pndid')
-# print(pnd_laagstevk_df.info())
-# print('pndvk_df:', pndvk_df.info())
-print('Debug1:\n', pndvk_df[pndvk_df['pndid']=='0003100000118116'])
 # #############################################################################
 print('\n----2. Voeg de informatie van de pndvk toe aan de vbovk----')
 # #############################################################################
@@ -204,9 +201,10 @@ vbovk_pndvk_df = pd.merge(vbovk_df,
                           pndvk_df,
                           how='left',
                           on='pndid')
-print('vbovk_pndvk_df:', vbovk_pndvk_df.info())
+
 print('\tAantal vbovk na koppeling met alle pndvk:')
-baglib.df_total_vs_key('2_vbovk_alle_pndvk', vbovk_pndvk_df, ['vboid', 'vbovkid'],
+baglib.df_total_vs_key('2_vbovk_alle_pndvk', vbovk_pndvk_df,
+                       ['vboid', 'vbovkid'],
                       result_dict)
 
 # #############################################################################
@@ -215,10 +213,7 @@ print('\n----3. Selecteer nu het pndvk waarin de vkeg valt van de vbovk----')
 msk = (vbovk_pndvk_df['pndvkbg'] <= vbovk_pndvk_df['vbovkeg']) & \
     (vbovk_pndvk_df['vbovkeg'] <= vbovk_pndvk_df['pndvkeg'])
 vbovk_pndvk_df = vbovk_pndvk_df[msk]
-# print('Debug2:\n', vbovk_pndvk_df[vbovk_pndvk_df['pndid']=='0003100000118116'].sort_values('vbovkid'))
-print('Debug2:\n', vbovk_pndvk_df[vbovk_pndvk_df['vboid']=='0003010000125988'].sort_values('vbovkid'))
 
-# print('vbovk_pndvk_df:', vbovk_pndvk_df.info())
 print('\tVoor gegeven vbovk zou je gegeven een pnd, precies 1 pndvk moeten\n',
       '\tvinden op dag vbovkeg. Hiermee zou het aantal weer op', n_vbovk, '\n',
       '\tmoeten uitkomen, waarin', doel_vbovk_u, 'unieke vbovk zitten. In de\n',
@@ -245,12 +240,7 @@ print('\t\tDe reden dat 3a optreedt is technisch van aard::\n',
       '\t\tOmdat hier twee keer <= staat hou je nog enkele dubbele\n',
       '\t\tvbovk. Als je echter links of rechts < zou doen, dan blijkt\n',
       '\t\tdat je koppelingen met pndvk gaat missen')
-'''
-verschil_3a = result_dict['3_vbovk_pndvk_tot'] -\
-    result_dict['3_vbovk_pndvk_uniek']
 
-verschil_3a = result_dict['3_vbovk_pndvk_verschil']
-'''
 print('\t3a samengevat: aan', result_dict['3_vbovk_pndvk_tot'], '-',
       result_dict['3_vbovk_pndvk_uniek'], '=',
       result_dict['3_vbovk_pndvk_verschil'], 'hangen dus nog\n',
@@ -268,7 +258,7 @@ if verschil_u != 0:  # er zijn vbovk met 0 pndvk
           '\tons bovengenoemd DOEL voor', perc_doel, '%')
     result_dict['3b_perc_doel'] = perc_doel
     result_dict['3b_vbovk_geen_pandvk'] = verschil_u
-    # Welke unieke vbovk missen we?
+
     vbovk_u = vbovk_df[['vboid', 'vbovkid']].drop_duplicates()
     vbovk_pndvk_u = vbovk_pndvk_df[['vboid',
                                     'vbovkid']].drop_duplicates()
@@ -276,7 +266,6 @@ if verschil_u != 0:  # er zijn vbovk met 0 pndvk
                                   vbovk_u]).drop_duplicates(keep=False)
     vbovk_geen_pndvk_df = pd.merge(missing_vbovk_df, vbovk_df, how='left')
     n_vbovk_geen_pndvk = vbovk_geen_pndvk_df.shape[0]
-    # print(vbovk_geen_pndvk_df.info())
 else:
     print('\tSituatie 3b komt niet voor: aantal unieke vbovk is (DOEL):',
             doel_vbovk_u)
@@ -290,16 +279,15 @@ vbovk_pndvk2_df = prio_pnd(vbovk_pndvk_df,
                            IN_VOORRAAD_P, ['inge', 'inni', 'verb'],
                            BOUWJAAR_P, YEAR_LOW, current_year + 1,
                            BOUWJAAR_DIV, PND_DIV)
-# print('vbovk_pndvk2_df:', vbovk_pndvk2_df.info())
+
 print('\tSelecteer nu het pand met de hoogste prio. Alle pndvk krijgen een\n',
       '\tprio, maar de prio is alleen belangrijk',
       'bij die', result_dict['3_vbovk_pndvk_verschil'],
       'extra aangemaakte vbovk\n',
       '\tdie we in stap 3a geconstateerd hebben.')
-print('Debug3:\n', vbovk_pndvk2_df[vbovk_pndvk_df['vboid']=='0003010000125988'].sort_values('vbovkid'))
+
 vbovk_prio_df = vbovk_pndvk2_df.sort_values('prio', ascending=False).\
     drop_duplicates(['vboid', 'vbovkid'])
-print('Debug4:\n', vbovk_prio_df[vbovk_pndvk_df['vboid']=='0003010000125988'].sort_values('vbovkid'))
 
 print('\tBewaar de pnd prios in pndvk_prio.csv')
 outputfile = OUTPUTDIR + 'pndvk_prio.csv'
@@ -331,7 +319,7 @@ if doel2_vbovk != n_vbovk_prio_u:
 print('\n----4. Bewaren in koppelvlak3: vbovk_hoofdpndvk.csv met',
       doel2_vbovk, 'records...')
 # #############################################################################
-# print('vbovk_prio_df:', vbovk_prio_df.info())
+
 outputfile = OUTPUTDIR + 'vbovk_hoofdpndvk.csv'
 vbovk_prio_df[['vboid', 'vbovkid', 'pndid', 'pndvkid']]\
     .sort_values(['vboid', 'vbovkid'])\
