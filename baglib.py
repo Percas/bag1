@@ -5,11 +5,11 @@ Functions used in different python scripts
 """
 # ################ import libraries ###############################
 import pandas as pd
-import logging
+# import logging
 import os
 import sys
-import datetime
-import logging
+# import datetime
+# import logging
 
 # ############### Define functions ################################
 def myprint(left_text, right_result):
@@ -84,6 +84,19 @@ def df_total_vs_key(bagobj_name, df, key_lst, result_dict):
     return result_dict
 
 
+def df_total_vs_key2(bagobj_name, df, key_lst):
+    '''Print number of (unique) records of df given key_lst are keys in df.'''
+    _n_rec = df.shape[0]
+    _n_rec_u = df[key_lst].drop_duplicates().shape[0]
+    _diff = _n_rec - _n_rec_u
+    # _perc = int(round(100 * _diff / _n_rec, 2))
+    _perc = round(100 * _diff / _n_rec, 2)
+    print('\t\tAantal records:         ', _n_rec,
+          '\n\t\tAantal uniek:           ', _n_rec_u,
+          '\n\t\tNiet uniek:             ', _diff,
+          '\n\t\tPercentage niet uniek:  ', _perc)
+
+
 def df_in_vs_out(proces_name, df_in, df_out):
     _n_in = df_in.shape[0]
     _n_out = df_out.shape[0]
@@ -108,6 +121,32 @@ def vgl_dfs(proces_name, df_in, df_out, result_dict):
     result_dict[proces_name + '_verschil'] = _verschil
     result_dict[proces_name + '_perc'] = _perc
     return result_dict
+
+def vgl_dfs2(proces_name, df_in, df_out,
+             rec_in   ='\t\tRecords in:\t\t',
+             rec_out  ='\t\tRecords uit:\t',
+             verschil ='\t\tVerschil:\t\t',
+             pverschil='\t\t%Verschil:\t\t'):
+    _n_in = df_in.shape[0]
+    _n_out = df_out.shape[0]
+    _verschil = _n_in - _n_out
+    _perc = round(100 * _verschil / _n_in, 3)
+    print(rec_in, _n_in)
+    print(verschil, _verschil)
+    print(rec_out, _n_out)
+    print(pverschil, _perc)
+    return (_n_in, _n_out)
+    '''
+    result_dict[proces_name + rec_in] = _n_in
+    result_dict[proces_name + rec_out] = _n_out
+    result_dict[proces_name + verschil] = _verschil
+    result_dict[proces_name + pverschil] = _perc
+    '''
+
+def get_perc(df_in, df_out):
+    _perc = round(100 * df_out.shape[0] / df_in.shape[0], 3)
+    print('\t\tPercentage:', _perc, '%')
+    return _perc
 
 def fix_eendagsvlieg(name, df, b_str, e_str):
     """Return df with voorkomens removed that start and end on same day."""

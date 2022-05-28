@@ -9,28 +9,32 @@ Purpose: Find the differences between sucessive months of the vbovk-pndvk
 0.2: clean up
 0.3: verschillen classicieren:
     zelfde pnd, maar nieuw pndv vs echt ander pnd
+0.4: clean. investigate and improve types of dataframe
     
 """
 # ################ import libraries ###############################
 import pandas as pd
 import os
 import sys
-# import datetime
-import bagpy
+import baglib
 
 # ############### Define functions ################################
 # #############################################################################
 print('----------------------------------------------------------------------')
-print('- DOEL: vergelijken aantallen t-1 en t van vbovk-hoofdpndvk')
+print('- DOEL: vergelijken van de vbovk-hoofdpndvk koppeling')
 # #############################################################################
+print('- tussen een BAG extract van t-1 en t')
 print('- We maken vier verzamelingen:\n',
-      '- \t\tonn: old not new: vbovk van t-1 niet in t\n',
-      '- \t\tnno: new not old: vbovk van t niet in t-1\n',
+      '- \t\tonn: oud niet nieuw: vbovk van t-1 niet in t\n',
+      '- \t\tnno: nieuw niet oud: vbovk van t niet in t-1\n',
       '- \t\tpgelijk: vbovk in t-1 en t, waarbij pndvk gelijk blijft\n',
       '- \t\tpwissel: vbovk waarbij pndvk wisselt van t-1 op t\n\n',
-      '- \t\tWe bewaren de laatste verzameling. Van alle verzamelingen\n',
-      '- \t\tzullen we aantallen en percentages berekenen. Het is aannemelijk\n',
-      '- \t\tdat deze percentages redelijk constant zullen zijn over de tijd')
+      '- \t\tWe bewaren de vbovk uit t-1 en t met pndvk wisselingen.\n',
+      '- \t\tWe berkenen percentages t.o.v. de vbovk van extract t:\n',
+      '- \t\t\t% onn, % nno, % gelijke panden, % wisselende panden\n',
+      '- \t\tWe tellen het aantal wisselingen panden (dus niet pndvk)\n',
+      '- \t\tbouwjaar, documentnrs, zodat we kunnen zien of deze\n',
+      '- \t\tenigszins constant zijn over de tijd')
 print('----------------------------------------------------------------------')
 
 # #############################################################################
@@ -39,7 +43,7 @@ print('\n0.............Variabelen initialiseren..............................')
 # month and dirs
 os.chdir('..')
 BASEDIR = os.getcwd() + '/'
-print('\tBasisdirectory:', BASEDIR)
+# print('\tBasisdirectory:', BASEDIR)
 if BASEDIR[-4:-1] == 'ont':
     print('\t\t\t---------------------------------')
     print('\t\t\t--------ONTWIKKELOMGEVING--------')
@@ -53,7 +57,7 @@ DATADIR = BASEDIR + 'data/'
 DIR02 = DATADIR + '02-csv/'
 DIR03 = DATADIR + '03-bewerktedata/'
 DIR04 = DATADIR + '04-ana/'
-current_month = bagpy.get_arg1(sys.argv, DIR03)
+current_month = baglib.get_arg1(sys.argv, DIR03)
 CSVDIR = DIR02 + str(current_month) + '/'
 INPUTDIR = DIR03 + current_month + '/'
 OUTPUTDIR = DIR04 + current_month + '/'
@@ -65,88 +69,86 @@ if prev_month / 100 == int(prev_month / 100):
     prev_month -= 88  # prev from 202201 is 202200 - 88 = 202112
 PREV_MONTH_INPUTDIR = DIR03 + str(prev_month) + '/'
 print('\tVerwerkingsmaand t:', current_month, '. t-1:', prev_month)
-# print('Previous month output dir: ' + PREV_MONTH_OUTPUTDIR)
-
-# cols = ['id', 'vkid', 'pndid', 'pndvkid']
 result_dict = {}
 
 # #############################################################################
 print('\n1.............Data inlezen...........................................')
 # #############################################################################
-print('\tvbovk_hoofdpndvk van', prev_month, '...')
-prev_vbovk_hoofdpnd_df = pd.read_csv(PREV_MONTH_INPUTDIR +\
-                                     'vbovk_hoofdpndvk.csv',
-                                     dtype={'id': str, 'vkid': int,
-                                      'pndid': str, 'pndvkid': int})
-result_dict = bagpy.df_total_vs_key('prev_vbovk_hoofdpnd', 
-                                    prev_vbovk_hoofdpnd_df,
-                                    ['vboid', 'vbovkid'], result_dict)
-print('\tvbovk_hoofdpndvk van', current_month, '...')
-vbovk_hoofdpnd_df = pd.read_csv(INPUTDIR +\
-                                'vbovk_hoofdpndvk.csv',
-                                dtype={'id': str, 'vkid': int,
-                                       'pndid': str, 'pndvkid': int})
-result_dict = bagpy.df_total_vs_key('vbovk_hoofdpnd', vbovk_hoofdpnd_df,
-                                    ['vboid', 'vbovkid'], result_dict)
+print('\n\t---- 1a. vbovk_hoofdpndvk van', prev_month, '...')
+prev_vbovk_hoofdpndvk_df = pd.read_csv(PREV_MONTH_INPUTDIR +\
+                                       'vbovk_hoofdpndvk.csv', dtype=object)
+baglib.df_total_vs_key2('prev_vbovk_hoofdpnd', 
+                         prev_vbovk_hoofdpndvk_df,
+                         ['vboid', 'vbovkid'])
 
-print('\tInlezen bestand pnd.csv uit koppelvlak 2:')
+print('\n\t---- 1b. vbovk_hoofdpndvk van', current_month, '...')
+vbovk_hoofdpndvk_df = pd.read_csv(INPUTDIR +\
+                                  'vbovk_hoofdpndvk.csv', dtype=object)
+baglib.df_total_vs_key2('vbovk_hoofdpndvk', vbovk_hoofdpndvk_df,
+                        ['vboid', 'vbovkid'])
+
+print('\n\t---- 1c. Inlezen bestand pnd.csv uit koppelvlak 2')
 pndvk_df = pd.read_csv(CSVDIR + 'pnd.csv',
-                       dtype={'pndid': str, 'pndvkid': int})
+                       dtype=object)
 
-print('\tInlezen bestand vbo.csv uit koppelvlak 2:')
-vbovk_df = pd.read_csv(CSVDIR + 'vbo.csv',
-                       dtype={'vboid': str, 'vbovkid': int})
-print('vbovk_df:', vbovk_df.info())
-vbovk_df['vboid'] = vbovk_df['vboid'].astype('int')
-print('vbovk_df:', vbovk_df.info())
+print('\n\t---- 1d. Inlezen bestand vbo.csv uit koppelvlak 2')
+vbovk_df = pd.read_csv(CSVDIR + 'vbo.csv', dtype=object,
+                       usecols=['vboid', 'vbovkid',
+                                'vbovkbg', 'vbovkeg']).drop_duplicates()
+
+
 # #############################################################################
 print('\n2.............Data vergelijken.......................................')
 # #############################################################################
-same_vbovk = pd.merge(prev_vbovk_hoofdpnd_df[['vboid', 'vbovkid']],
-                      vbovk_hoofdpnd_df[['vboid', 'vbovkid']],
-                      how='inner')
-print('same_vbovk:\n:', same_vbovk.info())
-print('\tAantal overeenkomende vbovk t-1 en t:', same_vbovk.shape[0])
-print('\tWe nemen dit aantal in het vervolg als basis (in de noemer)')
+print('\n\t---- 2a. vbovk vergelijken')
+same_vbovk_df = pd.merge(prev_vbovk_hoofdpndvk_df[['vboid', 'vbovkid']],
+                         vbovk_hoofdpndvk_df[['vboid', 'vbovkid']],
+                         how='inner')
+print('\tPercentage dezelfde vbovk in t-1 en t ten opzichte van t')
+result_dict['perc_samevbovk'] = baglib.get_perc(vbovk_hoofdpndvk_df,
+                                                same_vbovk_df)
 
-print('\n\tonn: in "Records uit" staat het aantal records oud niet nieuw:')
-onn_df = pd.concat([prev_vbovk_hoofdpnd_df[['vboid', 'vbovkid']],
-                   same_vbovk]).drop_duplicates(keep=False)
-result_dict = bagpy.vgl_dfs('onn', vbovk_hoofdpnd_df,
-                             onn_df, result_dict)
+onn_df = pd.concat([prev_vbovk_hoofdpndvk_df[['vboid', 'vbovkid']],
+                   same_vbovk_df]).drop_duplicates(keep=False)
+print('\tPercentage vbovk in t-1 en niet in t, ten opzichte van t')
+result_dict['perc_onn'] = baglib.get_perc(vbovk_hoofdpndvk_df,
+                                                onn_df)
 
-print('\n\tnno: in "Records uit" staat het aantal records nieuw niet oud:')
-nno_df = pd.concat([vbovk_hoofdpnd_df[['vboid', 'vbovkid']],
-                   same_vbovk]).drop_duplicates(keep=False)
-result_dict = bagpy.vgl_dfs('nno', vbovk_hoofdpnd_df,
-                             nno_df, result_dict)
+nno_df = pd.concat([vbovk_hoofdpndvk_df[['vboid', 'vbovkid']],
+                   same_vbovk_df]).drop_duplicates(keep=False)
+print('\tPercentage vbovk niet in t-1 en wel in t, ten opzichte van t')
+result_dict['perc_nno'] = baglib.get_perc(vbovk_hoofdpndvk_df,
+                                          nno_df)
 
-
-same_vbovk_pndvk = pd.merge(prev_vbovk_hoofdpnd_df, vbovk_hoofdpnd_df,
-                            how='inner')
-print('\tAantal overeenkomende vbovk-pndvk t-1 naar t:',
+print('\n\t---- 2b. vbovk + pndvk vergelijken')
+same_vbovk_pndvk_df = pd.merge(prev_vbovk_hoofdpndvk_df, vbovk_hoofdpndvk_df,
+                               how='inner')
+print('\tPercentage overeenkomende vbovk-pndvk t-1 en t tov t:')
+result_dict['perc-oen-pndvk'] = baglib.get_perc(vbovk_hoofdpndvk_df,
+                                                same_vbovk_pndvk_df)
+'''
+print('\n\tAantal overeenkomende vbovk-pndvk t-1 naar t:',
       same_vbovk_pndvk.shape[0])
 print('\tDit is gelijk aan pwissel + pgeljk')
-
-print('\n\tpwissel: Aantal vbovk met pnd wissel staat in "Records uit,"\n',
-      '\tpgelijk: vbovk met pnd gelijkgebleven staat in "Verschil":')
-vbovk_p_change = pd.concat([same_vbovk, same_vbovk_pndvk[['vboid',
-                                                          'vbovkid']]])\
+'''
+vbovk_p_change = pd.concat([same_vbovk_df, same_vbovk_pndvk_df[['vboid',
+                                                                'vbovkid']]])\
     .drop_duplicates(keep=False)
-result_dict = bagpy.vgl_dfs('pgelijk', vbovk_hoofdpnd_df,
-                            vbovk_p_change, result_dict)
-print('vbovk_p_change:\n', vbovk_p_change.info())
+
+print('\tPercentage dat een wijzigend pndvk heeft:')
+result_dict['perc-pndvk-wissel'] = baglib.get_perc(vbovk_hoofdpndvk_df,
+                                                   vbovk_p_change)
 
 # #############################################################################
-print('\n3.............Output maken: pnd wisselingen opslaan................')
+print('\n3.............Output verrijken......................................')
 # #############################################################################
 
-print('\n\t----Eerst maand t:', current_month)
-print('\tVoeg pndvk toe aan die vbovk met wisselend pnd:')
-vbovk_pndvk_change = pd.merge(vbovk_p_change, vbovk_hoofdpnd_df, how='inner')
-bagpy.vgl_dfs('checkgelijk1:', vbovk_p_change, vbovk_pndvk_change, result_dict)
+print('\tWe starten met vbovk uit maand t-1 en t met wisselend pndvk')
+print('\n\t---- 3a. data verrijken maand t =', current_month)
+print('\tVoeg pndvk toe')
+vbovk_pndvk_change = pd.merge(vbovk_p_change, vbovk_hoofdpndvk_df, how='inner')
 
-print('\tmerge met pnd.csv uit koppelvlak 2 en controleer aantal records:')
+print('\tvoeg verdere pnd info toe via pnd.csv:')
 cur_vbovk_pndvk = pd.merge(vbovk_pndvk_change,
                            pndvk_df[['pndid', 'pndvkid', 'pndstatus',
                                      'pndvkbg', 'pndvkeg', 'docnr',
@@ -157,16 +159,11 @@ cur_vbovk_pndvk.rename(columns={'pndid': 'pndid_t', 'pndvkid': 'pndvkid_t',
                                 'docnr': 'docnr_t',
                                 'pndstatus': 'pndstatus_t', 
                                 'bouwjaar': 'bouwjaar_t'}, inplace=True)
-bagpy.vgl_dfs('checkgelijk2:', vbovk_pndvk_change, cur_vbovk_pndvk,
-              result_dict)
 
-print('\n\t----Vervolgens maand t-1:', prev_month)
-vbovk_pndvk_change = pd.merge(vbovk_p_change, prev_vbovk_hoofdpnd_df,
+print('\n\t---- 3b. data verrijken maand t-1:', prev_month)
+print('\tvoeg weer pndvk en pnd info toe')
+vbovk_pndvk_change = pd.merge(vbovk_p_change, prev_vbovk_hoofdpndvk_df,
                               how='inner')
-bagpy.vgl_dfs('checkgelijk1:', vbovk_p_change, vbovk_pndvk_change,
-              result_dict)
-
-print('\tmerge met pnd.csv uit koppelvlak 2 en controleer aantal records:')
 prev_vbovk_pndvk = pd.merge(vbovk_pndvk_change,
                             pndvk_df[['pndid', 'pndvkid', 'pndstatus',
                                       'pndvkbg', 'pndvkeg', 'docnr',
@@ -179,25 +176,28 @@ prev_vbovk_pndvk.rename(columns={'pndid': 'pndid_t-1',
                                  'pndstatus': 'pndstatus_t-1', 
                                  'bouwjaar': 'bouwjaar_t-1'},
                         inplace=True)
-bagpy.vgl_dfs('checkgelijk2:', vbovk_pndvk_change, prev_vbovk_pndvk,
-              result_dict)
 
-# print(cur_vbovk_pndvk.info())
-print('\tMerge t-1 met t')
+print('\n\t---- 3c. Voeg t-1 en t samen tot 1 record')
 vbovk_pndwissel_tmin1_t = pd.merge(prev_vbovk_pndvk, cur_vbovk_pndvk,
                                    how='inner')
-bagpy.vgl_dfs('checkgelijk3:', prev_vbovk_pndvk, vbovk_pndwissel_tmin1_t,
-              result_dict)
-print(vbovk_pndwissel_tmin1_t.info())
 
-print('\tMerge met vbovk:')
+print('\tVoeg de vkbg en vkeg van het vbovk toe:')
 vbovk_res_df = pd.merge(vbovk_pndwissel_tmin1_t,
                         vbovk_df[['vboid', 'vbovkid',
                                   'vbovkbg', 'vbovkeg']], how='inner')
 
-print('Merge met vbovk zodat we vbovkbg en vbovkeg hebben')
-bagpy.vgl_dfs('checkgelijk4', vbovk_pndwissel_tmin1_t, vbovk_res_df,
-              result_dict)
+print('Aantal vbovk met pndvk wissel:', vbovk_res_df.shape[0])
+
+# #############################################################################
+print('\n4.............Output maken: pndvk wisselingen opslaan................')
+# #############################################################################
+print('Als er pndid staat bedoelen we pndid en niet pndvk:')
+for wsl in ['pndid', 'bouwjaar', 'pndstatus', 'pndvkid', 'docnr']:
+    w_df = vbovk_res_df[vbovk_res_df[wsl + '_t-1'] != vbovk_res_df[wsl + '_t']]
+    print('\tAantal', wsl, 'wisselingen:\t', w_df.shape[0])
+    result_dict['perc-' + wsl + '-wissel'] =\
+        baglib.get_perc(vbovk_hoofdpndvk_df, w_df)
+    # result_dict[wsl + '_wissel'] = w_df.shape[0]
 
 print('\tWegschrijven vbovk_pndwissel_tmin1_t in koppelvlak 4...')
 outputfile = OUTPUTDIR + 'vbovk_res.csv'
