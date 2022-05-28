@@ -38,7 +38,7 @@ import pandas as pd
 import numpy as np
 import sys
 import os
-import bagpy
+import baglib
 
 # ############### Define functions ################################
 def prio_pnd(pnd1_df,
@@ -103,10 +103,18 @@ def prio_pnd(pnd1_df,
 # month and dirs
 os.chdir('..')
 BASEDIR = os.getcwd() + '/'
+if BASEDIR[-4:-1] == 'ont':
+    print('\t\t\t---------------------------------')
+    print('\t\t\t--------ONTWIKKELOMGEVING--------')
+    print('\t\t\t---------------------------------')
+else:
+    print('\t\t\t---------------------------------')
+    print('\t\t\t--------PRODUCTIEOMGEVING--------')
+    print('\t\t\t---------------------------------')
 DATADIR = BASEDIR + 'data/'
 DIR02 = DATADIR + '02-csv/'
 DIR03 = DATADIR + '03-bewerktedata/'
-current_month = bagpy.get_arg1(sys.argv, DIR02)
+current_month = baglib.get_arg1(sys.argv, DIR02)
 INPUTDIR = DIR02 + current_month + '/'
 OUTPUTDIR = DIR03 + current_month + '/'
 current_month = int(current_month)
@@ -149,14 +157,14 @@ vbovk_df = pd.read_csv(INPUTDIR + 'vbo.csv',
                        dtype={'vboid': str, 'vbostatus': str, 'pndid': str,
                               'numid': str, 'vbovkid': np.short,
                               'vbovkbg': int, 'vbovkeg': int})
-result_dict = bagpy.df_total_vs_key('1a_vbovk', vbovk_df, ['vboid', 'vbovkid'],
+result_dict = baglib.df_total_vs_key('1a_vbovk', vbovk_df, ['vboid', 'vbovkid'],
                                     result_dict)
 
 print('\tVerwijder vbo voorkomens met dezelfde begin en einddag:')
-vbovk_df = bagpy.fix_eendagsvlieg('vbo', vbovk_df, 'vbovkbg', 'vbovkeg')
+vbovk_df = baglib.fix_eendagsvlieg('vbo', vbovk_df, 'vbovkbg', 'vbovkeg')
 
 print('\tAantal vbovk na verwijderen eendagsvliegen:')
-result_dict = bagpy.df_total_vs_key('1b_vbovk_1dagv', vbovk_df, ['vboid', 'vbovkid'],
+result_dict = baglib.df_total_vs_key('1b_vbovk_1dagv', vbovk_df, ['vboid', 'vbovkid'],
                                     result_dict)
 n_vbovk = vbovk_df.shape[0]
 doel_vbovk_u = vbovk_df[['vboid', 'vbovkid']].drop_duplicates().shape[0]
@@ -168,11 +176,11 @@ pndvk_df = pd.read_csv(INPUTDIR + 'pnd.csv',
                                'pndvkid': 'Int64', 'pndvkbg': int,
                                'pndvkeg': int, 'bouwjaar': np.short,
                                'docnr': str})
-result_dict = bagpy.df_total_vs_key('1c_pndvk', pndvk_df, ['pndid', 'pndvkid'],
+result_dict = baglib.df_total_vs_key('1c_pndvk', pndvk_df, ['pndid', 'pndvkid'],
                                     result_dict)
 
 print('\tVerwijder pnd voorkomens met dezelfde begin en einddag:')
-pndvk_df = bagpy.fix_eendagsvlieg('pnd', pndvk_df, 'pndvkbg', 'pndvkeg')
+pndvk_df = baglib.fix_eendagsvlieg('pnd', pndvk_df, 'pndvkbg', 'pndvkeg')
 
 pnd_laagstevk_df = pndvk_df.sort_values('pndvkid', ascending=True).\
     drop_duplicates('pndid')
@@ -198,7 +206,7 @@ vbovk_pndvk_df = pd.merge(vbovk_df,
                           on='pndid')
 print('vbovk_pndvk_df:', vbovk_pndvk_df.info())
 print('\tAantal vbovk na koppeling met alle pndvk:')
-bagpy.df_total_vs_key('2_vbovk_alle_pndvk', vbovk_pndvk_df, ['vboid', 'vbovkid'],
+baglib.df_total_vs_key('2_vbovk_alle_pndvk', vbovk_pndvk_df, ['vboid', 'vbovkid'],
                       result_dict)
 
 # #############################################################################
@@ -228,7 +236,7 @@ print('\tvbovk na het koppelen met pndvk obv vbovkeg: ')
 if vbovk_pndvk_df.shape[0] == 0:
     sys.exit('Fout: in pnd.csv staat geen enkel pand dat koppelt met\
              vbo.csv. Verder gaan heeft geen zin. Programma stopt...')
-result_dict = bagpy.df_total_vs_key('3_vbovk_pndvk', vbovk_pndvk_df,
+result_dict = baglib.df_total_vs_key('3_vbovk_pndvk', vbovk_pndvk_df,
                                     ['vboid', 'vbovkid'],
                                     result_dict)
 print('\t\tDe reden dat 3a optreedt is technisch van aard::\n',
@@ -299,7 +307,7 @@ vbovk_prio_df[['pndid', 'pndvkid', 'prio']]\
     .drop_duplicates().to_csv(outputfile, index=False)
 
 print('\tHet aantal unieke vbovk mag niet wijzigen door het prioriteren:')
-result_dict = bagpy.df_total_vs_key('4_vbovk_prio', vbovk_prio_df,
+result_dict = baglib.df_total_vs_key('4_vbovk_prio', vbovk_prio_df,
                                     ['vboid', 'vbovkid'], result_dict)
 doel2_vbovk = result_dict['4_vbovk_prio_tot']
 n_vbovk_prio_u = result_dict['4_vbovk_prio_uniek']
