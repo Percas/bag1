@@ -29,7 +29,10 @@ idem voor status naar vbostatus, vkid naar vbovkid etc.
 0.6.1 cleaning up
 0.6.2 writes file bepaal_hoofdpand_kerngetallen to compare months
 0.6.3 debugging error: in pndvk_prio staat in 202205 bij pnd 0003100000118116 
-dubbele pndvkid met ook nog verschillende prio ????
+dubbele pndvkid met ook nog verschillende prio. Fixed
+0.7 determine n_vbo_in_pndvk. For every pndvk determine the number of unique
+vbo in this pndvk, where the vbo is in IN_VOORRAAD. The vbo is in IN_VOORRAAD
+if at least one of its vbovk connected to pndvk is in IN_VOORRAAD
 
 """
 
@@ -121,7 +124,8 @@ current_month = int(current_month)
 current_year = int(current_month/100)
 
 # The tuning variables to determine pand prio
-IN_VOORRAAD_P = 100         # if pndstatus in {inge, inni, verb}
+IN_VOORRAAD = ['inge', 'inni', 'verb', 'buig']
+IN_VOORRAAD_P = 100         # if pndstatus is in IN_VOORRAAD
 BOUWJAAR_P = 50             # if YEAR_LOW < bouwjaar < current_year + 1
 BOUWJAAR_DIV = 2000         # divide bouwjaar with 2000 (small around 1)
 YEAR_LOW = 1000
@@ -276,7 +280,7 @@ print('\n----4. Bepaal prio voor pndvk: welke is het best om te koppelen--')
 # #############################################################################
 print('\tWe voegen een kolom prio toe aan vbovk_pndvk...')
 vbovk_pndvk2_df = prio_pnd(vbovk_pndvk_df,
-                           IN_VOORRAAD_P, ['inge', 'inni', 'verb'],
+                           IN_VOORRAAD_P, IN_VOORRAAD,
                            BOUWJAAR_P, YEAR_LOW, current_year + 1,
                            BOUWJAAR_DIV, PND_DIV)
 
@@ -312,11 +316,57 @@ else:
     print('Aantal vbovk na prioritering:', doel2_vbovk)
     print('Aantal unieke vbovk na prioritering:', n_vbovk_prio_u)
 if doel2_vbovk != n_vbovk_prio_u:
-    print('Error 4: bij prioritering is aantal vbovk verstoord:',
+    print('Error 5: bij prioritering is aantal vbovk verstoord:',
             doel2_vbovk, '==>', n_vbovk_prio_u)
 
 # #############################################################################
-print('\n----4. Bewaren in koppelvlak3: vbovk_hoofdpndvk.csv met',
+print('\n----5. Bepalen n_vbo_in_pndvk, gerelateerd aan vbo.typeinliggend')
+# #############################################################################
+print('\tn_vbo_in_pndvk is een eigenschap van pndvk. Het is het aantal\n',
+      '\tunieke vbo bij een pndvk, waarbij 1 van de vbovk bij die vbo wel\n',
+      '\tin IN_VOORRAAD moet zijn')
+print('\tStappen:\n',
+      '\t\t1. Bepaal voor elke vbovk of deze in IN_VOORRAAD zit\n',
+      '\t\t2. Bepaal voor elke pndvk de vbovk in IN_VOORRAAD\n',
+      '\t\t3. Tel deze. Het aantal is 0 of meer. Er zijn pndvk zonder VBO\n',
+      '\t\t4. Dit aantal is n_vbo_in_pndvk. Ken dit aantal ook toe aan de\n',
+      '\t\t\tvbovk die bij het betreffende pndvk horen')
+print('\tDe situaties die voorkomen zijn:\n',
+      '\t\tA. pndvk heeft geen vbo. Datafout: pndvk_zonder_vbo.csv\n',
+      '\t\tB. pndvk heeft 1 vbo: vbovk typeinliggend = False: woonhuis\n',
+      '\t\tC. pndvk heeft >1 vbo: vbovk typeinliggend = True: flat')
+
+print('\n\t\t5.1:  vbovk: leid voorraad af')
+vbovk_df['voorraad'] = vbovk_df['vbostatus'].isin(IN_VOORRAAD)
+# print(vbovk_df.info())
+vbovk_df = vbovk_df[['vboid', 'vbovkid', 'voorraad']].drop_duplicates()
+baglib.df_total_vs_key2('vbok_df met voorraad, uniek gemaakt',
+                        vbovk_df, ['vboid', 'vbovkid'])
+
+print('\n\t\t5.2a pak alle pndvk. voeg vbovk toe via vbovk-hoofdpndvk ')
+pndvk_df = pd.merge(pndvk_df[['pndid', 'pndvkid']],
+                    vbovk_prio_df[['pndid', 'pndvkid', 'vboid', 'vbovkid']],
+                    how='left')
+baglib.df_total_vs_key2('pndvk_df na merge met vbovk_prio_df',
+                        pndvk_df, ['pndid', 'pndvkid'])
+# print(pndvk_df.info())
+
+pndvk_df = pd.merge(pndvk_df, vbovk_df, how='left')
+baglib.df_total_vs_key2('pndvk_df na merge met vbovk_df',
+                        pndvk_df, ['pndid', 'pndvkid'])
+
+
+# pndvk_df2 = pndvk_df.groupby(['pndid', 'pndvkid'])['vboid', 'vbovkid'].count()
+pndvk_df3 = pndvk_df.groupby(['pndid', 'pndvkid'])['vboid'].count()
+
+
+# print(type(pndvk_df2), '\n', pndvk_df2.info())
+# print(pndvk_df2)
+print(type(pndvk_df3), '\n', pndvk_df3.info())
+print(pndvk_df3)
+'''
+# #############################################################################
+print('\n----6. Bewaren in koppelvlak3: vbovk_hoofdpndvk.csv met',
       doel2_vbovk, 'records...')
 # #############################################################################
 
@@ -344,7 +394,7 @@ else:
     print('\tEr is geen bestand aangemaakt met vbovk zonder pndvk')
 
 # #############################################################################
-print('\n----6. Samenvatting: bewaren van de belangrijkste kerngetallen------')
+print('\n----7. Samenvatting: bewaren van de belangrijkste kerngetallen------')
 # #############################################################################
 bepaal_hoofdpand_kerngetallen_file = DIR03 +\
     'bepaal_hoofdpand_kerngetallen.csv'
@@ -362,3 +412,4 @@ else:
 outputfile = DIR03 + 'bepaal_hoofdpand_kerngetallen.csv'
 result_df.to_csv(outputfile, index=False)
 print(result_df)
+'''

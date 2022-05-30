@@ -84,13 +84,14 @@ def df_total_vs_key(bagobj_name, df, key_lst, result_dict):
     return result_dict
 
 
-def df_total_vs_key2(bagobj_name, df, key_lst):
+def df_total_vs_key2(subject1, df, key_lst):
     '''Print number of (unique) records of df given key_lst are keys in df.'''
     _n_rec = df.shape[0]
     _n_rec_u = df[key_lst].drop_duplicates().shape[0]
     _diff = _n_rec - _n_rec_u
     # _perc = int(round(100 * _diff / _n_rec, 2))
     _perc = round(100 * _diff / _n_rec, 2)
+    print('\t\tInformatie over', subject1)
     print('\t\tAantal records:         ', _n_rec,
           '\n\t\tAantal uniek:           ', _n_rec_u,
           '\n\t\tNiet uniek:             ', _diff,
