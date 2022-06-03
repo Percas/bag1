@@ -297,6 +297,7 @@ print('\tBewaar de pnd prios in pndvk_prio.csv')
 outputfile = OUTPUTDIR + 'pndvk_prio.csv'
 vbovk_prio_df[['pndid', 'pndvkid', 'prio']]\
     .drop_duplicates().to_csv(outputfile, index=False)
+# print('DEBUG-----------------\n', vbovk_prio_df.info())
 
 print('\tHet aantal unieke vbovk mag niet wijzigen door het prioriteren:')
 result_dict = baglib.df_total_vs_key('4_vbovk_prio', vbovk_prio_df,
@@ -320,61 +321,14 @@ if doel2_vbovk != n_vbovk_prio_u:
             doel2_vbovk, '==>', n_vbovk_prio_u)
 
 # #############################################################################
-print('\n----5. Bepalen n_vbo_in_pndvk, gerelateerd aan vbo.typeinliggend')
-# #############################################################################
-print('\tn_vbo_in_pndvk is een eigenschap van pndvk. Het is het aantal\n',
-      '\tunieke vbo bij een pndvk, waarbij 1 van de vbovk bij die vbo wel\n',
-      '\tin IN_VOORRAAD moet zijn')
-print('\tStappen:\n',
-      '\t\t1. Bepaal voor elke vbovk of deze in IN_VOORRAAD zit\n',
-      '\t\t2. Bepaal voor elke pndvk de vbovk in IN_VOORRAAD\n',
-      '\t\t3. Tel deze. Het aantal is 0 of meer. Er zijn pndvk zonder VBO\n',
-      '\t\t4. Dit aantal is n_vbo_in_pndvk. Ken dit aantal ook toe aan de\n',
-      '\t\t\tvbovk die bij het betreffende pndvk horen')
-print('\tDe situaties die voorkomen zijn:\n',
-      '\t\tA. pndvk heeft geen vbo. Datafout: pndvk_zonder_vbo.csv\n',
-      '\t\tB. pndvk heeft 1 vbo: vbovk typeinliggend = False: woonhuis\n',
-      '\t\tC. pndvk heeft >1 vbo: vbovk typeinliggend = True: flat')
-
-print('\n\t\t5.1:  vbovk: leid voorraad af')
-vbovk_df['voorraad'] = vbovk_df['vbostatus'].isin(IN_VOORRAAD)
-# print(vbovk_df.info())
-vbovk_df = vbovk_df[['vboid', 'vbovkid', 'voorraad']].drop_duplicates()
-baglib.df_total_vs_key2('vbok_df met voorraad, uniek gemaakt',
-                        vbovk_df, ['vboid', 'vbovkid'])
-
-print('\n\t\t5.2a pak alle pndvk. voeg vbovk toe via vbovk-hoofdpndvk ')
-pndvk_df = pd.merge(pndvk_df[['pndid', 'pndvkid']],
-                    vbovk_prio_df[['pndid', 'pndvkid', 'vboid', 'vbovkid']],
-                    how='left')
-baglib.df_total_vs_key2('pndvk_df na merge met vbovk_prio_df',
-                        pndvk_df, ['pndid', 'pndvkid'])
-# print(pndvk_df.info())
-
-pndvk_df = pd.merge(pndvk_df, vbovk_df, how='left')
-baglib.df_total_vs_key2('pndvk_df na merge met vbovk_df',
-                        pndvk_df, ['pndid', 'pndvkid'])
-
-
-# pndvk_df2 = pndvk_df.groupby(['pndid', 'pndvkid'])['vboid', 'vbovkid'].count()
-pndvk_df3 = pndvk_df.groupby(['pndid', 'pndvkid'])['vboid'].count()
-
-
-# print(type(pndvk_df2), '\n', pndvk_df2.info())
-# print(pndvk_df2)
-print(type(pndvk_df3), '\n', pndvk_df3.info())
-print(pndvk_df3)
-'''
-# #############################################################################
-print('\n----6. Bewaren in koppelvlak3: vbovk_hoofdpndvk.csv met',
+print('\n----5. Bewaren in koppelvlak3: vbovk_hoofdpndvk.csv met',
       doel2_vbovk, 'records...')
 # #############################################################################
+vbovk_hoofdpndvk_df = vbovk_prio_df[['vboid', 'vbovkid', 'pndid', 'pndvkid']]
 
 outputfile = OUTPUTDIR + 'vbovk_hoofdpndvk.csv'
-vbovk_prio_df[['vboid', 'vbovkid', 'pndid', 'pndvkid']]\
-    .sort_values(['vboid', 'vbovkid'])\
-    .to_csv(outputfile, index=False)
-    # .rename({'vboid': 'id', 'vbovkid': 'vkid'}, axis='columns')\
+vbovk_hoofdpndvk_df.sort_values(['vboid', 'vbovkid']).to_csv(outputfile,
+                                                           index=False)
 
 if vbovk_geen_pndvk_df.shape[0] != 0:
     print('\tWe verrijken vbovk_geen_pndvk met "het laagste pndvk dat geen\n',
@@ -394,6 +348,82 @@ else:
     print('\tEr is geen bestand aangemaakt met vbovk zonder pndvk')
 
 # #############################################################################
+print('\n----6. Bepalen n_vbo_in_pndvk, gerelateerd aan vbo.typeinliggend')
+# #############################################################################
+print('\tn_vbo_in_pndvk is een eigenschap van pndvk. Het is het aantal\n',
+      '\tunieke vbo bij een pndvk, waarbij 1 van de vbovk bij die vbo wel\n',
+      '\tin IN_VOORRAAD moet zijn')
+print('\tStappen:\n',
+      '\t\t1. Bepaal voor elke vbovk of deze in IN_VOORRAAD zit\n',
+      '\t\t2. Bepaal voor elke pndvk de vbovk in IN_VOORRAAD\n',
+      '\t\t\t2a. zoek bij pndvk een vbovk\n',
+      '\t\t\t2b. koppel deze vbovk met de vbovk in voorraad\n',
+      '\t\t\t2c. laat vkid weg en drop dubbele. tel nu het aantal keren dat\n',
+      '\t\t\t\t voorraad==TRUE per pndvk\n'
+      '\t\t3. Tel deze. Het aantal is 0 of meer. Er zijn pndvk zonder VBO\n',
+      '\t\t4. Dit aantal is n_vbo_in_pndvk. Ken dit aantal ook toe aan de\n',
+      '\t\t\tvbovk die bij het betreffende pndvk horen')
+print('\tDe situaties die voorkomen zijn:\n',
+      '\t\tA. pndvk heeft geen vbo. Datafout: pndvk_zonder_vbo.csv\n',
+      '\t\tB. pndvk heeft 1 vbo: vbovk typeinliggend = False: woonhuis\n',
+      '\t\tC. pndvk heeft >1 vbo: vbovk typeinliggend = True: flat')
+
+print('\n\t\t5.1:  vbovk: leid voorraad af')
+vbovk_df['voorraad'] = vbovk_df['vbostatus'].isin(IN_VOORRAAD)
+vbovk_df2 = vbovk_df[vbovk_df['voorraad']==True]
+vbovk_df2 = vbovk_df2[['vboid', 'vbovkid', 'voorraad']].drop_duplicates()
+baglib.df_total_vs_key2('unieke vbovk in IN_VOORRAAD',
+                        vbovk_df2, ['vboid', 'vbovkid'])
+
+print('\n\t\t5.2a pak alle pndvk. voeg vbovk toe via vbovk-hoofdpndvk ')
+# vbovk-hoofdpndvk zit in het dataframe vbovk_prio_df
+baglib.df_total_vs_key2('pndvk', pndvk_df, ['pndid', 'pndvkid'])
+# baglib.df_total_vs_key2('vbovk_prio', vbovk_prio_df, ['vboid', 'vbovkid'])
+pndvk_vbovk_df = pd.merge(pndvk_df[['pndid', 'pndvkid']],
+                          vbovk_hoofdpndvk_df, how='left')
+baglib.df_total_vs_key2('pndvk_vbovk_df na merge met vbovk_hoofdpandvk_df',
+                        pndvk_vbovk_df, ['pndid', 'pndvkid'])
+# print(pndvk_df.info())
+
+print('\n\t\t5.2b koppel deze pndvk met de vbovk in voorraad')
+pndvk_vbovk2_df = pd.merge(pndvk_vbovk_df, vbovk_df2, how='left')
+baglib.df_total_vs_key2('pndvk_vbovk2_df na merge met vbovk_df',
+                        pndvk_vbovk2_df, ['pndid', 'pndvkid'])
+
+print('\n\t\t5.2c laat vkid weg en ontdubbel: we willen unieke vbo')
+pndvk_vbo_df = pndvk_vbovk2_df[['pndid', 'pndvkid','vboid', 'voorraad']]\
+    .drop_duplicates()
+baglib.df_total_vs_key2('pndvk_vbo', pndvk_vbo_df, ['pndid', 'pndvkid'])
+
+print('\t\t5.3 tel aantal keren voorraad per pndvk')
+pndvk_vbo_df['voorraad'] = pndvk_vbo_df['voorraad'].fillna(0)
+pndvk_vbo_df['voorraad'] = pndvk_vbo_df['voorraad'].astype(int)
+pndvk_nvbo_df = pndvk_vbo_df.groupby(['pndid', 'pndvkid'])['voorraad']\
+    .sum()\
+    .reset_index()
+pndvk_nvbo_df.rename({'voorraad': 'nvbo'}, axis='columns', inplace=True)
+# print('---------DEBUG1', pndvk_nvbo_df.info())
+
+result_dict['gem_nvbo_in_pndvk'] = pndvk_nvbo_df['nvbo'].mean()
+print('\t\tgemiddeld aantal vbos in pndvk:', result_dict['gem_nvbo_in_pndvk'])
+
+print('\n\t\t5.4 dit aantal toewijzen aan vbovk')
+print('\t\t\tkoppel hiervoor weer vbovk weer aan pndvk, nu vanuit vbovk')
+vbovk_pndvk_nvbo_df = pd.merge(vbovk_hoofdpndvk_df, pndvk_nvbo_df, how='left')
+# print('---------DEBUG2', vbovk_pndvk_nvbo_df.info())
+result_dict['gem_inliggend_per_vbovk'] = vbovk_pndvk_nvbo_df['nvbo'].mean()
+print('\t\tgemiddeld aantal vbos in vbovk:',
+      result_dict['gem_inliggend_per_vbovk'])
+
+print('\n\t\t5.5. bewaren in pndvk_nvbo.csv vbovk_nvbo.csv...')
+outputfile = OUTPUTDIR + 'pndvk_nvbo.csv'
+pndvk_nvbo_df.to_csv(outputfile, index=True)
+outputfile = OUTPUTDIR + 'vbovk_nvbo.csv'
+vbovk_pndvk_nvbo_df[['vboid', 'vbovkid', 'nvbo']].to_csv(outputfile,
+                                                         index=True)
+
+
+# #############################################################################
 print('\n----7. Samenvatting: bewaren van de belangrijkste kerngetallen------')
 # #############################################################################
 bepaal_hoofdpand_kerngetallen_file = DIR03 +\
@@ -405,6 +435,7 @@ except:
     result_df = pd.DataFrame(list(result_dict.items()),
                               columns=['Maand', current_month])
 else:
+    print('Aanmaken nieuw bestand bepaal_hoofdpand_kerngetallen...')
     current_df = pd.DataFrame(list(result_dict.items()),
                               columns=['Maand', current_month])
     result_df[current_month] = current_df[current_month]
@@ -412,4 +443,3 @@ else:
 outputfile = DIR03 + 'bepaal_hoofdpand_kerngetallen.csv'
 result_df.to_csv(outputfile, index=False)
 print(result_df)
-'''
