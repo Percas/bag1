@@ -6,36 +6,10 @@
 Created on Sat Mar  5 12:40:26 2022
 @author: anton
 Purpose: convert BAG XML to CSV file
-version 0.9.1
+version 0.2
 
-0.8.1: renamed adres in vbo.csv to numid
-0.8.2: debugging below bug, read_csv('file', dtype=str)
-    Fix bug: this output in vbo.csv:
-    2874,0503010000038262,1,7,2020-01-21,EMPTYFIELD,0503200000023195,woonfunctie,205,0503100000028807
-    2875,0503010000038262,1,7,2020-01-21,EMPTYFIELD,0503200000023195,woonfunctie,205,0503100000028807
 
-    It should be:
-    2874,0503010000038262,1,7,2020-01-21,EMPTYFIELD,0503200000023195,woonfunctie,205,0503100000025247
-    2875,0503010000038262,1,7,2020-01-21,EMPTYFIELD,0503200000023195,woonfunctie,205,0503100000028807
-
-    Solution: it took me a few hours to figure this out: if you append a dict to a list
-    and change the dict after that (in a loop), then the appended dict in the list
-    changes as well. To prevent this you need to make a copy of the dict: list.append(dict.copy())
-
-0.9: add geo info using geopandas and shapeley - on hold
-0.9.1: make proper date fields, properly handle empty or not found fields in assigniffound function
-0.9.2: fixed a small bug
-0.9.3: dates in nanoseconds don't fit because of range: make it int...
-0.9.4: fixed some PEP warnings
-0.9.5: gebruiksdoel added
-0.9.7: adding counting
-0.9.8: adding num-opr-wpl-gem dimension; 
-
-##### Remarks: bag2csv currently processes 5 of the 7 bagobjects ###########
-    'vbo', 'sta', 'lig', 'pnd', 'num'
-    does not process geometry yet
-    
-###### Typical XML layout ##########################################
+# #### Typical XML layout ##########################################
 
 <Objecten:Verblijfsobject>
   <Objecten:heeftAlsHoofdadres>
@@ -118,6 +92,8 @@ Objecten:heeftAlsHoofdadres
 import xml.etree.ElementTree as ET
 import os
 import pandas as pd
+import sys
+import baglib
 
 # ############### Define functions #################################
 def assigniffound(node,
@@ -187,12 +163,19 @@ def date2int(_date_str):
 
 
 # ################ Initialize variables ###########################
-current_month = 202203
-basedir = '/home/anton/python/bag/data/'
-# xmldir = basedir + '01-xml/'
-inputdir = basedir + '01-xml/' + str(current_month) + '/'
-outputdir = basedir + '02-csv/' + str(current_month) + '/'
-loglevel = 1
+# month and dirs
+os.chdir('..')
+BASEDIR = os.getcwd() + '/'
+baglib.print_omgeving(BASEDIR)
+DATADIR = BASEDIR + 'data/'
+DIR01 = DATADIR + '01-xml/'
+DIR02 = DATADIR + '02-csv/'
+DIR03 = DATADIR + '03-bewerktedata/'
+current_month = baglib.get_arg1(sys.argv, DIR02)
+INPUTDIR = DIR01 + current_month + '/'
+OUTPUTDIR = DIR02 + current_month + '/'
+
+
 status_dict = {
     'Plaats ingetrokken':                           'plai',
     'Plaats aangewezen':                            'plaa',
@@ -221,6 +204,7 @@ status_dict = {
     'Woonplaats ingetrokken':                       'woin',
     'definitief':                                   'defi',
     'voorlopig':                                    'vrlg'}
+'''
 ligtype_dict = {
         'Verblijfsobject':       0,
         'Standplaats':           1,
@@ -245,6 +229,7 @@ gebruiksdoel_dict = {
 }
 
 baseheader = ['id', 'status', 'vkid', 'vkbg', 'vkeg']
+'''
 # namespace stuff we have to deal with
 '''
 ns = {'Objecten': "www.kadaster.nl/schemas/lvbag/imbag/objecten/v20200601",
@@ -272,15 +257,15 @@ short = {'vbo': 'Verblijfsobject',
          'wpl': 'Woonplaats',
          'gemwpl': 'GemeenteWoonplaatsRelatie'
          }
+
 futureday_str = '20321231'
 
 # ######### works just for gemwpl                ###########
 
 bagobject = 'gemwpl'
 
-
 subdir = bagobject + '/'
-ddir = inputdir + subdir
+ddir = INPUTDIR + subdir
 bag_files = os.listdir(ddir)
 print(short[bagobject], 'directory bevat', len(bag_files), 'bestanden')
 output_dict = []           # list of dict containing output records
@@ -321,9 +306,9 @@ for inputfile in bag_files:
 
         output_record = {'wplid':   wpl,
                          'gemid':   gem,
-                         'status':  status,
-                         'vkbg':    vkbg,
-                         'vkeg':    vkeg}
+                         'wplstatus':  status,
+                         'wplvkbg':    vkbg,
+                         'wplvkeg':    vkeg}
 
         output_dict.append(output_record.copy())
         output_bagobject_filecount += 1
@@ -341,10 +326,10 @@ df.index.name = 'idx'
 
 # print(gdf[['id', 'gml']].dtype())
 
-outputfile = outputdir + bagobject + '.csv'
+outputfile = OUTPUTDIR + bagobject + '.csv'
 print('\nOutputfile:', bagobject + '.csv',
       ',                      records in:', input_bagobject_count,
       ', records aangemaakt:', output_bagobject_count,
       bagobject, '\n')
 
-df.to_csv(outputfile)
+df.to_csv(outputfile, index=False)

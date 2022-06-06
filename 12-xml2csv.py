@@ -34,6 +34,7 @@ version 0.9.1
 read_csv een dict meekrijgen om deze kolomnamen mee te kunnen geven
 1.0 niets gewijzigd
 1.1 fix gebruiksdoel: een vbo kan er meer dan eentje hebben. concateneer ze maar...
+1.2 remove logging; clean up
 
 ##### Remarks: bag2csv currently processes 5 of the 7 bagobjects ###########
     'vbo', 'sta', 'lig', 'pnd', 'num'
@@ -125,7 +126,7 @@ import xml.etree.ElementTree as ET
 import os
 import sys
 import pandas as pd
-import logging
+import baglib
 
 # --------------------------------------------------------------------------
 # ############### Define functions #################################
@@ -196,54 +197,41 @@ def date2int(_date_str):
     return int(_str)
 
 
+'''
 def get_month(par_lst, mdir):
     """Get the first cmdline parameter, must be month YYYYMM."""
     _month_lst = os.listdir(mdir)
-    log.debug('Beschikbare maanden in ' + mdir + ':\n\t\t' + str(_month_lst))
+    print('Beschikbare maanden in ' + mdir + ':\n\t\t' + str(_month_lst))
     if len(par_lst) <= 1:
-        log.critical('Usage: bag2csv <month>')
+        print('Usage: bag2csv <month>')
         return None
     _cur_month = par_lst[1]
     if _cur_month not in _month_lst:
-        log.critical('Usage: bag2csv <month>, with month in ' + str(mdir))
+        print('Usage: bag2csv <month>, with month in ' + str(mdir))
         return None
     return _cur_month
+'''
 
 
-# --------------------------------------------------------------------------
-# print('----- Logger initialiseren')
-# --------------------------------------------------------------------------
-BASEDIR = '/home/anton/python/bag/ont/'
-DATADIR = BASEDIR + 'data/'
-DIR01 = DATADIR + '01-xml/'
-DIR02 = DATADIR + '02-csv/'
-DIR03 = DATADIR + '03-bewerktedata/'
-DIR04 = DATADIR + '04-ana/'
-LOG_FILE = BASEDIR + 'log/baglog.txt'
-
-log = logging.getLogger('logger')
-log.setLevel(logging.DEBUG)
-formatter = logging.Formatter("%(levelname)s: %(message)s")
-fh = logging.FileHandler(LOG_FILE, mode='w', encoding='utf-8')
-fh.setFormatter(formatter)
-fh.setLevel(logging.INFO)
-log.addHandler(fh)
-ch = logging.StreamHandler()
-ch.setLevel(logging.DEBUG)
-ch.setFormatter(formatter)
-log.addHandler(ch)
-
-log.info('----- DOEL: bag xml bestanden omzetten naar csv -----------------')
+print('-----------------------------------------------------------------')
+print('----- DOEL: bag xml bestanden omzetten naar csv -----------------')
+print('-----------------------------------------------------------------')
 
 # --------------------------------------------------------------------------
 # ################ Initialize variables ###########################
 # --------------------------------------------------------------------------
+# month and dirs
+os.chdir('..')
+BASEDIR = os.getcwd() + '/'
+baglib.print_omgeving(BASEDIR)
+DATADIR = BASEDIR + 'data/'
+DIR01 = DATADIR + '01-xml/'
+DIR02 = DATADIR + '02-csv/'
+DIR03 = DATADIR + '03-bewerktedata/'
+current_month = baglib.get_arg1(sys.argv, DIR02)
+INPUTDIR = DIR01 + current_month + '/'
+OUTPUTDIR = DIR02 + current_month + '/'
 
-log.info('----- Command line parsen')
-current_month = get_month(sys.argv, DIR02)
-# xmldir = basedir + '01-xml/'
-inputdir = DIR01 + str(current_month) + '/'
-outputdir = DIR02 + str(current_month) + '/'
 status_dict = {
     'Plaats ingetrokken':                           'plai',
     'Plaats aangewezen':                            'plaa',
@@ -312,28 +300,29 @@ short = {'vbo': 'Verblijfsobject',
          'wpl': 'Woonplaats'
          }
 futureday_str = '20321231'
-log.info('\tVerslagmaand is ' + current_month)
+print('\n\tVerslagmaand is', current_month)
 
 # --------------------------------------------------------------------------
-log.info('\n-----Main for loop over de bag typen')
+print('\n----- Loop over de bag typen')
 # --------------------------------------------------------------------------
-xml_dirs = ['num']
+# xml_dirs = ['num']
 # xml_dirs = ['vbo', 'pnd', 'num']
-# xml_dirs = ['lig', 'sta', 'opr', 'wpl']
+xml_dirs = ['lig', 'sta', 'opr', 'wpl']
 # xml_dirs = ['pnd', 'num']
+# xml_dirs = ['opr', 'wpl']
 for bagobject in xml_dirs:
     # ########## general part for all 7 bagobjects
     subdir = bagobject + '/'
-    ddir = inputdir + subdir
+    ddir = INPUTDIR + subdir
     bag_files = os.listdir(ddir)
     output_dict = []           # list of dict containing output records
     input_bagobject_count = 0
     output_bagobject_count = 0
     file_count = 0
     report_count = 0
-    log.info('\tBagobject  ' + bagobject)
-    log.info('\tDirectory: ' + ddir)
-    log.info('\tAantal bestanden: ' + str(len(bag_files)))
+    print('\n\tBagobject  ' + bagobject)
+    print('\tDirectory: ' + ddir)
+    print('\tAantal bestanden: ' + str(len(bag_files)))
     for inputfile in bag_files:
         bagtree = ET.parse(ddir + inputfile)
         root = bagtree.getroot()
@@ -499,19 +488,12 @@ for bagobject in xml_dirs:
     print('\n')
     df = pd.DataFrame.from_dict(output_dict)
     df.index.name = 'idx'
-    outputfile = outputdir + bagobject + '.csv'
-    log.info('Outputfile: ' + bagobject + '.csv ' + '\n\t\trecords in:\t' +
+    outputfile = OUTPUTDIR + bagobject + '.csv'
+    print('\tOutputfile: ' + bagobject + '.csv ' + '\n\t\trecords in:\t' +
              str(input_bagobject_count) + '\n\t\trecords aangemaakt: ' +
              str(output_bagobject_count) + ' ' + bagobject)
     if bagobject == 'vbo':
-        log.info('Perc dubbel gebruiksdoel: ' +\
+        print('Perc dubbel gebruiksdoel: ' +\
                  str(round(100 * dubbel_gebruiksdoel_count /\
                            output_bagobject_count, 3)))
     df.to_csv(outputfile, index=False)
-# #############################################################################
-log.info('----- Closing these two log.handlers:\n\t\t' + str(log.handlers))
-# #############################################################################
-fh.close()
-log.removeHandler(fh)
-ch.close()
-log.removeHandler(ch)

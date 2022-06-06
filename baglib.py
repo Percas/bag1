@@ -45,7 +45,7 @@ def get_arg1(arg_lst, ddir):
     return _current_month
 
 
-def read_csv(inputdir, file_with_bag_objects, dtype_dict, vkid_cols):
+def obsolet_read_csv(inputdir, file_with_bag_objects, dtype_dict, vkid_cols):
     """
     Read voorkomens from file in inputdir, do some counting.
 
@@ -91,7 +91,7 @@ def df_total_vs_key2(subject1, df, key_lst):
     _diff = _n_rec - _n_rec_u
     # _perc = int(round(100 * _diff / _n_rec, 2))
     _perc = round(100 * _diff / _n_rec, 2)
-    print('\t\tInformatie over', subject1)
+    print('\n\t\tInformatie over', subject1)
     print('\t\tAantal records:         ', _n_rec,
           '\n\t\tAantal uniek:           ', _n_rec_u,
           '\n\t\tNiet uniek:             ', _diff,
@@ -156,3 +156,12 @@ def fix_eendagsvlieg(name, df, b_str, e_str):
     return _df
 
 
+def print_omgeving(adir):
+    if adir[-4:-1] == 'ont':
+        print('\t\t\t---------------------------------')
+        print('\t\t\t--------ONTWIKKELOMGEVING--------')
+        print('\t\t\t---------------------------------')
+    else:
+        print('\t\t\t---------------------------------')
+        print('\t\t\t--------PRODUCTIEOMGEVING--------')
+        print('\t\t\t---------------------------------')
