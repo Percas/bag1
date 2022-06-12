@@ -306,9 +306,9 @@ for inputfile in bag_files:
 
         output_record = {'wplid':   wpl,
                          'gemid':   gem,
-                         'wplstatus':  status,
-                         'wplvkbg':    vkbg,
-                         'wplvkeg':    vkeg}
+                         'gemwplstatus':  status,
+                         'gemwplvkbg':    vkbg,
+                         'gemwplvkeg':    vkeg}
 
         output_dict.append(output_record.copy())
         output_bagobject_filecount += 1

@@ -6,8 +6,10 @@
 Created on Sat Mar  5 12:40:26 2022
 @author: anton
 Purpose: convert BAG XML to CSV file
-version 0.9.1
+version 1.2.1
 
+Version history
+---------------
 0.8.1: renamed adres in vbo.csv to numid
 0.8.2: debugging below bug, read_csv('file', dtype=str)
     Fix bug: this output in vbo.csv:
@@ -35,10 +37,8 @@ read_csv een dict meekrijgen om deze kolomnamen mee te kunnen geven
 1.0 niets gewijzigd
 1.1 fix gebruiksdoel: een vbo kan er meer dan eentje hebben. concateneer ze maar...
 1.2 remove logging; clean up
+1.2.1 added timing
 
-##### Remarks: bag2csv currently processes 5 of the 7 bagobjects ###########
-    'vbo', 'sta', 'lig', 'pnd', 'num'
-    does not process geometry yet
     
 ###### Typical XML layout ##########################################
 
@@ -114,9 +114,6 @@ Objecten:ligtIn
 # #### vsl specific
 Objecten:heeftAlsHoofdadres
     Objecten-ref:NummeraanduidingRef [1:n]
-
-
-
 """
 
 # --------------------------------------------------------------------------
@@ -126,7 +123,8 @@ import xml.etree.ElementTree as ET
 import os
 import sys
 import pandas as pd
-import baglib
+import time
+import baglib                # general functions user defined
 
 # --------------------------------------------------------------------------
 # ############### Define functions #################################
@@ -196,23 +194,7 @@ def date2int(_date_str):
     _str = _date_str.replace('-', '')
     return int(_str)
 
-
-'''
-def get_month(par_lst, mdir):
-    """Get the first cmdline parameter, must be month YYYYMM."""
-    _month_lst = os.listdir(mdir)
-    print('Beschikbare maanden in ' + mdir + ':\n\t\t' + str(_month_lst))
-    if len(par_lst) <= 1:
-        print('Usage: bag2csv <month>')
-        return None
-    _cur_month = par_lst[1]
-    if _cur_month not in _month_lst:
-        print('Usage: bag2csv <month>, with month in ' + str(mdir))
-        return None
-    return _cur_month
-'''
-
-
+tic = time.perf_counter()
 print('-----------------------------------------------------------------')
 print('----- DOEL: bag xml bestanden omzetten naar csv -----------------')
 print('-----------------------------------------------------------------')
@@ -307,7 +289,7 @@ print('\n----- Loop over de bag typen')
 # --------------------------------------------------------------------------
 # xml_dirs = ['num']
 # xml_dirs = ['vbo', 'pnd', 'num']
-xml_dirs = ['lig', 'sta', 'opr', 'wpl']
+xml_dirs = ['lig', 'sta', 'opr', 'wpl', 'vbo', 'pnd', 'num']
 # xml_dirs = ['pnd', 'num']
 # xml_dirs = ['opr', 'wpl']
 for bagobject in xml_dirs:
@@ -497,3 +479,5 @@ for bagobject in xml_dirs:
                  str(round(100 * dubbel_gebruiksdoel_count /\
                            output_bagobject_count, 3)))
     df.to_csv(outputfile, index=False)
+toc = time.perf_counter()
+print('\nProgram time in seconds:', toc - tic)

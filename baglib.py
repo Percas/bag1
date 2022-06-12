@@ -160,8 +160,52 @@ def print_omgeving(adir):
     if adir[-4:-1] == 'ont':
         print('\t\t\t---------------------------------')
         print('\t\t\t--------ONTWIKKELOMGEVING--------')
-        print('\t\t\t---------------------------------')
+        print('\t\t\t---------------------------------\n')
     else:
         print('\t\t\t---------------------------------')
         print('\t\t\t--------PRODUCTIEOMGEVING--------')
-        print('\t\t\t---------------------------------')
+        print('\t\t\t---------------------------------\n')
+
+
+def select_active_vk(bagobj, df, idate):
+    """
+    Select active voorkomens of df on idate.
+
+    Returns
+    -------
+    subset of df of active voorkomens. Active on idate.
+
+    Select id,vkid of those records of df with vkbg <= idate <= vkeg.
+
+    Parameters
+    ----------
+    df : dataframe with column names vkbg and vkeg
+        both these fields are 8-digit In664 of format YYYYMMDD
+    idate : int64
+        8-digit Integer of format YYYYMMDD
+    Returns
+    -------
+    returns id, vkid those records with vkbg <= idate <= vkeg and the
+    highest vkid. This is the active one
+
+    """
+    _mask = (df[bagobj + 'vkbg'] <= idate) & (idate < df[bagobj + 'vkeg'])
+    _df_active = df[_mask].copy()
+
+    _all_voorkomens = df.shape[0]
+    _all_active_voorkomens = _df_active.shape[0]
+    _perc_active = round(100 * _all_active_voorkomens / _all_voorkomens, 2)
+    print('\t\tActieve voorkomens:   ', _all_active_voorkomens)
+    print('\t\tPercentage actieve vk:', _perc_active, '%')
+    return _df_active
+
+def last_day_of_month(month_str):
+    '''Return the last day of the month as integer. Format: 20220331.'''
+    _last = 100 * int(month_str) + 31 # most common situation
+    m = int(month_str[-2:])
+    if m in [4, 6, 9, 11]:
+        _last -= 1 # compensate for months with 30 days
+    if m == 2:
+        _last -= 3 # compensate for februari, does not work in schrikkeljaar
+    print('\tLaatste dag van de maand:', _last)
+    return _last

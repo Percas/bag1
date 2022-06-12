@@ -2,11 +2,8 @@
 # -*- coding: utf-8 -*-
 """
 9 juni, Anton
-
+version: 0.2
 doel: uitpakken van de gezipte BAG XML bestanden
-
-todo: mapjes aanmaken als ze nog niet bestaan
-
 """
 
 # ################ import libraries ###############################
@@ -14,9 +11,10 @@ import sys
 import os
 import baglib
 import zipfile
-
+import time
 # ############### Define functions ################################
 
+tic = time.perf_counter()
 # #############################################################################
 # print('00.............Initializing variables...............................')
 # #############################################################################
@@ -60,3 +58,5 @@ for bagobj in bagobj_starts_with.keys():
             with zipfile.ZipFile(unzip_file, 'r') as zip_ref:
                 zip_ref.extractall(unzip_dir)
 
+toc = time.perf_counter()
+print('\nProgram time in seconds:', toc - tic)

@@ -18,41 +18,6 @@ import sys
 
 
 # ############### Define functions ################################
-def select_active_vk(bagobj, df, idate):
-    """
-    Select active voorkomens of df on idate.
-
-    Returns
-    -------
-    subset of df of active voorkomens. Active on idate.
-
-    Select id,vkid of those records of df with vkbg <= idate <= vkeg.
-
-    Parameters
-    ----------
-    df : dataframe with column names vkbg and vkeg
-        both these fields are 8-digit In664 of format YYYYMMDD
-    idate : int64
-        8-digit Integer of format YYYYMMDD
-    Returns
-    -------
-    returns id, vkid those records with vkbg <= idate <= vkeg and the
-    highest vkid. This is the active one
-
-    """
-    _mask = (df[bagobj + 'vkbg'] <= idate) & (idate < df[bagobj + 'vkeg'])
-    _df_active = df[_mask].copy()
-
-    _all_voorkomens = df.shape[0]
-    _all_active_voorkomens = _df_active.shape[0]
-    _perc_active = round(100 * _all_active_voorkomens / _all_voorkomens, 2)
-    print('\tActieve voorkomens:                   ', _all_active_voorkomens)
-    print('\tPercentage actieve voorkomens tov tot:', _perc_active, '%')
-    # ################# LOGGING ################
-    return _df_active
-
-
-
 def my_leftmerge(left_df, right_df, check_nan_column=None):
     """
     Do a simple left merge including a checks on number of records.
@@ -115,8 +80,8 @@ for bagobj in BAGTYPES:
     baglib.df_total_vs_key2(bagobj, bagobj_d[bagobj], 
                             [bagobj + 'id', bagobj + 'vkid'])
     print('\tActieve', bagobj, 'selecteren...')
-    bagobj_d[bagobj] = select_active_vk(bagobj, bagobj_d[bagobj],
-                                        peildatum_i)
+    bagobj_d[bagobj] = baglib.select_active_vk(bagobj, bagobj_d[bagobj],
+                                               peildatum_i)
     bagobj_d[bagobj].drop([bagobj + 'vkeg', bagobj +'vkbg'],
                           axis=1, inplace=True)
     baglib.df_total_vs_key2(bagobj, bagobj_d[bagobj], 
@@ -128,7 +93,7 @@ print('\ngemwpl in', INPUTDIR)
 gemwpl_df = pd.read_csv(INPUTDIR + 'gemwpl.csv')
 baglib.df_total_vs_key2('gemwpl', gemwpl_df, ['wplid', 'wplvkbg'])
 print('\tActieve relaties gemwpl selecteren...')
-gemwpl_df = select_active_vk('wpl', gemwpl_df, peildatum_i)
+gemwpl_df = baglib.select_active_vk('wpl', gemwpl_df, peildatum_i)
 # active_gemwpl_df.drop(['vkeg', 'vkbg'], axis=1, inplace=True)
 # active_gemwpl_df.rename(columns={'status': 'gemwplstatus'},
 #                         inplace=True)
@@ -147,23 +112,31 @@ baglib.df_total_vs_key2('wpl-gem', wg_df, ['wplid'])
 print('\n\tAdd wplid, gemid to opr, link on wplid...')
 owg_df = my_leftmerge(bagobj_d['opr'], wg_df, 'gemid')
 baglib.df_total_vs_key2('opr-wpl-gem', owg_df, ['oprid', 'oprvkid'])
-print('DEBUG1', owg_df.info())
+# print('DEBUG1', owg_df.info())
 
 print('\n\tAdd oprid, wplid, gemid to num, link on oprid')
 nowg_df = my_leftmerge(bagobj_d['num'], owg_df, 'wplid')
 baglib.df_total_vs_key2('num-opr-wpl-gem', nowg_df, ['numid', 'numvkid'])
-print('DEBUG2', nowg_df.info())
+# print('DEBUG2', nowg_df.info())
 
 print('\n\tAdd numid, oprid, wplid, gemid to vbo, link on numid')
 vnowg_df = my_leftmerge(bagobj_d['vbo'], nowg_df, 'oprid')
 baglib.df_total_vs_key2('vbo-num-opr-wpl-gem', vnowg_df, ['vboid', 'vbovkid'])
 # print(vnowg_df.info())
-print('DEBUG3', vnowg_df.info())
+# print('DEBUG3', vnowg_df.info())
+result_df = vnowg_df[['vboid', 'vbovkid', 'vbostatus', 'gebruiksdoel',
+                      'oppervlakte', 'postcode', 'huisnr', 'oprnaam',
+                      'wplnaam', 'gemid']].drop_duplicates()
+baglib.df_total_vs_key2('resultaatbestand met vbovk', result_df,
+                        ['vboid', 'vbovkid'])
 
-vnowg_df.drop(['numid', 'numvkid', 'typeao', 'oprid', 'oprstatus',
-               'oprvkid'], axis=1, inplace=True)
+
+# vnowg_df.drop(['numid', 'numvkid', 'typeao', 'oprid', 'oprstatus',
+#                'oprvkid', 'pndid', 'numstatus'], axis=1, inplace=True)
+print('\n\tWegschrijven naar vbo.csv', result_df.shape[0],
+      'actuele verrijkte unieke vbovk')
 outputfile = OUTPUTDIR + 'vbo.csv'
 # vnowg_df.dropna().to_csv(outputfile, index=False)
-vnowg_df.to_csv(outputfile, index=False)
+result_df.to_csv(outputfile, index=False)
 '''
 '''
