@@ -97,6 +97,19 @@ def df_total_vs_key2(subject1, df, key_lst):
           '\n\t\tNiet uniek:             ', _diff,
           '\n\t\tPercentage niet uniek:  ', _perc)
 
+def df_total_vs_key3(subject1, df, key_lst, log_lvl):
+    '''Print number of (unique) records of df given key_lst are keys in df.'''
+    if log_lvl > 0:
+        _n_rec = df.shape[0]
+        _n_rec_u = df[key_lst].drop_duplicates().shape[0]
+        _diff = _n_rec - _n_rec_u
+        # _perc = int(round(100 * _diff / _n_rec, 2))
+        _perc = round(100 * _diff / _n_rec, 2)
+        print('\n\t\tInformatie over', subject1)
+        print('\t\tAantal records:         ', _n_rec,
+              '\n\t\tAantal uniek:           ', _n_rec_u,
+              '\n\t\tNiet uniek:             ', _diff,
+              '\n\t\tPercentage niet uniek:  ', _perc)
 
 def df_in_vs_out(proces_name, df_in, df_out):
     _n_in = df_in.shape[0]
@@ -209,3 +222,9 @@ def last_day_of_month(month_str):
         _last -= 3 # compensate for februari, does not work in schrikkeljaar
     print('\tLaatste dag van de maand:', _last)
     return _last
+
+
+def make_dir(path):
+    if not os.path.exists(path):
+        print('\n\tAanmaken outputmap', path)
+        os.makedirs(path)
