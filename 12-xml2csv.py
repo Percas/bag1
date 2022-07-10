@@ -6,7 +6,7 @@
 Created on Sat Mar  5 12:40:26 2022
 @author: anton
 Purpose: convert BAG XML to CSV file
-version 1.2.1
+version 1.2.2
 
 Version history
 ---------------
@@ -38,6 +38,7 @@ read_csv een dict meekrijgen om deze kolomnamen mee te kunnen geven
 1.1 fix gebruiksdoel: een vbo kan er meer dan eentje hebben. concateneer ze maar...
 1.2 remove logging; clean up
 1.2.1 added timing
+1.2.2 added makedir OUTPUTDIR (if not exist)
 
     
 ###### Typical XML layout ##########################################
@@ -210,9 +211,10 @@ DATADIR = BASEDIR + 'data/'
 DIR01 = DATADIR + '01-xml/'
 DIR02 = DATADIR + '02-csv/'
 DIR03 = DATADIR + '03-bewerktedata/'
-current_month = baglib.get_arg1(sys.argv, DIR02)
+current_month = baglib.get_arg1(sys.argv, DIR01)
 INPUTDIR = DIR01 + current_month + '/'
 OUTPUTDIR = DIR02 + current_month + '/'
+baglib.make_dir(OUTPUTDIR)
 
 status_dict = {
     'Plaats ingetrokken':                           'plai',

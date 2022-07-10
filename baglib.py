@@ -20,19 +20,6 @@ def myprint(left_text, right_result):
 def prtxt(astring):
     print(astring)
 
-def get_df_from_csv(idir, csv_file, dtype_dict, cols):
-    """Return dataframe from csv_file in dir_path."""
-    try:
-        # prtxt('Contents of this dir: ' +
-        #          str(os.listdir(idir)))
-        _df = read_csv(idir,
-                       csv_file,
-                       dtype_dict, cols)
-        return _df
-    except FileNotFoundError:
-        prtxt('Error: kan dit bestand niet openen: ' +
-                  idir + csv_file)
-
 def get_arg1(arg_lst, ddir):
     _lst = os.listdir(ddir)
     if len(arg_lst) <= 1:
@@ -43,28 +30,6 @@ def get_arg1(arg_lst, ddir):
         sys.exit('Usage: ' + arg_lst[0] + '  <month>, where <month> in '
                  + str(_lst))
     return _current_month
-
-
-def obsolet_read_csv(inputdir, file_with_bag_objects, dtype_dict, vkid_cols):
-    """
-    Read voorkomens from file in inputdir, do some counting.
-
-    Returns
-    -------
-    Dataframe with voorkomens.
-
-    """
-    # print('\tread ', file_with_bag_objects, '...')
-    _df = pd.read_csv(inputdir + file_with_bag_objects,
-                      dtype=dtype_dict)
-    _all_voorkomens = _df.shape[0]
-    _all_kadaster_voorkomens = _df[vkid_cols].drop_duplicates().shape[0]
-    _verschil = _all_voorkomens - _all_kadaster_voorkomens
-    myprint('\tVoorkomens totaal:', _all_voorkomens)
-    myprint('\tVoorkomens cf kadaster (unieke vk):', _all_kadaster_voorkomens)
-    myprint('\tZelf aangemaakte voorkomens:', _verschil)
-    return _df
-
 
 def df_total_vs_key(bagobj_name, df, key_lst, result_dict):
     '''Print number of (unique) records of df given key_lst are keys in df.'''

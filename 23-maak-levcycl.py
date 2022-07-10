@@ -5,7 +5,8 @@ Created on June 11, 2022
 
 Purpose: make the levenscyclus file for VBO: 
     vbovk met bouwjaar en typeinliggend
-    restriction: vbovk must be in IN_VOORRAAD
+    restrictions: vbovk must be in IN_VOORRAAD and in a gemeente
+    
 0.1: initial version based on 23-bew-data.py
 
 
@@ -23,48 +24,7 @@ import sys
 def num2gem(bagobj_dict):
     '''Link num-opr-wpl-gem based on input dict with these 4 df's.'''
 
-    print('\n\tAdd gemid to wpl, link on wplid...')
-    _res_df = pd.merge(bagobj_dict['wpl']['wplid'], 
-                       bagobj_dict['gemwpl'][['wplid', 'gemid']],
-                       how='left')
-    baglib.df_total_vs_key2('wpl-gem', _res_df, ['wplid'])
-    
-    '''
-    print('DEBUG1 wg_df:')
-    print(wg_df.info())
-    print(bagobj_d['opr'].info())
-    '''
-    
-    print('\n\tAdd wplid, gemid to opr, link on wplid...')
-    _res_df = pd.merge(bagobj_dict['opr'][['oprid', 'wplid']],
-                       _res_df, 
-                       how='left')
-    baglib.df_total_vs_key2('opr-wpl-gem', _res_df, ['oprid'])
-    
-    '''
-    print('DEBUG2: owg:')
-    print(owg_df.info())
-    print('DEBUG3: het bagobj num:')
-    print(bagobj_d['num'].info())
-    '''
-    
-    print('\n\tAdd oprid, wplid, gemid to num, link on oprid')
-    _res_df = pd.merge(bagobj_dict['num'][['numid', 'oprid']], 
-                       _res_df,
-                       how='left')
-    baglib.df_total_vs_key2('num-opr-wpl-gem', _res_df, ['numid'])
-    
-    '''
-    print('DEBUG4: nowg_df')
-    print(nowg_df.info())
-    '''
-    
-    return _res_df    
-    
-def num2gem2(bagobj_dict):
-    '''Link num-opr-wpl-gem based on input dict with these 4 df's.'''
-
-    print('\n\tMake num-opr, link on oprid')
+    print('\n\tMerge num (num-opr) with opr (opr-wpl), link on oprid')
     _res_df = pd.merge(bagobj_dict['num'][['numid', 'oprid']], 
                        bagobj_dict['opr'][['oprid', 'wplid']],
                        how='left')
@@ -74,14 +34,26 @@ def num2gem2(bagobj_dict):
     print(_res_df.info())
     print(bagobj_d['gemwpl'].info())
     '''
-    print('\n\tMake num-opr-wpl-gem, link on wplid...')
+    print('\n\tMerge num-wpl with wpl-gem, link on wplid...')
     _res_df = pd.merge(_res_df,
                        bagobj_dict['gemwpl'][['wplid', 'gemid']],
                        how='left')
-    baglib.df_total_vs_key2('num-opr-wpl-gem', _res_df, ['oprid'])
-
-    return _res_df    
+    # baglib.df_total_vs_key2('num-opr-wpl-gem', _res_df, ['oprid'])
     
+    return _res_df
+
+def read_dfs(ddir, df_lst, keys_lst):
+    '''Read the csv files in dflist in directory ddir. Return dict with 
+    dflist as keys and dataframes created from csv files as values'''
+    
+    _df_dict = {}
+    for _file in df_lst:
+        print('\tReading', _file, 'in', ddir)
+        _df_dict[_file] = pd.read(ddir + _file + '.csv')
+        _df_dict[keys_lst] = _df_dict[keys_lst].astype(str)
+        return _df_dict
+
+
 # #################################################################
 print('-----------------------------------------------------------')
 print('Bepaal bouwjaar en typeinliggend van alle vbovk in voorraad')
@@ -103,12 +75,18 @@ DIR02 = DATADIR + '02-csv/'
 DIR03 = DATADIR + '03-bewerktedata/'
 current_month = baglib.get_arg1(sys.argv, DIR02)
 INPUTDIR = DIR02 + current_month + '/'
-OUTPUTDIR = DIR03 + current_month + '/'
+K3DIR = DIR03 + current_month + '/'
+OUTPUTDIR = K3DIR
+baglib.make_dir(OUTPUTDIR)
 IN_VOORRAAD = ['inge', 'inni', 'verb', 'buig']
 # BAGTYPES = ['vbo', 'lig', 'sta', 'pnd', 'num', 'opr', 'wpl']
-BAG_OBJECTEN = ['vbo', 'num', 'opr', 'wpl', 'gemwpl']
+LEES_BAG_OBJECTEN = ['vbo', 'num', 'opr', 'wpl', 'gemwpl', 'pnd']
+LEES_K3_DF = ['vbovk_hoofdpndvk', 'vbovk_nvbo'] # K3 is KOPPELVLAK3
 bagobj_d = {} # dict to store the bagobject df's
+k3_d = {} # dict to store koppelvlak3 input df's: vbovk-pndvk
 peildatum = baglib.last_day_of_month(current_month)
+LOG_LVL = 1
+
 veldnaam_d1 = {
     'vboid': 'OBJECTNUMMER',
     'vbovkbg': 'AANVLEVCYCLWOONNIETWOON',
@@ -135,19 +113,26 @@ gebruiksdoel_dict = {
     'celf': 'VBOCELFUNCTIE'}
 
 # ############################################################################
-print('\n----Inlezen bagobjecten die we nodig hebben------------------------')
+print('\n1.----Inlezen bagobjecten die we nodig hebben----------------------')
 # ############################################################################
+print('\t1.1 in koppelvlak 2:', LEES_BAG_OBJECTEN)
 
-for bagobj in BAG_OBJECTEN:
-    print('\n', bagobj, 'in', INPUTDIR, ':')
+'''
+bagobj_d = read_dfs(INPUTDIR, LEES_BAG_OBJECTEN)
+'''
+
+for bagobj in LEES_BAG_OBJECTEN:
+    print('\n', bagobj, 'in', INPUTDIR, 'inlezen...')
     bagobj_d[bagobj] = pd.read_csv(INPUTDIR + bagobj + '.csv')
-    if bagobj == 'gemwpl':
-        bagobj['gemwpl']['wplvkid'] = bagobj['gemwpl'].groupby('wplid').cumcount()
-    
-    # if bagobj != 'gemwpl':  # gemwpl had no gemwplvkid
-    baglib.df_total_vs_key2(bagobj +'vk', bagobj_d[bagobj], 
-                            [bagobj + 'id', bagobj + 'vkid'])
+    bagobj_d[bagobj] = bagobj_d[bagobj].astype(str)
+    bagobj_d[bagobj][[bagobj + 'vkbg', bagobj + 'vkeg']] =\
+        bagobj_d[bagobj][[bagobj + 'vkbg', bagobj + 'vkeg']].astype(int)
 
+    if bagobj != 'gemwpl': # gemwpl has no vkid
+        baglib.df_total_vs_key3(bagobj +'vk', bagobj_d[bagobj], 
+                                [bagobj + 'id', bagobj + 'vkid'], LOG_LVL)
+    # The following bagobj have no vk link in vbo, so linking is on active vk:
+    # vbo -> num -> opr -> wpl -> gem
     if bagobj in ['num', 'opr', 'wpl', 'gemwpl']:
         print('\n\t\tActieve', bagobj, 'selecteren...')
         bagobj_d[bagobj] = baglib.select_active_vk(bagobj, bagobj_d[bagobj],
@@ -155,49 +140,65 @@ for bagobj in BAG_OBJECTEN:
         bagobj_d[bagobj].drop([bagobj + 'vkeg', bagobj +'vkbg'],
                               axis=1, inplace=True)
         if bagobj != 'gemwpl':
-            baglib.df_total_vs_key2('actieve ' + bagobj, bagobj_d[bagobj], 
-                                    [bagobj + 'id', bagobj + 'vkid'])
+            baglib.df_total_vs_key3('actieve ' + bagobj, bagobj_d[bagobj], 
+                                    [bagobj + 'id', bagobj + 'vkid'],
+                                    LOG_LVL)
+
+
+print('\t1.1 in koppelvlak 3:', LEES_K3_DF)
+for k3_df in LEES_K3_DF:
+    print('\n\t', k3_df, 'in', K3DIR, 'inlezen...')
+    k3_d[k3_df] = pd.read_csv(K3DIR + k3_df + '.csv')
+    k3_d[k3_df] = k3_d[k3_df].astype(str)
+    
 
 # #############################################################################
-print('\n----Verrijken van VBO met woonplaats en gemeente---------    ')
+print('\n2.----Verrijken van VBO met woonplaats en gemeente---------    ')
 # #############################################################################
 print('\n\tDe koppeling loopt als volgt: vbo -> num -> opr -> wpl -> gem\n',
       '\tOmdat het Kadaster de laatste vier bagobjecten aan elkaar linkt zonder\n',
       '\top het vk ervan te letten, nemen we voor deze laatste vier steeds\n',
       '\thet actieve vk. Alleen voor vbo houden we alle voorkomens in beeld.')
-print('\tWe koppelen de bag objecten erbij van rechts naar links:')
 
 
-nowg_df = num2gem2(bagobj_d)
+print('\n\t2.1 Bepaal eerst de koppeling num-gem:')
+nowg_df = num2gem(bagobj_d)
 
-
-print('\n\tAdd numid, oprid, wplid, gemid to vbo, link on numid')
+print('\n\t2.2 Koppel num-gem aan vbovk')
 vnowg_df = pd.merge(bagobj_d['vbo'], nowg_df, how='left')
 baglib.df_total_vs_key2('vbo-num-opr-wpl-gem', vnowg_df, ['vboid', 'vbovkid'])
-# print(vnowg_df.info())
 
 
-'''
-print('DEBUG5 vnowg:')
-print(vnowg_df.info())
-'''
-
-
-result_df = vnowg_df[['vboid', 'vbovkid', 'vbostatus', 'gebruiksdoel',
+vnowg_df2 = vnowg_df[['vboid', 'vbovkid', 'vbostatus', 'gebruiksdoel',
                       'oppervlakte', 'gemid']].drop_duplicates()
-baglib.df_total_vs_key2('vbovk waarin dubbele verwijderd', result_df,
+baglib.df_total_vs_key2('vbovk waarin dubbele verwijderd', vnowg_df2,
                         ['vboid', 'vbovkid'])
-result_df.dropna(subset=['gemid'], axis='rows', inplace=True)
+vnowg_df2.dropna(subset=['gemid'], axis='rows', inplace=True)
 baglib.df_total_vs_key2('vbovk waarin die zonder gemid verwijderd zijn',
-                        result_df,
+                        vnowg_df2,
                         ['vboid', 'vbovkid'])
 
-# vnowg_df.drop(['numid', 'numvkid', 'typeao', 'oprid', 'oprstatus',
-#                'oprvkid', 'pndid', 'numstatus'], axis=1, inplace=True)
+# #############################################################################
+print('\n3.----Bepalen vbo in voorraad---------    ')
+# #############################################################################
+vbovk_voorraad_df = vnowg_df2.loc[vnowg_df2['vbostatus'].isin(IN_VOORRAAD)]
+baglib.df_in_vs_out('voorraad', vnowg_df2, vbovk_voorraad_df)
 
-print('\n\tWegschrijven naar vbo.csv', result_df.shape[0],
+# #############################################################################
+print('\n4.----Bepalen bouwjaar van vbo in voorraad---------    ')
+# #############################################################################
+vbovk_bouwjaar_df = pd.merge(vnowg_df2, k3_d['vbovk_hoofdpndvk'], how='left')
+baglib.df_in_vs_out('hoofdpnd bepaald', vnowg_df2, vbovk_bouwjaar_df)
+print('DEBUG1', vbovk_bouwjaar_df.info())
+'''
+# #############################################################################
+print('\n9.----Wegschrijven VBO vk---------------------------------------    ')
+# #############################################################################
+
+print('\n\t2.3 Wegschrijven naar vbo.csv', result_df.shape[0],
       'actuele verrijkte unieke vbovk')
 outputfile = OUTPUTDIR + 'vbo.csv'
 result_df.to_csv(outputfile, index=False)
 print('DEBUG6: resultaat:')
 print(result_df.info())
+'''

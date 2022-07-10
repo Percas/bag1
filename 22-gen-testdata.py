@@ -25,12 +25,56 @@ import pandas as pd
 import numpy as np
 import sys
 import os
-import bagpy
+# import baglib
 from pathlib import Path
+
+
+
+# #############################################################################
+# print('00.............Define functions...............................')
+# #############################################################################
+def read_csv(inputdir, file_with_bag_objects, dtype_dict, vkid_cols):
+    """
+    Read voorkomens from file in inputdir, do some counting.
+
+    Returns
+    -------
+    Dataframe with voorkomens.
+
+    """
+    # print('\tread ', file_with_bag_objects, '...')
+    _df = pd.read_csv(inputdir + file_with_bag_objects,
+                      dtype=dtype_dict)
+    _all_voorkomens = _df.shape[0]
+    _all_kadaster_voorkomens = _df[vkid_cols].drop_duplicates().shape[0]
+    _verschil = _all_voorkomens - _all_kadaster_voorkomens
+    print('\tVoorkomens totaal:', _all_voorkomens)
+    print('\tVoorkomens cf kadaster (unieke vk):', _all_kadaster_voorkomens)
+    print('\tZelf aangemaakte voorkomens:', _verschil)
+    return _df
+
+def get_df_from_csv(idir, csv_file, dtype_dict, cols):
+    """Return dataframe from csv_file in dir_path."""
+    try:
+        # prtxt('Contents of this dir: ' +
+        #          str(os.listdir(idir)))
+        _df = read_csv(idir,
+                       csv_file,
+                       dtype_dict, cols)
+        return _df
+    except FileNotFoundError:
+        print('Error: kan dit bestand niet openen: ' +
+                  idir + csv_file)
+
 
 # #############################################################################
 # print('00.............Initializing variables...............................')
 # #############################################################################
+'''
+os.chdir('..')
+BASEDIR = os.getcwd() + '/'
+baglib.print_omgeving(BASEDIR)
+'''
 BASEDIR = '/home/anton/python/bag/'
 DATADIR = BASEDIR + 'data/'
 DIR02 = DATADIR + '02-csv/'
@@ -60,36 +104,36 @@ print('\n----1. Inlezen van vbo.csv, pnd.csv en num.csv---------------------')
 # #############################################################################
 
 print('\n\t1.1 VBO:------------------------------------------')
-vbovk_df = bagpy.get_df_from_csv(INPUTDIR, 'vbo.csv',
-                                 {'vboid': str, 'status': str,
-                                  'pndid': str, 'numid' : str,
-                                  'vbovkid': np.short,
-                                  'vbovkbg': int,
-                                  'vbovkeg': int},
-                                 ['vboid', 'vbovkid'])
-vbovk_df.drop(['idx'], axis=1, inplace=True)
+vbovk_df = get_df_from_csv(INPUTDIR, 'vbo.csv',
+                           {'vboid': str, 'status': str,
+                            'pndid': str, 'numid' : str,
+                            'vbovkid': np.short,
+                            'vbovkbg': int,
+                            'vbovkeg': int},
+                           ['vboid', 'vbovkid'])
+# vbovk_df.drop(['idx'], axis=1, inplace=True)
 # vbo_cols = list(vbovk_df.columns)
 vbovk_u = vbovk_df[['vboid', 'vbovkid']].drop_duplicates()
 n_vbovk = vbovk_df.shape[0]
 n_vbovk_u = vbovk_u.shape[0]
 verschil = n_vbovk - n_vbovk_u
 perc = round(100 * verschil / n_vbovk_u, 2)
-bagpy.myprint('\tPerc zelf aangemaakt (=vbo met dubbel pnd):', perc)
+print('\tPerc zelf aangemaakt (=vbo met dubbel pnd):', perc)
 
 print('\n\t1.2 PND:------------------------------------------')
-pndvk_df = bagpy.read_csv(INPUTDIR, 'pnd.csv',
-                          {'pndid': str, 'pndstatus': str,
-                           'pndvkid': np.short, 'pndvkbg': int,
-                           'pndvkeg': int, 'bouwjaar': np.short,
-                           'docnr': str}, ['pndid', 'pndvkid'])
-pndvk_df.drop(['idx'], axis=1, inplace=True)
+pndvk_df = read_csv(INPUTDIR, 'pnd.csv',
+                    {'pndid': str, 'pndstatus': str,
+                     'pndvkid': np.short, 'pndvkbg': int,
+                     'pndvkeg': int, 'bouwjaar': np.short,
+                     'docnr': str}, ['pndid', 'pndvkid'])
+# pndvk_df.drop(['idx'], axis=1, inplace=True)
 # pnd_cols = list(pndvk_df.columns)
 
 print('\n\t1.2 NUM:------------------------------------------')
-numvk_df = bagpy.read_csv(INPUTDIR, 'num.csv',
-                          {'numid': str, 'numstatus': str,
-                          'numvkid': np.short, 'numvkbg': int,
-                          'numvkeg': int}, ['numid', 'numvkid'])
+numvk_df = read_csv(INPUTDIR, 'num.csv',
+                    {'numid': str, 'numstatus': str,
+                    'numvkid': np.short, 'numvkbg': int,
+                    'numvkeg': int}, ['numid', 'numvkid'])
 try:
     numvk_df.drop(['idx'], axis=1, inplace=True)
 except KeyError:

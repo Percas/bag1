@@ -86,12 +86,12 @@ def prio_pnd(pnd1_df,
             '-bouwjaar/' + str(bouwjaar_divider))
     pnd1_df['prio'] = pnd1_df['prio'] - \
         pnd1_df['bouwjaar'] / bouwjaar_divider
-
+    '''
     print('\t\tMinpunten voor pandid (tbv herhaalbaarheid):',
             '-pndid /' + str(pndid_divider))
     pnd1_df['prio'] = pnd1_df['prio'] - \
-        pnd1_df['pndid'].astype(int) / pndid_divider
-
+       pnd1_df['pndid'].astype(int) / pndid_divider
+    '''
     # print(active_pnd_df[['pndid', 'pndstatus', 'bouwjaar', 'prio']].head(30))
     # print('\tnumber of records in activ_pnd_df:', active_pnd_df.shape[0])
     # if pnd1_df.shape[0] != pnd1_df['pndid'].unique().shape[0]:
@@ -106,20 +106,14 @@ def prio_pnd(pnd1_df,
 # month and dirs
 os.chdir('..')
 BASEDIR = os.getcwd() + '/'
-if BASEDIR[-4:-1] == 'ont':
-    print('\t\t\t---------------------------------')
-    print('\t\t\t--------ONTWIKKELOMGEVING--------')
-    print('\t\t\t---------------------------------')
-else:
-    print('\t\t\t---------------------------------')
-    print('\t\t\t--------PRODUCTIEOMGEVING--------')
-    print('\t\t\t---------------------------------')
+baglib.print_omgeving(BASEDIR)
 DATADIR = BASEDIR + 'data/'
 DIR02 = DATADIR + '02-csv/'
 DIR03 = DATADIR + '03-bewerktedata/'
 current_month = baglib.get_arg1(sys.argv, DIR02)
 INPUTDIR = DIR02 + current_month + '/'
 OUTPUTDIR = DIR03 + current_month + '/'
+baglib.make_dir(OUTPUTDIR)
 current_month = int(current_month)
 current_year = int(current_month/100)
 
@@ -233,7 +227,7 @@ print('\n\t---3a: meer dan 1 pndvk koppelt met een vbovk')
 print('\tStartpunt (reminder) aantal records vbovk:', n_vbovk)
 print('\tvbovk na het koppelen met pndvk obv vbovkeg: ')
 if vbovk_pndvk_df.shape[0] == 0:
-    sys.exit('Fout: in pnd.csv staat geen enkel pand dat koppelt met\
+    sys.exit('Fout: in pnd.csv staat geen enkel pand dat koppelt met\n\
              vbo.csv. Verder gaan heeft geen zin. Programma stopt...')
 result_dict = baglib.df_total_vs_key('3_vbovk_pndvk', vbovk_pndvk_df,
                                     ['vboid', 'vbovkid'],
@@ -368,34 +362,37 @@ print('\tDe situaties die voorkomen zijn:\n',
       '\t\tB. pndvk heeft 1 vbo: vbovk typeinliggend = False: woonhuis\n',
       '\t\tC. pndvk heeft >1 vbo: vbovk typeinliggend = True: flat')
 
-print('\n\t\t5.1:  vbovk: leid voorraad af')
+print('\n\t\t6.1:  vbovk: leid voorraad af')
 vbovk_df['voorraad'] = vbovk_df['vbostatus'].isin(IN_VOORRAAD)
 vbovk_df2 = vbovk_df[vbovk_df['voorraad']==True]
 vbovk_df2 = vbovk_df2[['vboid', 'vbovkid', 'voorraad']].drop_duplicates()
 baglib.df_total_vs_key2('unieke vbovk in IN_VOORRAAD',
                         vbovk_df2, ['vboid', 'vbovkid'])
+print('\n\t\tca 15% procent van de vbovk zitten niet in voorraad:')
+baglib.df_in_vs_out('in_voorraad', vbovk_df, vbovk_df2)
 
-print('\n\t\t5.2a pak alle pndvk. voeg vbovk toe via vbovk-hoofdpndvk ')
+print('\n\t\t6.2a pak alle pndvk. voeg vbovk toe via vbovk-hoofdpndvk ')
 # vbovk-hoofdpndvk zit in het dataframe vbovk_prio_df
 baglib.df_total_vs_key2('pndvk', pndvk_df, ['pndid', 'pndvkid'])
 # baglib.df_total_vs_key2('vbovk_prio', vbovk_prio_df, ['vboid', 'vbovkid'])
 pndvk_vbovk_df = pd.merge(pndvk_df[['pndid', 'pndvkid']],
                           vbovk_hoofdpndvk_df, how='left')
+
 baglib.df_total_vs_key2('pndvk_vbovk_df na merge met vbovk_hoofdpandvk_df',
                         pndvk_vbovk_df, ['pndid', 'pndvkid'])
 # print(pndvk_df.info())
 
-print('\n\t\t5.2b koppel deze pndvk met de vbovk in voorraad')
+print('\n\t\t6.2b koppel deze pndvk met de vbovk in voorraad')
 pndvk_vbovk2_df = pd.merge(pndvk_vbovk_df, vbovk_df2, how='left')
 baglib.df_total_vs_key2('pndvk_vbovk2_df na merge met vbovk_df',
                         pndvk_vbovk2_df, ['pndid', 'pndvkid'])
 
-print('\n\t\t5.2c laat vkid weg en ontdubbel: we willen unieke vbo')
+print('\n\t\t6.2c laat vkid weg en ontdubbel: we willen unieke vbo')
 pndvk_vbo_df = pndvk_vbovk2_df[['pndid', 'pndvkid','vboid', 'voorraad']]\
     .drop_duplicates()
 baglib.df_total_vs_key2('pndvk_vbo', pndvk_vbo_df, ['pndid', 'pndvkid'])
 
-print('\t\t5.3 tel aantal keren voorraad per pndvk')
+print('\n\t\t6.3 tel aantal keren voorraad per pndvk')
 pndvk_vbo_df['voorraad'] = pndvk_vbo_df['voorraad'].fillna(0)
 pndvk_vbo_df['voorraad'] = pndvk_vbo_df['voorraad'].astype(int)
 pndvk_nvbo_df = pndvk_vbo_df.groupby(['pndid', 'pndvkid'])['voorraad']\
@@ -415,12 +412,12 @@ result_dict['gem_inliggend_per_vbovk'] = vbovk_pndvk_nvbo_df['nvbo'].mean()
 print('\t\tgemiddeld aantal vbos in vbovk:',
       result_dict['gem_inliggend_per_vbovk'])
 
-print('\n\t\t5.5. bewaren in pndvk_nvbo.csv vbovk_nvbo.csv...')
+print('\n\t\t5.5. bewaren in koppelvlak 3: pndvk_nvbo.csv vbovk_nvbo.csv...')
 outputfile = OUTPUTDIR + 'pndvk_nvbo.csv'
-pndvk_nvbo_df.to_csv(outputfile, index=True)
+pndvk_nvbo_df.to_csv(outputfile, index=False)
 outputfile = OUTPUTDIR + 'vbovk_nvbo.csv'
 vbovk_pndvk_nvbo_df[['vboid', 'vbovkid', 'nvbo']].to_csv(outputfile,
-                                                         index=True)
+                                                         index=False)
 
 
 # #############################################################################
