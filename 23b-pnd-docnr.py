@@ -3,37 +3,14 @@
 """
 Created on Zaterdag 23 april 2022
 
-Doel: selecteer bij elke VBO voorkomen (vbovk) een hoofdpand voorkomen (pndvk).
-Het kadaster koppelt 1 of meer pnd aan een vbovk. Dit is om twee redenen niet
-eenduidig:
-    1. er kan meer dan 1 pnd aan een vbovk gekoppeld zijn (0,44%)
-    2. bij het pnd kan het bouwjaar veranderen in een volgend vk
+Doel: analyseer de afstand van de docnrs van panden in een woonplaats.
 
-Voor elk pndvk bepalen we een prioriteit. Het pndvk met de hoogste prio wordt
-het hoofdpnd vk. Hoe je de prioriteit berekent staat in de functie prio_pnd
-
-0.2: Clean up code. Make one outputfile with all vbo vk:
-    vboid, vbovkid, vbovkbg, vbovkeg, pndid, pndvkid, pndvkbg, pndvkeg, prio
-    where that pnd vk is linked with pndvkbg < vbovkeg <= pndvkeg
-    prio is only calculated if there is more than one pnd linked the the vbo
-    vk. So if prio is empty (nan), it means that there is only one pnd vk
-    linked to this vbo vk.
-0.3: Koppel een hoofd-pndvk aan een vbovk: pndvk ipv een pnd dus!
-0.3.2: Documentation and string formatting
-0.3.3b: tel vbovk totaal en vbovk uniek (vku) in elke stap
-0.4.1 koppel laagste pndvk aan vbovk_geen_pndvk
-0.4.2 samenvatting toevoegen aan het eind met sleutelgetallen
-0.5.1 aanpassing id naar vboid and pndid in koppelvlak 2 (waar het hoort ;-),
-idem voor status naar vbostatus, vkid naar vbovkid etc.
-0.6 functies verhuisd naar bag_functions.py
-0.6.1 cleaning up
-0.6.2 writes file bepaal_hoofdpand_kerngetallen to compare months
-0.6.3 debugging error: in pndvk_prio staat in 202205 bij pnd 0003100000118116 
-dubbele pndvkid met ook nog verschillende prio. Fixed
-0.7 determine n_vbo_in_pndvk. For every pndvk determine the number of unique
-vbo in this pndvk, where the vbo is in IN_VOORRAAD. The vbo is in IN_VOORRAAD
-if at least one of its vbovk connected to pndvk is in IN_VOORRAAD
-0.8 introducing indices and as small as possible datatypes
+stappen:
+    1. haal vbovk-hoofdpndvk en vbo-wpl op
+    2. bepaal hiermee de wpl van een pndvk. 
+    3. bepaal de afstand tussen de docnrs van de pndvk. Let met name op
+    kleine afstanden. Sorteer bijvoorbeeld waarbij je de nul afstanden
+    verwijdert
 """
 
 # ################ import libraries ###############################
@@ -45,59 +22,6 @@ import time
 import baglib
 
 # ############### Define functions ################################
-def prio_pnd(pnd1_df,
-             in_voorraad_points, in_voorraad_statuslst,
-             bouwjaar_points, bouwjaar_low, bouwjaar_high, bouwjaar_divider,
-             pndid_divider):
-    """
-    Bereken een prioriteit voor elk pndid in pnd1_df.
-
-    In detail:
-        1. Als bouwjaar vh pand logisch is:     +bouwjaar_points
-           logisch betekent tussen de bouwjaar_low en bouwjaar_high
-        2. Als het pand in de voorraad is:      +in_voorraad_points
-           in de voorraad betekend status in in_voorraad_statuslist:
-               {inge, inni, verb}
-        3. We trekken het vkid er nog af om het switchen naar een
-           nieuw voorkomen te ontmoedigen
-        4. Oudere panden krijgen (ietsje) minder aftrekpunten:
-            -bouwjaar / bouwjaar_divider
-        5. Om het uniek te maken trekken we er een klein getal van af obv
-        pnd_idPND_DIV:       -pndid/pndid_divider
-
-    Returns
-    -------
-    Hetzelfde input dataframe pnd1_df met een extra kolom prio.
-
-    """
-    print('\tDe prio van een pnd is de som van onderstaande punten:')
-    print('\t\tPunten als het pand in voorraad is:', in_voorraad_points)
-    _in_voorraad_check = pnd1_df['pndstatus'].isin(in_voorraad_statuslst)
-    pnd1_df['prio'] = np.where(_in_voorraad_check, in_voorraad_points, 0)
-
-    print('\t\tPunten als het bouwjaar logisch is:', bouwjaar_points)
-    _logisch_bouwjaar_check = pnd1_df['bouwjaar'].\
-        between(bouwjaar_low, bouwjaar_high)
-    pnd1_df['prio'] += np.where(_logisch_bouwjaar_check, bouwjaar_points, 0)
-    
-    print('\t\tMinpunten om switchen iets te ontmoedigen:', '-vkid')
-    pnd1_df['prio'] -= pnd1_df['pndvkid']
- 
-    print('\t\tMinpunten voor het bouwjaar zelf (ca -1):',
-            '-bouwjaar/' + str(bouwjaar_divider))
-    pnd1_df['prio'] -= pnd1_df['bouwjaar'] / bouwjaar_divider
-
-    print('\t\tMinpunten voor pandid (tbv herhaalbaarheid):',
-            '-pndid /' + str(pndid_divider))
-    pnd1_df['prio'] -= pnd1_df['pndid'].astype(int) / pndid_divider
-
-    # print(active_pnd_df[['pndid', 'pndstatus', 'bouwjaar', 'prio']].head(30))
-    # print('\tnumber of records in activ_pnd_df:', active_pnd_df.shape[0])
-    # if pnd1_df.shape[0] != pnd1_df['pndid'].unique().shape[0]:
-    #     print('Error of niet he;
-    #           in functie prio_pnd: unieke panden versus actief')
-
-    return pnd1_df
 
 # #############################################################################
 # print('00.............Initializing variables...............................')
@@ -110,43 +34,38 @@ DATADIR = BASEDIR + 'data/'
 DIR02 = DATADIR + '02-csv/'
 DIR03 = DATADIR + '03-bewerktedata/'
 current_month = baglib.get_arg1(sys.argv, DIR02)
-INPUTDIR = DIR02 + current_month + '/'
+INPUTDIR = DIR03 + current_month + '/'
 OUTPUTDIR = DIR03 + current_month + '/'
 baglib.make_dir(OUTPUTDIR)
 
 current_month = int(current_month)
 current_year = int(current_month/100)
 
-# The tuning variables to determine pand prio
-IN_VOORRAAD = ['inge', 'inni', 'verb', 'buig']
-IN_VOORRAAD_P = 100         # if pndstatus is in IN_VOORRAAD
-BOUWJAAR_P = 50             # if YEAR_LOW < bouwjaar < current_year + 1
-BOUWJAAR_DIV = 2000         # divide bouwjaar with 2000 (small around 1)
-YEAR_LOW = 1000
-PND_DIV = 10 ** 16
-# vbovk_geen_pndvk_df = pd.DataFrame()
-# n_vbovk_geen_pndvk = 0
-result_dict = {}
 
 pd.set_option('display.max_columns', 20)
-vbo_type_dict = {'vboid': 'string',
-                 'vbovkid': np.short,
-                 'vbovkbg': np.uintc, 
-                 'vbovkeg': np.uintc,
-                 'vbostatus': 'category',
-                 'gebruiksdoel': 'category',
-                 'oppervlakte': np.uintc,
-                 'pndid': 'string',
-                 'numid': 'string'}
-pnd_type_dict = {'pndid': 'string',
-                 'pndvkid': np.short,
-                 'pndvkbg': np.uintc, 
-                 'pndvkeg': np.uintc,
-                 'pndstatus': 'category',
-                 'bouwjaar': np.uintc,
-                 'docnr': 'string'}
 
-# if printit = True bepaal-hoofdpnd prints extra info
+
+small_type_dict = {'vboid': 'string',
+                   'vbovkid': np.short,
+                   'vbovkbg': np.uintc, 
+                   'vbovkeg': np.uintc,
+                   'pndvkid': np.short,
+                   'vbostatus': 'category',
+                   'gebruiksdoel': 'category',
+                   'oppervlakte': np.uintc,
+                   'pndid': 'string',
+                   'pndvkbg': np.uintc, 
+                   'pndvkeg': np.uintc,
+                   'pndstatus': 'category',
+                   'bouwjaar': np.uintc,
+                   'docnr': 'string',
+                   'postcode': 'string',
+                   'huisnr': 'string',
+                   'oprid': 'string',
+                   'wplid': 'string',
+                   'gemid': 'string'
+                   }
+
 printit = True
 
 # #####################################################
@@ -163,44 +82,20 @@ print(f'{"~":~>80}')
 
 
 print('\n---------------DOELSTELLING--------------------------------')
-print('----Bepaal voor elk VBO voorkomen een hoofdpand voorkomen')
-print('----op basis van de vbo vkeg (voorkomen einddatum geldigheid)')
+print('----BAnalyseer de verschillen tussen docnrs van panden   ')
+print('----in een woonplaats                                       )')
 print('-----------------------------------------------------------')
 print('\tStatistiekmaand:', current_month)
 
 # #############################################################################
-print('\n----1. Inlezen van vbo.csv en pnd.csv ------------------------')
+print('\n----1. Inlezen van pndvk, vbovk-hoofdpndvk en vbo-wpl--------------')
 # #############################################################################
 
-print('\n\t1.1 VBO:------------------------------------------')
-tic = time.perf_counter()
-
-vbovk_df = pd.read_csv(INPUTDIR + 'vbo.csv',
-                       dtype=vbo_type_dict)
-(n_vbovk, n_vbovk_u, vbovk_perc) = \
-    baglib.df_comp(vbovk_df, key_lst=['vboid', 'vbovkid'])
-print('\tPercentage unieke vbovk:', vbovk_perc)
-
-print('\tVerwijder vbo voorkomens met dezelfde begin en einddag')
-vbovk_df = baglib.fix_eendagsvlieg(vbovk_df, 'vbovkbg', 'vbovkeg')
-(n_vbovk, n_vbovk_u, vbovk_perc) = \
-    baglib.df_comp(vbovk_df, key_lst=['vboid', 'vbovkid'],
-                   n_rec=n_vbovk, n_rec_u=n_vbovk_u)
-print('\tPercentage unieke vbovk:', vbovk_perc)
-doel_vbovk_u = n_vbovk_u
-
-print('\tDOEL:', doel_vbovk_u, 'vbovk van een pndvk voorzien.')
-
-toc = time.perf_counter()
-baglib.print_time(toc - tic, 'reading, indexing, fixing eendagsvbovk in',
-                  printit)
-
-
-print('\n\t1.2 PND:------------------------------------------')
+print('\n\t1.1 PND:------------------------------------------')
 tic = time.perf_counter()
 
 pndvk_df = pd.read_csv(INPUTDIR + 'pnd.csv',
-                       dtype=pnd_type_dict)
+                       dtype=small_type_dict)
 pndvk_df.set_index('pndid', inplace=True)
 (n_pndvk, n_pndvk_u, pndvk_perc) = baglib.df_comp(pndvk_df)
 
@@ -215,6 +110,63 @@ toc = time.perf_counter()
 baglib.print_time(toc - tic, 'reading, indexing, fixing eendagspndvk in',
                   printit)
 
+
+print('\n\t1.1 vbovk_hoofdpnd.csv-----------------------------')
+tic = time.perf_counter()
+
+vbopnd_df = pd.read_csv(INPUTDIR + 'vbovk_hoofdpndvk.csv',
+                        dtype=small_type_dict)
+vbopnd_df.set_index(['vboid', 'vbovkid'], inplace=True)
+
+(n_vp, n_vp_u, vp_perc) = baglib.df_comp(vbopnd_df)
+print('\tGedeelte unieke vbovk:', vp_perc)
+
+toc = time.perf_counter()
+baglib.print_time(toc - tic, 'reading, indexing, fixing eendagsvbovk in',
+                  printit)
+
+# rint(vbopnd_df.info())
+
+print('\n\t1.2 vbo_wpl----------------------------------------')
+tic = time.perf_counter()
+
+vbowpl_df = pd.read_csv(INPUTDIR + 'vbo_wpl.csv',
+                       dtype=small_type_dict)
+vbowpl_df.set_index(['vboid', 'vbovkid'], inplace=True)
+(n_vw, n_vw_u, vw_perc) = baglib.df_comp(vbowpl_df)
+print('\tntal actieve vbovk:', n_vw_u)
+
+toc = time.perf_counter()
+baglib.print_time(toc - tic, 'reading, indexing, fixing eendagspndvk in',
+                  printit)
+# print(vbowpl_df.info())
+
+
+# #############################################################################
+print('\n----2. Bepalen wpl van een pnd vk----------------------------')
+# #############################################################################
+tic = time.perf_counter()
+
+vbowpl_df = vbowpl_df.join(vbopnd_df, how='left')
+(n_vw, n_vw_u, vw_perc) = baglib.df_comp(vbowpl_df, n_rec=n_vw, n_rec_u=n_vw_u)
+# print(vbowpl_df.info())
+
+'''
+deze hangt:
+pndvk_df = vbowpl_df.groupby(['pndid', 'pndvkid'])['wplid'].min()
+'''
+
+pndvk_df = vbowpl_df.reset_index().set_index(['pndid', 'pndvkid'])
+
+
+
+print(pndvk_df.info())
+
+toc = time.perf_counter()
+baglib.print_time(toc - tic, 'connecting pndvk with wpl in',
+                  printit)
+
+'''
 
 # #############################################################################
 print('\n----2. Voeg de informatie van de pndvk toe aan de vbovk----')
@@ -295,12 +247,6 @@ print('\t\tDe reden dat 3a optreedt is technisch van aard::\n',
       '\t\tdat je koppelingen met pndvk gaat missen')
 
 
-'''
-print('\t3a samengevat: aan', result_dict['3_vbovk_pndvk_tot'], '-',
-      result_dict['3_vbovk_pndvk_uniek'], '=',
-      result_dict['3_vbovk_pndvk_verschil'], 'hangen dus nog\n',
-      '\teventjes twee (of meer) pndvk')
-'''
 # verschil_u = doel_vbovk_u - result_dict['3_vbovk_pndvk_uniek']
 if verschil_u != 0:  # er zijn vbovk met 0 pndvk
     print('\tbij deze vbovk is er dus op datum vkeg geen pndvk te vinden:',
@@ -317,13 +263,6 @@ if verschil_u != 0:  # er zijn vbovk met 0 pndvk
 
     # vbovk_u = vbovk_df[['vboid', 'vbovkid']].drop_duplicates()
   
-    '''
-    vbovk_u = vbovk_df[['vboid', 'vbovkid']].drop_duplicates()
-    missing_vbovk_df = pd.concat([vbovk_pndvk_u,
-                                  vbovk_u]).drop_duplicates(keep=False)
-    vbovk_geen_pndvk_df = pd.merge(missing_vbovk_df, vbovk_df, how='left')
-    n_vbovk_geen_pndvk = vbovk_geen_pndvk_df.shape[0]
-    '''
 
 else:
     print('\tSituatie 3b komt niet voor: aantal unieke vbovk is (DOEL):',
@@ -357,12 +296,6 @@ print('\tSelecteer nu het pand met de hoogste prio. Alle pndvk krijgen een\n',
 
 # how to remove the right non unique vbovk:
 # https://stackoverflow.com/questions/13035764/remove-pandas-rows-with-duplicate-indices/13036848#13036848
-'''
-# drop_duplicated works as well, but much slower:
-vbovk_df = vbovk_df.sort_values('prio', ascending=False).reset_index()
-vbovk_df = vbovk_df.drop_duplicates(['vboid', 'vbovkid'])
-vbovk_df.set_index(['vboid', 'vbovkid'], inplace=True)
-'''
 vbovk_df = vbovk_df.sort_values('prio', ascending=False)
 vbovk_df = vbovk_df[~vbovk_df.index.duplicated(keep='first')]
 (n_vbovk, n_vbovk_u, vbovk_perc) = \
@@ -375,7 +308,7 @@ print('\t\ttictoc - prio, sort and drop duplicates', toc - tic, 'seconds')
 
 
 
-'''
+
 tic = time.perf_counter()
 
 print('\tBewaar de pnd prios in pndvk_prio.csv')

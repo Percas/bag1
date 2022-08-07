@@ -6,7 +6,7 @@
 Created on Sat Mar  5 12:40:26 2022
 @author: anton
 Purpose: convert BAG XML to CSV file
-version 1.2.2
+version 1.2.1
 
 Version history
 ---------------
@@ -38,7 +38,6 @@ read_csv een dict meekrijgen om deze kolomnamen mee te kunnen geven
 1.1 fix gebruiksdoel: een vbo kan er meer dan eentje hebben. concateneer ze maar...
 1.2 remove logging; clean up
 1.2.1 added timing
-1.2.2 added makedir OUTPUTDIR (if not exist)
 
     
 ###### Typical XML layout ##########################################
@@ -213,8 +212,7 @@ DIR02 = DATADIR + '02-csv/'
 DIR03 = DATADIR + '03-bewerktedata/'
 current_month = baglib.get_arg1(sys.argv, DIR01)
 INPUTDIR = DIR01 + current_month + '/'
-OUTPUTDIR = DIR02 + current_month + '/'
-baglib.make_dir(OUTPUTDIR)
+OUTPUTDIR = baglib.make_dir(DIR02 + current_month + '/')
 
 status_dict = {
     'Plaats ingetrokken':                           'plai',
@@ -291,7 +289,8 @@ print('\n----- Loop over de bag typen')
 # --------------------------------------------------------------------------
 # xml_dirs = ['num']
 # xml_dirs = ['vbo', 'pnd', 'num']
-xml_dirs = ['lig', 'sta', 'opr', 'wpl', 'vbo', 'pnd', 'num']
+# xml_dirs = ['lig', 'sta', 'opr', 'wpl', 'vbo', 'pnd', 'num']
+xml_dirs = ['lig', 'sta', 'opr', 'wpl', 'vbo']
 # xml_dirs = ['pnd', 'num']
 # xml_dirs = ['opr', 'wpl']
 for bagobject in xml_dirs:
