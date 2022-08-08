@@ -137,16 +137,22 @@ for bobj in BOBJ:
     bdict[bobj] = pd.read_csv(INPUTDIR + bobj + '.csv',
                               dtype=small_type_dict)
     # bdict[bobj].set_index([bobj+'id', bobj+'vkid'], inplace=True)
+    key_lst = [bobj+'id', bobj+'vkid']
     (n_rec[bobj], n_rec_u[bobj], perc[bobj]) =\
-        baglib.df_comp(bdict[bobj], key_lst=[bobj+'id', bobj+'vkid'])
+        baglib.df_comp(bdict[bobj], key_lst=key_lst)
     print('\tAantal records:', n_rec[bobj])
     print('\tAantal vk:     ', n_rec_u[bobj])
     
     bdict[bobj] = baglib.fix_eendagsvlieg(bdict[bobj], bobj+'vkbg',
                                           bobj+'vkeg')
     (n_rec[bobj], n_rec_u[bobj], perc[bobj]) =\
-        baglib.df_comp(bdict[bobj], key_lst=[bobj+'id', bobj+'vkid'],
+        baglib.df_comp(bdict[bobj], key_lst=key_lst,
                        n_rec=n_rec[bobj], n_rec_u=n_rec_u[bobj])
+
+    bobju = bobj + 'u'
+    bdict[bobju] = bdict[bobj][key_lst].set_index(key_lst)
+    bdict[bobju] = bdict[bobju][~bdict[bobju].index.duplicated()]
+    print(bdict[bobju].info())
     # print('\tAantal records:', n_rec[bobj])
     # print('\tAantal vk:     ', n_rec_u[bobj])
     # print(bdict[bagobj].info())
@@ -165,7 +171,7 @@ toc = time.perf_counter()
 baglib.print_time(toc - tic, 'step 1 in', printit)
 
 # #############################################################################
-print('\n--2. Merging ---------------------------------------')
+print('\n------2. Merging ---------------------------------------')
 # #############################################################################
 tic = time.perf_counter()
 
@@ -182,21 +188,42 @@ bdict['vbo'] = pd.merge(bdict['vbo'],
 # print(bdict['vbo'].info())
 
 toc = time.perf_counter()
-baglib.print_time(toc - tic, 'step 2 in', printit)
+baglib.print_time(toc - tic, 'step 2a in', printit)
+
+# print(bdict['vbo'].info())
 
 '''
-# #############################################################################
-print('\n--2. Selecteer nu het vk rechts waarin de vkeg valt van het vk links')
-# #############################################################################
+msk = (bdict['vbo']['numvkbg'] < bdict['vbo']['vbovkeg']) &\
+    (bdict['vbo']['vbovkeg'] <= bdict['vbo']['numvkeg'])
+'''
+msk = (bdict['vbo']['numvkbg'] <= bdict['vbo']['vbovkeg']) &\
+    (bdict['vbo']['vbovkeg'] <= bdict['vbo']['numvkeg'])
+
 tic = time.perf_counter()
 
-msk = (bdict['vbo'])
+bdict['vbo'] = bdict['vbo'][msk]
 
+(n_rec['vbo'], n_rec_u['vbo'], perc['vbo']) =\
+    baglib.df_comp(bdict['vbo'], key_lst=['vboid', 'vbovkid'],
+                   n_rec=n_rec['vbo'], n_rec_u=n_rec_u['vbo'],
+                   u_may_change=True)
+toc = time.perf_counter()
+baglib.print_time(toc - tic, 'step 2b masking in', printit)
 
-msk = (vbovk_df['pndvkbg'] <= vbovk_df['vbovkeg']) & \
-    (vbovk_df['vbovkeg'] <= vbovk_df['pndvkeg'])
-vbovk_df = vbovk_df[msk]
+print(bdict['vbo'].info())
+key_lst = ['vboid', 'vbovkid']
+print(bdict['vbo'][key_lst].drop_duplicates().info())
+'''
+202207 O omgeving:
+    vbovk: 
+        2485492 (na verwijderen eendagsvliegen)
+        
+        2483676 (na koppelen met numvk met msk < vbovkeg <=)
+        1315466  (na koppelen met numvk met msk <= vbovkeg <)
+        2484573  (na koppelen met numvk met msk <= vbovkeg <=)
+            uniek!
 
+----------------
 (n_vbovk, doel2_vbovk_u, vbovk_perc) = \
     baglib.df_comp(vbovk_df, n_rec=n_vbovk, n_rec_u=n_vbovk_u,
                    u_may_change=True)

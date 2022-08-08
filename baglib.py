@@ -152,6 +152,10 @@ def vgl_dfs2(proces_name, df_in, df_out,
     result_dict[proces_name + verschil] = _verschil
     result_dict[proces_name + pverschil] = _perc
     '''
+def diff_idx_df(df1, df2):
+    '''Return tuple: (df1not2, df2not1, dfboth).'''
+    None
+    
 
 def get_perc(df_in, df_out):
     _perc = round(100 * df_out.shape[0] / df_in.shape[0], 3)
