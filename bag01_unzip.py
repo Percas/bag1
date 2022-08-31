@@ -22,12 +22,11 @@ def bag_unzip(current_month='202208',
               loglevel=True):
     '''Uitpakken van door Kadaster gezipte XML bestanden.''' 
 
+    # ########################################################################
+    print('------------- Start bag_unzip ------------- ')
+    # ########################################################################
     tic = time.perf_counter()
 
-    print('-------------------------------------------')
-    print('------------- Start bag_unzip -------------')
-    print('-------------------------------------------')
-    
     inputdir = koppelvlak0 + current_month + '/'
     outputdir = koppelvlak1 + current_month + '/'
     

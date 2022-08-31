@@ -54,12 +54,9 @@ def bag_vbovk_pndvk(current_month='202208',
                     koppelvlak3='../data/03-bewerkte-data',
                     loglevel=True):
 
-    tic = time.perf_counter()
-    
-    print('-------------------------------------------')
-    print('------------- Start bag_vbovk_pndvk -------')
-    print('-------------------------------------------')
-
+    # ########################################################################
+    print('------------- Start bag_vbovk_pndvk ------------- ')
+    # ########################################################################
     # #############################################################################
     # print('00.............Initializing variables...............................')
     # #############################################################################
@@ -102,19 +99,31 @@ def bag_vbovk_pndvk(current_month='202208',
     # if printit = True bepaal-hoofdpnd prints extra info
     # printit = True
     
+    # #####################################################
+    # ----------- Legenda ----- ---------------------------
+    # #####################################################
+    print(f'{"Legenda":~^80}')
+    print(f'~\t{"vbo:  verblijfsobject":<38}', f'{"pnd:  pand":<38}')
+    print(f'~\t{"vk:   voorkomen":<38}', f'{"pndvk:  pand voorkomen":<38}')
+    print(f'~\t{"vkbg: voorkomen begindatum geldigheid":<38}',
+          f'{"vkeg: voorkomen einddatum geldigheid":<38}')
+    print(f'~\t{"n...:  aantal records in df":<38}',
+          f'{"bob: bagobject":<38}')
+    print(f'{"~":~>80}')
     
     
     print('\n---------------DOELSTELLING--------------------------------')
-    print('----1. Bepaal voor elk VBO voorkomen een hoofdpand voorkomen')
+    print('----Bepaal voor elk VBO voorkomen een hoofdpand voorkomen')
     print('----op basis van de vbo vkeg (voorkomen einddatum geldigheid)')
-    print('----2. Bepaal voor elk vbovk de waarde voor "inliggend" ')
     print('-----------------------------------------------------------')
     
     # #############################################################################
     print('\n----1. Inlezen van vbo.csv en pnd.csv -----------------------\n')
     # #############################################################################
     
-    # print('huidige maand (verslagmaand + 1):', current_month)
+    tic = time.perf_counter()
+    
+    print('huidige maand (verslagmaand + 1):', current_month)
     
     bd = baglib.read_input_csv(INPUT_FILS_DICT, BAG_TYPE_DICT)
     
@@ -133,7 +142,7 @@ def bag_vbovk_pndvk(current_month='202208',
     
     doel_vbovk_u = nkey['vbo']
     n_vbovk = nrec['vbo']
-    print('\tConcreet doel:', doel_vbovk_u, 'vbovk van een pndvk voorzien.')
+    print('\tConcreter doel:', doel_vbovk_u, 'vbovk van een pndvk voorzien.')
     
     
     # #############################################################################
@@ -331,11 +340,11 @@ def bag_vbovk_pndvk(current_month='202208',
     # #############################################################################
     print('\n----6. Bepalen n_vbo_in_pndvk, gerelateerd aan vbo.typeinliggend\n')
     # #############################################################################
-    print('\tHet aantal vbo-s dat in een pand ligt, n_vbo_in_pndvk is een\n',
+    print('\tHet aantal vbo-s dat in een pand ligt, n_vbo_in_pndvk is een',
           '\teigenschap van pndvk. We tellen dan het aantal\n',
-          '\tunieke vbo bij een pndvk, waarbij geldt dat zo een vbo pas meetelt,\n',
+          '\tunieke vbo bij een pndvk, waarbij geldt dat zo een vbo pas meetelt,',
           '\tals 1 van zijn vk in IN_VOORRAAD zit.\n')
-    print('\tStappen:\n',
+    print('\tStappen\n:\n',
           '\t\t1. Bepaal voor elke vbovk of deze in IN_VOORRAAD zit\n',
           '\t\t2. Bepaal voor elke pndvk de vbovk die erin zitten en in\n',
           '\t\tIN_VOORRAAD zijn.Dit gebeurt in drie substappen:\n',
@@ -348,7 +357,7 @@ def bag_vbovk_pndvk(current_month='202208',
           '\t\t\tvbovk die bij het betreffende pndvk horen')
     print('\tDe situaties die voorkomen zijn:\n',
           '\t\tA. pndvk heeft geen vbo. Schuurtje: pndvk_zonder_vbo.csv\n',
-          '\t\t\tMaakt in dit geval typeinliggend = False\n'
+          '\t\t\tMaakt in dit geval typeinliggend = False'
           '\t\tB. pndvk heeft 1 vbo: vbovk typeinliggend = False: woonhuis\n',
           '\t\tC. pndvk heeft >1 vbo: vbovk typeinliggend = True: flat')
     

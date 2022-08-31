@@ -142,9 +142,12 @@ def bag_xml2csv(current_month='202208',
                 loglevel=True):
 
     tic = time.perf_counter()
-    print('-------------------------------------------')
-    print('------------- Start bag_xml2csv ---------- ')
-    print('-------------------------------------------')
+
+    # ########################################################################
+    print('-----------------------------------------------------------------')
+    print('------------- Start bag_xml2csv ------------- ')
+    print('-----------------------------------------------------------------')
+    # ########################################################################
 
     inputdir = koppelvlak1 + current_month + '/'
     outputdir = koppelvlak2 + current_month + '/'
@@ -228,15 +231,15 @@ def bag_xml2csv(current_month='202208',
                 'bij1', 'celf', 'sprt',
                 'vbogmlx', 'vbogmly'],
         'pnd': ['pndid', 'pndvkid', 'pndvkbg', 'pndvkeg',
-                'pndstatus', 'bouwjaar', 'docnr', 'docdd', 'pndgmlx', 'pndgmly'],
+                'pndstatus', 'bouwjaar', 'docnr', 'pndgmlx', 'pndgmly'],
         'lig': ['ligid', 'ligvkid', 'ligvkbg', 'ligvkeg', 'ligstatus', 
-                'numid', 'docnr', 'docdd', 'liggmlx', 'liggmly'],
+                'numid', 'docnr', 'liggmlx', 'liggmly'],
         'num': ['numid', 'numvkid', 'numvkbg', 'numvkeg', 'numstatus',
                 'huisnr', 'postcode', 'typeao', 'oprid'],
         'opr': ['oprid', 'oprvkid', 'oprvkbg', 'oprvkeg', 'oprstatus', 
                 'oprnaam', 'oprtype', 'wplid'],
         'sta': ['staid', 'stavkid', 'stavkbg', 'stavkeg', 'stastatus',
-                'numid', 'docnr', 'docdd', 'stagmlx', 'stagmly'],
+                'numid', 'docnr', 'stagmlx', 'stagmly'],
         'wpl': ['wplid', 'wplvkid', 'wplvkbg', 'wplvkeg', 'wplstatus', 'wplnaam']
         }
     
@@ -344,10 +347,6 @@ def bag_xml2csv(current_month='202208',
                         assigniffound(level0, ['Objecten:documentnummer'],
                                       ns)
     
-                    output_record['docdd'] = date2int(\
-                        assigniffound(level0, ['Objecten:documentdatum'],
-                                      ns))
-    
                     outp_lst_d.append(output_record.copy())
                     output_bagobject_filecount += 1
     
@@ -427,10 +426,6 @@ def bag_xml2csv(current_month='202208',
                     output_record['docnr'] = \
                         assigniffound(level0, ['Objecten:documentnummer'],
                                       ns)
-    
-                    output_record['docdd'] = date2int(\
-                        assigniffound(level0, ['Objecten:documentdatum'],
-                                      ns))
     
                     gml_string = assigniffound(level0, ['Objecten:geometrie',
                                                         'gml:Polygon',
@@ -530,6 +525,8 @@ def bag_xml2csv(current_month='202208',
     
     toc = time.perf_counter()
     baglib.print_time(toc - tic, '\n------------- Einde bag_xml2csv in', printit)
+
+
 
 def assigniffound(node,
                   taglist,

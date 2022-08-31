@@ -48,11 +48,9 @@ def bag_levcycl(current_month='202208',
     inliggend, voorraad en alle mogelijke woonfuncties van dit vbovk zijn
     afgeleid.'''
 
-    tic = time.perf_counter()
-   
-    print('-------------------------------------------')
-    print('------------- Start bag_vbovk_levcycl -----')
-    print('-------------------------------------------')
+    # ########################################################################
+    print('------------- Start bag_levcycl ------------- ')
+    # ########################################################################
 
     INPUTDIR = koppelvlak2 + current_month + '/'
     K2DIR = INPUTDIR

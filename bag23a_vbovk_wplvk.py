@@ -39,9 +39,9 @@ from baglib import BAG_TYPE_DICT
 
 # ############### Define functions ################################
 
-# print('-----------------------------------------------------------')
-# print('----maak vbovk-numvk, numvk-oprvk, oprvk-wplvk---------------')
-# print('-----------------------------------------------------------')
+print('-----------------------------------------------------------')
+print('----maak vbovk-numvk, numvk-oprvk, oprvk-wplvk---------------')
+print('-----------------------------------------------------------')
 
 def bag_vbovk_pndvk(current_month='202208',
                     koppelvlak2='../data/02-csv',
@@ -49,12 +49,11 @@ def bag_vbovk_pndvk(current_month='202208',
                     loglevel=True):
     '''Koppel aan VBO voorkomens de woonplaats voorkomens waarbij het vkeg
     van de vbo vk tussen de vkbg en vkeg van het wpl vk ligt.'''
-
+    
+    # ########################################################################
+    print('------------- Start bag_vbovk_wplvk ------------- ')
+    # ########################################################################
     tic = time.perf_counter()
-    print('-------------------------------------------')
-    print('------------- Start bag_vbovk_wplvk ------ ')
-    print('-------------------------------------------')
-   
     
     # #############################################################################
     # print('00.............Initializing variables...............................')
@@ -69,12 +68,12 @@ def bag_vbovk_pndvk(current_month='202208',
     nrec = {}
     nkey = {}
     # perc = {}
-    # printit = True
+    printit = True
     pd.set_option('display.max_columns', 20)
 
 
     # ############################################################################
-    print('----1. Inlezen bagobjecten -------------\n')
+    print('----1. Inlezen bagobjecten ---------------------------------\n')
     # #############################################################################
         
     print('huidige maand (verslagmaand + 1):', current_month)

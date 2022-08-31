@@ -5,7 +5,6 @@ Functions used in different python scripts
 """
 # ################ import libraries ###############################
 import pandas as pd
-import time
 # import logging
 import os
 import sys
@@ -37,7 +36,6 @@ BAG_TYPE_DICT = {'vboid': 'string',
                  'oprvkeg': np.uintc,
                  'wplvkbg': np.uintc, 
                  'wplvkeg': np.uintc,
-                 'docdd': np.uintc,
                  'vbostatus': 'category',
                  'pndstatus': 'category',
                  'numstatus': 'category',
@@ -225,13 +223,13 @@ def fix_eendagsvlieg(df, b_str, e_str):
 
 def print_omgeving(adir):
     if adir[-4:-1] == 'ont':
-        print('\t---------------------------------')
-        print('\t--------ONTWIKKELOMGEVING--------')
-        print('\t---------------------------------\n')
+        print('\t\t\t---------------------------------')
+        print('\t\t\t--------ONTWIKKELOMGEVING--------')
+        print('\t\t\t---------------------------------\n')
     else:
-        print('\t---------------------------------')
-        print('\t--------PRODUCTIEOMGEVING--------')
-        print('\t---------------------------------\n')
+        print('\t\t\t---------------------------------')
+        print('\t\t\t--------PRODUCTIEOMGEVING--------')
+        print('\t\t\t---------------------------------\n')
 
 
 def select_active_vk(df, bagobj, idate):
@@ -293,11 +291,10 @@ def recast_df_floats(df, dict1):
     return df.astype(_type_dict)
 
 
-def print_time(seconds, info, printit):
+def print_time(time, info, printit):
     '''Print toc-tic s if printit = True.'''
     if printit:
-        print(info, seconds / 60, 'min\n')
-        # print(info, time.strftime('%H:%M:%S', time.gmtime(int(seconds))))
+        print(info, time, 's\n')
 
 def df_comp(df, key_lst=[], nrec=0, nkey=0, u_may_change=True):
     '''
@@ -352,13 +349,4 @@ def read_input_csv(file_d, bag_type_d):
         # print('DEBUG:', _bdict[_k].head())
     return _bdict
         
-def print_legenda():
-    '''Print een paar veel voorkomende afkortingen.'''
-    print(f'{"Legenda":~^80}')
-    print(f'~\t{"vbo:  verblijfsobject":<38}', f'{"pnd:  pand":<38}')
-    print(f'~\t{"vk:   voorkomen":<38}', f'{"pndvk:  pand voorkomen":<38}')
-    print(f'~\t{"vkbg: voorkomen begindatum geldigheid":<38}',
-          f'{"vkeg: voorkomen einddatum geldigheid":<38}')
-    print(f'~\t{"n...:  aantal records in df":<38}',
-          f'{"bob: bagobject":<38}')
-    print(f'{"~":~>80}')
+        
