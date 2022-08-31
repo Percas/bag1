@@ -22,11 +22,12 @@ def bag_unzip(current_month='202208',
               loglevel=True):
     '''Uitpakken van door Kadaster gezipte XML bestanden.''' 
 
-    # ########################################################################
-    print('------------- Start bag_unzip ------------- ')
-    # ########################################################################
     tic = time.perf_counter()
 
+    print('-------------------------------------------')
+    print('------------- Start bag_unzip -------------')
+    print('-------------------------------------------')
+    
     inputdir = koppelvlak0 + current_month + '/'
     outputdir = koppelvlak1 + current_month + '/'
     
@@ -49,9 +50,13 @@ def bag_unzip(current_month='202208',
                 print('\nUitpakken van bestand', unzip_file_name,
                       '\nin directory', inputdir,
                       '\nnaar directory', unzip_dir, '...')
+                ti = time.perf_counter()
                 with zipfile.ZipFile(unzip_file, 'r') as zip_ref:
                     zip_ref.extractall(unzip_dir)
-
+                to = time.perf_counter()
+                baglib.print_time(to - ti,
+                                  'file ' + unzip_file_name + ' unzipped in',
+                                  loglevel)
     toc = time.perf_counter()
     baglib.print_time(toc - tic, '\n------------- Einde bag_unzip in',
                       loglevel)

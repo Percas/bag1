@@ -25,13 +25,11 @@ import bag23b_levcycl
 
 # ############### Define functions ################################
 
-
-
-# ########################################################################
-print('------------- Start bag_main ------------- \n')
-# ########################################################################
-
 tic = time.perf_counter()
+
+print('-------------------------------------------')
+print('------------- Start bag_main --------------')
+print('-------------------------------------------')
 
 os.chdir('..')
 BASEDIR = os.getcwd() + '/'
@@ -44,6 +42,8 @@ current_month = baglib.get_arg1(sys.argv, DIR02)
 printit=True
 
 baglib.print_omgeving(BASEDIR)
+print('\thuidige maand (verslagmaand + 1):', current_month, '\n')
+baglib.print_legenda()
 
 # unzip XML files van koppelvlak 0 naar koppelvlak 1
 bag01_unzip.bag_unzip(current_month=current_month,

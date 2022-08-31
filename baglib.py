@@ -5,11 +5,9 @@ Functions used in different python scripts
 """
 # ################ import libraries ###############################
 import pandas as pd
-# import logging
+# import time
 import os
 import sys
-# import datetime
-# import logging
 import numpy as np
 
 
@@ -36,6 +34,7 @@ BAG_TYPE_DICT = {'vboid': 'string',
                  'oprvkeg': np.uintc,
                  'wplvkbg': np.uintc, 
                  'wplvkeg': np.uintc,
+                 'docdd': np.uintc,
                  'vbostatus': 'category',
                  'pndstatus': 'category',
                  'numstatus': 'category',
@@ -76,29 +75,6 @@ BAG_TYPE_DICT = {'vboid': 'string',
 
 
 # ############### Define functions ################################
-'''
-def myprint(left_text, right_result):
-    # """Print a text and the result."""
-    # print(f"{left_text : <45}" + str(right_result))
-    print(f"{left_text : <45}" + str(right_result))
-
-def prtxt(astring):
-    print(astring)
-
-
-def get_df_from_csv(idir, csv_file, dtype_dict, cols):
-    """Return dataframe from csv_file in dir_path."""
-    try:
-        # prtxt('Contents of this dir: ' +
-        #          str(os.listdir(idir)))
-        _df = read_csv(idir,
-                       csv_file,
-                       dtype_dict, cols)
-        return _df
-    except FileNotFoundError:
-        prtxt('Error: kan dit bestand niet openen: ' +
-                  idir + csv_file)
-'''
 def get_arg1(arg_lst, ddir):
     _lst = os.listdir(ddir)
     if len(arg_lst) <= 1:
@@ -110,94 +86,6 @@ def get_arg1(arg_lst, ddir):
                  + str(_lst))
     return _current_month
 
-'''
-def total_vs_index(df, printit):
-    _uniq = df.index.drop_duplicates().shape[0]
-    # print nr of records vs unique records in index.
-    if printit:
-        print('\t\tAantal records:        ', df.shape[0])
-        # print('\t\tAantal uniek in index: ', df.index.unique().shape[0])
-        print('\t\tAantal uniek in index: ', _uniq)
-    return _uniq
-
-
-def df_total_vs_key(bagobj_name, df, key_lst, result_dict):
-    'rint number of (unique) records of df given key_lst are keys in df.
-    _n_rec = df.shape[0]
-    _n_rec_u = df[key_lst].drop_duplicates().shape[0]
-    _diff = _n_rec - _n_rec_u
-    # _perc = int(round(100 * _diff / _n_rec, 2))
-    _perc = round(100 * _diff / _n_rec, 2)
-    print('\t\tAantal records:         ', _n_rec,
-          '\n\t\tAantal uniek:           ', _n_rec_u,
-          '\n\t\tNiet uniek:             ', _diff,
-          '\n\t\tPercentage niet uniek:  ', _perc)
-    result_dict[bagobj_name + '_tot'] = _n_rec
-    result_dict[bagobj_name + '_uniek'] = _n_rec_u
-    result_dict[bagobj_name + '_verschil'] = _diff
-    result_dict[bagobj_name + '_perc_niet_uniek'] = _perc
-    return result_dict
-
-
-def df_total_vs_key2(subject1, df, key_lst):
-    'rint number of (unique) records of df given key_lst are keys in df.
-    _n_rec = df.shape[0]
-    _n_rec_u = df[key_lst].drop_duplicates().shape[0]
-    _diff = _n_rec - _n_rec_u
-    # _perc = int(round(100 * _diff / _n_rec, 2))
-    _perc = round(100 * _diff / _n_rec, 2)
-    print('\n\t\tInformatie over', subject1)
-    print('\t\tAantal records:         ', _n_rec,
-          '\n\t\tAantal uniek:           ', _n_rec_u,
-          '\n\t\tNiet uniek:             ', _diff,
-          '\n\t\tPercentage niet uniek:  ', _perc)
-
-
-def df_in_vs_out(proces_name, df_in, df_out):
-    _n_in = df_in.shape[0]
-    _n_out = df_out.shape[0]
-    _verschil = _n_in - _n_out
-    _perc = round(100 * _verschil / _n_in, 3)
-    print('\t\tRecords in:         ', _n_in)
-    print('\t\tVerschil:           ', _verschil)
-    print('\t\tRecords uit:        ', _n_out)
-    print('\t\tPerc verschil:      ', _perc)
-    
-def vgl_dfs(proces_name, df_in, df_out, result_dict):
-    _n_in = df_in.shape[0]
-    _n_out = df_out.shape[0]
-    _verschil = _n_in - _n_out
-    _perc = round(100 * _verschil / _n_in, 3)
-    print('\t\tRecords in:         ', _n_in)
-    print('\t\tVerschil:           ', _verschil)
-    print('\t\tRecords uit:        ', _n_out)
-    print('\t\tPerc verschil:      ', _perc)
-    result_dict[proces_name + '_in'] = _n_in
-    result_dict[proces_name + '_uit'] = _n_out
-    result_dict[proces_name + '_verschil'] = _verschil
-    result_dict[proces_name + '_perc'] = _perc
-    return result_dict
-
-def vgl_dfs2(proces_name, df_in, df_out,
-             rec_in   ='\t\tRecords in:\t\t',
-             rec_out  ='\t\tRecords uit:\t',
-             verschil ='\t\tVerschil:\t\t',
-             pverschil='\t\t%Verschil:\t\t'):
-    _n_in = df_in.shape[0]
-    _n_out = df_out.shape[0]
-    _verschil = _n_in - _n_out
-    _perc = round(100 * _verschil / _n_in, 3)
-    print(rec_in, _n_in)
-    print(verschil, _verschil)
-    print(rec_out, _n_out)
-    print(pverschil, _perc)
-    return (_n_in, _n_out)
-    
-    result_dict[proces_name + rec_in] = _n_in
-    result_dict[proces_name + rec_out] = _n_out
-    result_dict[proces_name + verschil] = _verschil
-    result_dict[proces_name + pverschil] = _perc
-'''
 
 def diff_idx_df(df1, df2):
     '''Return tuple: (dfboth, df1not2, df2not1).'''
@@ -223,13 +111,13 @@ def fix_eendagsvlieg(df, b_str, e_str):
 
 def print_omgeving(adir):
     if adir[-4:-1] == 'ont':
-        print('\t\t\t---------------------------------')
-        print('\t\t\t--------ONTWIKKELOMGEVING--------')
-        print('\t\t\t---------------------------------\n')
+        print('\t---------------------------------')
+        print('\t--------ONTWIKKELOMGEVING--------')
+        print('\t---------------------------------\n')
     else:
-        print('\t\t\t---------------------------------')
-        print('\t\t\t--------PRODUCTIEOMGEVING--------')
-        print('\t\t\t---------------------------------\n')
+        print('\t---------------------------------')
+        print('\t--------PRODUCTIEOMGEVING--------')
+        print('\t---------------------------------\n')
 
 
 def select_active_vk(df, bagobj, idate):
@@ -291,10 +179,11 @@ def recast_df_floats(df, dict1):
     return df.astype(_type_dict)
 
 
-def print_time(time, info, printit):
+def print_time(seconds, info, printit):
     '''Print toc-tic s if printit = True.'''
     if printit:
-        print(info, time, 's\n')
+        print(info, seconds / 60, 'min\n')
+        # print(info, time.strftime('%H:%M:%S', time.gmtime(int(seconds))))
 
 def df_comp(df, key_lst=[], nrec=0, nkey=0, u_may_change=True):
     '''
@@ -349,4 +238,13 @@ def read_input_csv(file_d, bag_type_d):
         # print('DEBUG:', _bdict[_k].head())
     return _bdict
         
-        
+def print_legenda():
+    '''Print een paar veel voorkomende afkortingen.'''
+    print(f'{"Legenda":~^80}')
+    print(f'~\t{"vbo:  verblijfsobject":<38}', f'{"pnd:  pand":<38}')
+    print(f'~\t{"vk:   voorkomen":<38}', f'{"pndvk:  pand voorkomen":<38}')
+    print(f'~\t{"vkbg: voorkomen begindatum geldigheid":<38}',
+          f'{"vkeg: voorkomen einddatum geldigheid":<38}')
+    print(f'~\t{"n...:  aantal records in df":<38}',
+          f'{"bob: bagobject":<38}')
+    print(f'{"~":~>80}')
