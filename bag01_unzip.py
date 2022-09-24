@@ -12,6 +12,8 @@ import os
 import baglib
 import zipfile
 import time
+from config import LOCATION
+
 # ############### Define functions ################################
 
 # Main function for this package:
@@ -74,16 +76,17 @@ print('------------- Start unzip_bag lokaal ------------- \n')
 
 if __name__ == '__main__':
 
-    os.chdir('..')
-    BASEDIR = os.getcwd() + '/'
-    baglib.print_omgeving(BASEDIR)
-    DATADIR = BASEDIR + 'data/'
-    DIR00 = DATADIR + '00-zip/'
-    DIR01 = DATADIR + '01-xml/'
-    DIR02 = DATADIR + '02-csv/'
-    DIR03 = DATADIR + '03-bewerktedata/'
+    print('-------------------------------------------')
+    print('-------------', LOCATION['OMGEVING'], '-----------')
+    print('-------------------------------------------\n')
+    
+    DATADIR_IN = LOCATION['DATADIR_IN']
+    DATADIR_OUT = LOCATION['DATADIR_OUT']
+    DIR00 = DATADIR_IN + '00-zip/'
+    DIR01 = DATADIR_OUT + '01-xml/'
+    DIR02 = DATADIR_OUT + '02-csv/'
+    DIR03 = DATADIR_OUT + '03-bewerktedata/'
     current_month = baglib.get_arg1(sys.argv, DIR00)
-
     printit=True
 
     bag_unzip(current_month=current_month,

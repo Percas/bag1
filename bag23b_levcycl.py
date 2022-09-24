@@ -34,6 +34,8 @@ from baglib import BAG_TYPE_DICT
 import os
 import sys
 import time
+from config import LOCATION
+
 
 # import numpy as np
 
@@ -227,16 +229,18 @@ print('------------- Start bag_levcycl lokaal ------------- \n')
 
 if __name__ == '__main__':
 
-    os.chdir('..')
-    BASEDIR = os.getcwd() + '/'
-    DATADIR = BASEDIR + 'data/'
-    DIR00 = DATADIR + '00-zip/'
-    DIR01 = DATADIR + '01-xml/'
-    DIR02 = DATADIR + '02-csv/'
-    DIR03 = DATADIR + '03-bewerktedata/'
+    print('-------------------------------------------')
+    print('-------------', LOCATION['OMGEVING'], '-----------')
+    print('-------------------------------------------\n')
+
+    DATADIR_IN = LOCATION['DATADIR_IN']
+    DATADIR_OUT = LOCATION['DATADIR_OUT']
+    DIR00 = DATADIR_IN + '00-zip/'
+    DIR01 = DATADIR_OUT + '01-xml/'
+    DIR02 = DATADIR_OUT + '02-csv/'
+    DIR03 = DATADIR_OUT + '03-bewerktedata/'
     current_month = baglib.get_arg1(sys.argv, DIR02)
     printit=True
-    baglib.print_omgeving(BASEDIR)
 
     bag_levcycl(current_month=current_month,
                 koppelvlak2=DIR02,
@@ -244,190 +248,3 @@ if __name__ == '__main__':
                 loglevel=printit)
 
 
-
-'''
-# #################################################################
-print('-----------------------------------------------------------')
-print('Doel: maak het levenscyclus bestand. In dit bestand staan de\n',
-      'actieve vbovk met bouwjaar, typeinliggend en gebruiksdoel')
-print('-----------------------------------------------------------')
-
-print('\tDefinitie: een vbovk is in voorraad als\n',
-      "\tvbostatus is in 'inge', 'inni', 'verb', 'buig' en\n",
-      '\tvbovk ligt in een gemeente\n')
-
-# #############################################################################
-# print('00.............Initializing variables...............................')
-# #############################################################################
-# month and dirs
-os.chdir('..')
-BASEDIR = os.getcwd() + '/'
-baglib.print_omgeving(BASEDIR)
-DATADIR = BASEDIR + 'data/'
-DIR02 = DATADIR + '02-csv/'
-DIR03 = DATADIR + '03-bewerktedata/'
-current_month = baglib.get_arg1(sys.argv, DIR02)
-INPUTDIR = DIR02 + current_month + '/'
-K2DIR = INPUTDIR
-K3DIR = DIR03 + current_month + '/'
-OUTPUTDIR = DIR03 + current_month + '/'
-IN_VOORRAAD = ['inge', 'inni', 'verb', 'buig']
-
-vbovk = ['vboid', 'vbovkid']
-pndvk = ['pndid', 'pndvkid']
-
-KEY_DICT = {'vbo': vbovk,
-            'vbovk-wplvk': vbovk,
-            'vbovk-pndvk': vbovk,
-            'vbovk-nvbo': vbovk,
-            'pnd': pndvk}    
-
-INPUT_FILES_DICT = {'vbo': K2DIR + 'vbo.csv',
-                   'pnd': K2DIR + 'pnd.csv',
-                   'vbovk-pndvk': K3DIR + 'vbovk-pndvk.csv',
-                   'vbovk-wplvk': K3DIR + 'vbovk-wplvk.csv',
-                   'vbovk-nvbo':  K3DIR + 'vbovk-nvbo.csv'}
-
-bagobj_d = {} # dict to store the bagobject df's
-peildatum = baglib.last_day_of_month(current_month)
-LEVCYCL_COLS = {
-    'vboid': 'OBJECTNUMMER',
-    'vbovkbg': 'AANVLEVCYCLWOONNIETWOON',
-    'vbovkeg': 'EINDLEVCYCLWOONNIETWOON',
-    # 'dummy1': 'KENMERKWIJZIGDATUM',
-    'voorraad': 'INVOORRAAD',
-    # 'voorraadtype': 'VBOVOORRAADTYPE',
-    'bouwjaar': 'VBOBOUWJAAR',
-    # 'typeinliggend': 'VBOTYPEINLIGGEND',
-    'inliggend': 'VBOINLIGGEND',        #
-    'oppervlakte': 'VBOOPPERVLAKTE',
-    'vbostatus': 'VBOSTATUS',
-    'woon': 'VBOWOONFUNCTIE',
-    'over': 'VBOOVERIGE_GEBRUIKSFUNCTIE',
-    'kant': 'VBOKANTOORFUNCTIE',
-    'gezo': 'VBOGEZONDHEIDSFUNCTIE',
-    'bij1': 'VBOBIJEENKOMSTFUNCTIE',
-    'ondr': 'VBOONDERWIJSFUNCTIE',
-    'wink': 'VBOWINKELFUNCTIE',
-    'sprt': 'VBOSPORTFUNCTIE',
-    'logi': 'VBOLOGIESFUNCTIE',
-    'indu': 'VBOINDUSTRIEFUNCTIE',
-    'celf': 'VBOCELFUNCTIE'}
-
-pd.set_option('display.max_columns', 20)
-
-
-bd = {}         # dict with df with bagobject (vbo en pnd in this case)
-nrec = {}       # aantal records
-nkey = {}       # aantal keyrecords
-
-# if printit = True bepaal-hoofdpnd prints extra info
-printit = True
-
-print('\thuidige maand (verslagmaand + 1):', current_month)
-
-
-# ############################################################################
-print('\n----1. Inlezen bagobjecten die we nodig hebben-------------------\n')
-# ############################################################################
-
-tic = time.perf_counter()
-
-
-bd = baglib.read_input_csv(INPUT_FILES_DICT, BAG_TYPE_DICT)
-
-print()
-
-for bob in INPUT_FILES_DICT.keys():
-    bd[bob].set_index(KEY_DICT[bob], inplace=True)
-    (nrec[bob], nkey[bob]) = baglib.df_comp(bd[bob])
-    print('\trecords', bob + ':', nrec[bob], '\tvk',
-          KEY_DICT[bob], ':', nkey[bob])
-
-
-# ############################################################################
-print('\n----2. Koppel alles aan de vbovk---------------------------------\n')
-# ############################################################################
-
-print('\t--- 2.1 Verwijder pnd uit vbo en ontdubbel vbovk')
-# bd['vbo'].set_index(vbovk, inplace=True)
-bd['vbo'].drop(axis=1, columns=['pndid'], inplace=True)
-bd['vbo'] = baglib.ontdubbel_idx_maxcol(bd['vbo'], ['numid'])
-(nrec['vbo'], nkey['vbo']) = baglib.df_comp(bd['vbo'],
-                                            nrec=nrec['vbo'], nkey=nkey['vbo'],
-                                            u_may_change=True)
-
-print('\n\t--- 2.2 koppel pndvk erbij')
-
-bd['vbo'] = pd.merge(bd['vbo'], bd['vbovk-pndvk'], how='left',
-                     left_on=vbovk, right_on=vbovk)
-(nrec['vbo'], nkey['vbo']) = baglib.df_comp(bd['vbo'],
-                                            nrec=nrec['vbo'], nkey=nkey['vbo'],
-                                            u_may_change=False)
-bd['vbo'] = baglib.recast_df_floats(bd['vbo'], BAG_TYPE_DICT)
-
-
-
-print('\n\t--- 2.2 koppel wplvk erbij')
-
-bd['vbo'] = pd.merge(bd['vbo'], bd['vbovk-wplvk'], how='left',
-                     left_on=vbovk, right_on=vbovk)
-(nrec['vbo'], nkey['vbo']) = baglib.df_comp(bd['vbo'],
-                                            nrec=nrec['vbo'], nkey=nkey['vbo'],
-                                            u_may_change=False)
-
-print('\n\t--- 2.3 koppel vbovk_nvbo erbij')
-
-bd['vbo'] = pd.merge(bd['vbo'], bd['vbovk-nvbo'], how='left',
-                     left_on=vbovk, right_on=vbovk)
-(nrec['vbo'], nkey['vbo']) = baglib.df_comp(bd['vbo'],
-                                            nrec=nrec['vbo'], nkey=nkey['vbo'],
-                                            u_may_change=False)
-
-# I dont know why, but merging on something else then index screws things up
-# So lets reset it for now:
-bd['vbo'] = bd['vbo'].reset_index()
-
-print('\n\t--- 2.4 koppel pnd erbij')
-
-bd['vbo'] = pd.merge(bd['vbo'], bd['pnd'], how='left',
-                     left_on=pndvk, right_on=pndvk)
-
-
-
-# and set it again
-# bd['vbo'] = bd['vbo'].set_index(vbovk)
-
-
-(nrec['vbo'], nkey['vbo']) = baglib.df_comp(bd['vbo'], key_lst=vbovk,
-                                            nrec=nrec['vbo'], nkey=nkey['vbo'],
-                                            u_may_change=False)
-
-
-bd['vbo'] = baglib.recast_df_floats(bd['vbo'], BAG_TYPE_DICT)
-
-
-# print('DEBUG0')
-# print(bd['vbo'].info())
-
-
-# bd['vbo'] = bd['vbo'].reset_index()
-# bd['vbo'] = bd['vbo'].columns(LEVCYCL_COLS)[LEVCYCL_COLS.values()]
-
-# print('DEBUG1')
-# print(bd['vbo'].info())
-
-bd['vbo'] = bd['vbo'].rename(columns =LEVCYCL_COLS)
-bd['vbo'] = bd['vbo'].rename(columns =LEVCYCL_COLS)[LEVCYCL_COLS.values()]
-
-print('DEBUG2')
-print(bd['vbo'].info())
-
-
-print('\n\tWegschrijven naar levcycl.csv')
-outputfile = OUTPUTDIR + 'levcycl.csv'
-bd['vbo'].to_csv(outputfile, index=False)
-
-toc = time.perf_counter()
-baglib.print_time(toc - tic, 'gebruikte tijd:', printit)
-'''

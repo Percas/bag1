@@ -14,7 +14,7 @@ output1:    levcycl.csv  Het levenscyclus bestand
 # ################ import libraries ###############################
 
 import sys
-import os
+# import os
 import baglib
 import time
 import bag01_unzip
@@ -22,26 +22,29 @@ import bag12_xml2csv
 import bag23a_vbovk_pndvk
 import bag23a_vbovk_wplvk
 import bag23b_levcycl
+from config import LOCATION
 
 # ############### Define functions ################################
 
 tic = time.perf_counter()
+print('-------------------------------------------')
+print('-------------', LOCATION['OMGEVING'], '-----------')
+print('-------------------------------------------\n')
 
 print('-------------------------------------------')
 print('------------- Start bag_main --------------')
 print('-------------------------------------------')
 
-os.chdir('..')
-BASEDIR = os.getcwd() + '/'
-DATADIR = BASEDIR + 'data/'
-DIR00 = DATADIR + '00-zip/'
-DIR01 = DATADIR + '01-xml/'
-DIR02 = DATADIR + '02-csv/'
-DIR03 = DATADIR + '03-bewerktedata/'
+DATADIR_IN = LOCATION['DATADIR_IN']
+DATADIR_OUT = LOCATION['DATADIR_OUT']
+DIR00 = DATADIR_IN + '00-zip/'
+DIR01 = DATADIR_OUT + '01-xml/'
+DIR02 = DATADIR_OUT + '02-csv/'
+DIR03 = DATADIR_OUT + '03-bewerktedata/'
 current_month = baglib.get_arg1(sys.argv, DIR00)
 printit=True
 
-baglib.print_omgeving(BASEDIR)
+
 print('\thuidige maand (verslagmaand + 1):', current_month, '\n')
 baglib.print_legenda()
 
