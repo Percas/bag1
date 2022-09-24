@@ -297,7 +297,7 @@ def bag_vbovk_pndvk(current_month='202208',
     tic = time.perf_counter()
     
     
-    outputfile = OUTPUTDIR + 'vbovk-pndvk.csv'
+    outputfile = OUTPUTDIR + 'vbovk_pndvk.csv'
     
     # vbovk_hoofdpndvk_df = vbovk_prio_df[['vboid', 'vbovkid', 'pndid', 'pndvkid']]
     # vbovk_hoofdpndvk_df.sort_values(['vboid', 'vbovkid']).to_csv(outputfile,
@@ -463,7 +463,7 @@ def bag_vbovk_pndvk(current_month='202208',
     print('\n\t\t----- 7. bewaren in pndvk-nvbo.csv vbovk_nvbo.csv...')
     outputfile = OUTPUTDIR + 'pndvk_nvbo.csv'
     bd['pnd'].to_csv(outputfile, index=True)
-    outputfile = OUTPUTDIR + 'vbovk-nvbo.csv'
+    outputfile = OUTPUTDIR + 'vbovk_nvbo.csv'
     bd['vbo'].to_csv(outputfile, index=True)
      
     toc = time.perf_counter()

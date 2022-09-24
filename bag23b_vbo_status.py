@@ -34,15 +34,16 @@ def bag_vbo_status(current_month='202208',
     # month and dirs
     k2dir = koppelvlak2 + current_month + '/'
     k3dir = koppelvlak3 + current_month + '/'
+    baglib.make_dir(k3dir)
     
     # current_month = int(current_month)
     # current_year = int(current_month/100)
     
     pd.set_option('display.max_columns', 20)
     
-    INPUT_FILS_DICT = {'vbo': k2dir + 'vbo.csv'}
-                       # 'pnd': k2dir + 'pnd.csv',
-                       # '#bovk-pndvk': k3dir + 'vbovk_pndvk.csv'}
+    INPUT_FILS_DICT = {'vbo': k2dir + 'vbo.csv',
+                       'pnd': k2dir + 'pnd.csv',
+                       'vbovk-pndvk': k3dir + 'vbovk_pndvk.csv'}
     
     
     vbovk = ['vboid', 'vbovkid']
@@ -50,7 +51,7 @@ def bag_vbo_status(current_month='202208',
     
     KEY_DICT = {'vbo': vbovk,
                 'pnd': pndvk,
-                'vbovk-pndvk': vbovk}
+                'vbovk_pndvk': vbovk}
     
     bd = {}         # dict with df with bagobject (vbo en pnd in this case)
     nrec = {}       # aantal records
@@ -79,34 +80,58 @@ def bag_vbo_status(current_month='202208',
     cols2 = ['vboid', 'vbostatus']
     cols3 = ['vboid', 'vbovkid']
     stats = bd['vbo'][cols].sort_values(axis=0, by=cols3)
-    dedup = stats[cols].loc[(stats[cols2].shift() != stats[cols2]).any(axis=1)] 
+    # stat_df = stats[cols].loc[(stats[cols2].shift() != stats[cols2]).any(axis=1)] 
+    # if vboid, vbostatus occurs multiple times consecutively, only keep one instance
+    vbo_df = stats.loc[(stats[cols2].shift() != stats[cols2]).any(axis=1)] 
     
-    
-    # de_dup = a[cols].loc[(a[cols].shift() != a[cols]).any(axis=1)]
-
     # print(dedup(1000)[dedup['vbostatus'] != 'inge'])
     
-    print(dedup.head(30))
-    
-    '''    
-    # fix eendagsvliegen plus controle bob=bagobject: vbo of pnd
-    for bob, vk in KEY_DICT.items():
-        # controle
-        # print('DEBUG:', bd[bob].info())
-        # print('DEBUG: controle op', bob, 'met', vk )
-        (nrec[bob], nkey[bob]) = baglib.df_comp(bd[bob], key_lst=vk)
-        
-        print('\tVerwijder eendagsvliegen bij', bob)
-        bd[bob] = baglib.fix_eendagsvlieg(bd[bob], bob+'vkbg', bob+'vkeg')
-        print('\tCheck na verwijderen', bob, 'met voorkomens', vk, ':')
-        (nrec[bob], nkey[bob]) = baglib.df_comp(bd[bob], key_lst=vk, 
-                                                nrec=nrec[bob], nkey=nkey[bob])
-    
-    doel_vbovk_u = nkey['vbo']
-    n_vbovk = nrec['vbo']
-    print('\tConcreet doel:', doel_vbovk_u, 'vbovk van een pndvk voorzien.')
+    # print('ontdubbelde statussen:')
+    # print(stat_df.head(30))
     
     
+    cols = ['pndid', 'pndvkid', 'pndvkbg', 'pndstatus']
+    cols2 = ['pndid', 'pndstatus']
+    cols3 = ['pndid', 'pndvkid']
+    stats = bd['pnd'][cols].sort_values(axis=0, by=cols3)
+    # if pndid, pndstatus occurs multiple times consecutively, only keep one instance
+    pnd_df = stats.loc[(stats[cols2].shift() != stats[cols2]).any(axis=1)] 
+    
+    # print(dedup(1000)[dedup['vbostatus'] != 'inge'])
+    
+    print('ontdubbelde statussen:')
+    print(pnd_df.head(30))
+    
+    stat_df = pnd_df
+    
+    
+    print('\tMaak statusrij per id. duurt even ...')
+    # stat_df['vbostatusrij'] = stat_df.groupby('vboid')['vbostatus'].transform(lambda x: ''.join(x))
+    stat_df['vbostatusrij'] = stat_df.groupby('pndid')['pndstatus'].transform(lambda x: ''.join(x))
+    # print(stat_df.head(30))
+    # print(stat_df.info())
+    
+    print('\tTel aantal keren dat een vbo statusrij voorkomt')
+    stat_df = stat_df.groupby('vbostatusrij').size().sort_values(ascending=False)
+    # piep.columns = ['aantal']
+
+    # print(piep.sort_values('aantal', axis=0, ascending=False).head(30))
+    print(stat_df.head(30))
+    
+    # ggbyp = dedup.groupby('vbostatus').transform(lambda x: x/sum(x))
+    # print(ggbyp.head(30))
+
+    print('\tBewaren van', stat_df.shape[0], 'statusrijen met hun aantal...')
+    outputfile = k3dir + 'vbo_statusrij.csv'
+    stat_df.to_csv(outputfile, index=True)
+
+
+    toc = time.perf_counter()
+    baglib.print_time(toc - tic, 'countin vbovk in', printit)
+    
+
+    
+    '''
     # #############################################################################
     print('\n----2. Voeg de informatie van de pndvk toe aan de vbovk----')
     # #############################################################################

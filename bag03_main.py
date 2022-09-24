@@ -38,7 +38,7 @@ DIR00 = DATADIR + '00-zip/'
 DIR01 = DATADIR + '01-xml/'
 DIR02 = DATADIR + '02-csv/'
 DIR03 = DATADIR + '03-bewerktedata/'
-current_month = baglib.get_arg1(sys.argv, DIR02)
+current_month = baglib.get_arg1(sys.argv, DIR00)
 printit=True
 
 baglib.print_omgeving(BASEDIR)
