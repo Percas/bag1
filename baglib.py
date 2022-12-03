@@ -312,6 +312,9 @@ def df_comp(df, key_lst=[], nrec=0, nkey=0, u_may_change=True):
         _nkey = df.index.drop_duplicates().shape[0]
     else:
         _nkey = df[key_lst].drop_duplicates().shape[0]
+        # print('DEBUG df_comp')
+        # print(df[key_lst].drop_duplicates())
+        # print(df[key_lst].drop_duplicates().shape[0])
     
     if nrec ==  0:
         return (_nrec, _nkey)
@@ -322,12 +325,12 @@ def df_comp(df, key_lst=[], nrec=0, nkey=0, u_may_change=True):
         print('\t\tAantal input records ongewijzigd:\n\t\tRecords in = uit =',
               nrec)
     if nkey != _nkey:
-        print('\t\tAantal vk in:', nkey,
-              'aantal vk uit:', _nkey)
+        print('\t\tAantal', key_lst,  'in:', nkey,
+              'aantal', key_lst, 'uit:', _nkey)
         if not u_may_change:
             print('FOUT: aantal unieke eenheden gewijzigd!')
     else:
-        print('\t\tAantal vk ongewijzigd: vk in = uit =',
+        print('\t\tAantal', key_lst, 'ongewijzigd: vk in = uit =',
               nkey)
     # in_equals_out = (_n_rec == n_rec) and (_n_rec_u == n_rec_u) 
     # print('\tNr of records in equals out:', in_equals_out)
