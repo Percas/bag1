@@ -7,6 +7,7 @@ Purpose: make the following connections:
     vbovk - numvk
     numvk - oprvk
     oprvk  - wplvk
+    pndvk - wplvk
     
 Notes
 De eerste vk-s van een VBO hebben soms(0.00037) nog geen num vk (wel een num)
@@ -22,6 +23,7 @@ step 2b: connect numvk to all oprvk
 0.1: first attempt to create microdata
 0.2: make a VBO view for peilmomenten
 0.3: connect active vbo to opr-wpl-gem
+0.5.3 pndvk-wplvk
 
 """
 
@@ -45,7 +47,7 @@ from config import LOCATION
 # print('----maak vbovk-numvk, numvk-oprvk, oprvk-wplvk---------------')
 # print('-----------------------------------------------------------')
 
-def bag_vbovk_pndvk(current_month='202208',
+def bag_vbovk_wplvk(current_month='202208',
                     koppelvlak2='../data/02-csv',
                     koppelvlak3='../data/03-bewerkte-data',
                     loglevel=True):
@@ -62,16 +64,32 @@ def bag_vbovk_pndvk(current_month='202208',
     # print('00.............Initializing variables...............................')
     # #############################################################################
     # month and dirs
-    INPUTDIR = koppelvlak2 + current_month + '/'
-    OUTPUTDIR = koppelvlak3 + current_month + '/'
-    baglib.make_dir(OUTPUTDIR)
-    BOBJ = ['vbo', 'num', 'opr', 'wpl']
-    # BOBJ = ['vbo', 'num']
-    bdict = {} # dict to store the bagobject df's
-    nrec = {}
-    nkey = {}
-    # perc = {}
-    # printit = True
+    k2dir = koppelvlak2 + current_month + '/'
+    k3dir = koppelvlak3 + current_month + '/'
+    baglib.make_dir(k3dir)
+    INPUT_FILS_DICT = {'vbo': k2dir + 'vbo.csv',
+                       'pnd': k2dir + 'pnd.csv',
+                       'num': k2dir + 'num.csv',
+                       'opr': k2dir + 'opr.csv',
+                       'wpl': k2dir + 'wpl.csv',
+                       'vbovk_pndvk': k3dir + 'vbovk_pndvk.csv'}
+        
+    vbovk = ['vboid', 'vbovkid']
+    pndvk = ['pndid', 'pndvkid']
+    oprvk = ['oprid', 'oprvkid']
+    numvk = ['numid', 'numvkid']
+    wplvk = ['wplid', 'wplvkid']
+    
+    KEY_DICT = {'vbo': vbovk,
+                'pnd': pndvk,
+                'num': numvk,
+                'opr': oprvk,
+                'wpl': wplvk,
+                'vbovk_pndvk': vbovk}
+    
+    bd = {}         # dict with df with bagobject (vbo en pnd in this case)
+    nrec = {}       # aantal records
+    nkey = {}       # aantal keyrecords
     pd.set_option('display.max_columns', 20)
 
 
@@ -81,23 +99,14 @@ def bag_vbovk_pndvk(current_month='202208',
         
     print('huidige maand (verslagmaand + 1):', current_month)
     
-    for bobj in BOBJ:
-        print('\n', bobj, 'in', INPUTDIR, ':')
-        bdict[bobj] = pd.read_csv(INPUTDIR + bobj + '.csv',
-                                  dtype=BAG_TYPE_DICT)
-    
-        key_lst = [bobj+'id', bobj+'vkid']
+    bd = baglib.read_input_csv(INPUT_FILS_DICT, BAG_TYPE_DICT)
+ 
+    for bobj in INPUT_FILS_DICT.keys():
+        if bobj != 'vbovk_pndvk':
+            bd[bobj] = baglib.fix_eendagsvlieg(bd[bobj], bobj+'vkbg',
+                                               bobj+'vkeg')
         (nrec[bobj], nkey[bobj]) =\
-            baglib.df_comp(bdict[bobj], key_lst=key_lst)
-        print('\tAantal records:', nrec[bobj])
-        print('\tAantal vk:     ', nkey[bobj])
-        
-        bdict[bobj] = baglib.fix_eendagsvlieg(bdict[bobj], bobj+'vkbg',
-                                              bobj+'vkeg')
-        (nrec[bobj], nkey[bobj]) =\
-            baglib.df_comp(bdict[bobj], key_lst=key_lst,
-                           nrec=nrec[bobj], nkey=nkey[bobj],
-                           u_may_change=True)
+            baglib.df_comp(bd[bobj], key_lst=KEY_DICT[bobj])
         
     
         nkey['doel'+bobj] = nkey[bobj]
@@ -105,16 +114,16 @@ def bag_vbovk_pndvk(current_month='202208',
               bobj, 'vk een gekoppeld vk vinden ***')
         
     #neem alleen de velden mee die we nodig hebben:
-    bdict['vbo'] = bdict['vbo'][['vboid', 'vbovkid', 'vbovkbg', 'vbovkeg', 'numid']]
-    bdict['num'] = bdict['num'][['numid', 'numvkid', 'numvkbg', 'numvkeg', 'oprid']]
-    bdict['opr'] = bdict['opr'][['oprid', 'oprvkid', 'oprvkbg', 'oprvkeg', 'wplid']]
-    bdict['wpl'] = bdict['wpl'][['wplid', 'wplvkid', 'wplvkbg', 'wplvkeg']]
-    
+    bd['vbo'] = bd['vbo'][['vboid', 'vbovkid', 'vbovkbg', 'vbovkeg', 'numid']]
+    bd['num'] = bd['num'][['numid', 'numvkid', 'numvkbg', 'numvkeg', 'oprid']]
+    bd['opr'] = bd['opr'][['oprid', 'oprvkid', 'oprvkbg', 'oprvkeg', 'wplid']]
+    bd['wpl'] = bd['wpl'][['wplid', 'wplvkid', 'wplvkbg', 'wplvkeg']]
+    bd['pnd'] = bd['pnd'][['pndid', 'pndvkid', 'pndvkbg', 'pndvkeg']]
     
     # #############################################################################
     print('\n------2. Koppelen voorkomens van: vbo-num, num-opr, opr-wpl---------')
     # #############################################################################
-    
+    '''
     for i,bobj in enumerate(BOBJ[0:3]):
     
         nextbobj = BOBJ[i+1]
@@ -233,7 +242,7 @@ def bag_vbovk_pndvk(current_month='202208',
     baglib.print_time(toc - tic, '\n------------- Einde bag_vbovk_wplvk in',
                       loglevel)
 
-
+    '''
 '''             
 # ########################################################################
 print('------------- Start bag_vbovk_wplvk lokaal ------------- \n')
@@ -257,7 +266,7 @@ if __name__ == '__main__':
 
     printit=True
 
-    bag_vbovk_pndvk(current_month=current_month,
+    bag_vbovk_wplvk(current_month=current_month,
                     koppelvlak2=DIR02,
                     koppelvlak3=DIR03,
                     loglevel=printit)

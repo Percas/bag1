@@ -104,8 +104,9 @@ def get_df_from_csv(idir, csv_file, dtype_dict, cols):
 def get_arg1(arg_lst, ddir):
     _lst = os.listdir(ddir)
     if len(arg_lst) <= 1:
-        sys.exit('Usage: ' + arg_lst[0] + '  <month>, where <month> in '
-                 + str(_lst))
+        # sys.exit('Usage: ' + arg_lst[0] + '  <month>, where <month> in '
+        #         + str(_lst))
+        return "testdata"
     _current_month = arg_lst[1]
     if _current_month not in _lst:
         sys.exit('Usage: ' + arg_lst[0] + '  <month>, where <month> in '
@@ -266,6 +267,7 @@ def select_active_vk(df, bagobj, idate):
     print('\t\tGedeelte actieve vk:', _davk)
     return _df_active
 
+
 def last_day_of_month(month_str):
     '''Return the last day of the month as integer. Format: 20220331.'''
     _last = 100 * int(month_str) + 31 # most common situation
@@ -339,6 +341,7 @@ def ontdubbel_idx_maxcol(df, max_cols):
     _df = df.sort_values(axis=0, by=max_cols, ascending=False)
     return _df[~_df.index.duplicated(keep='first')] 
 
+
 def read_input_csv(file_d, bag_type_d):
     '''Read the input csv files in file_d dict and return them in a dict of
     df. Use the bag_type_d dict to get the (memory) minimal types.'''
@@ -362,3 +365,39 @@ def print_legenda():
     print(f'~\t{"n...:  aantal records in df":<38}',
           f'{"bob: bagobject":<38}')
     print(f'{"~":~>80}')
+
+
+def ontdubbel_maxcol(df, subset, lowest):
+    ''' Ontdubbel op subset door de laagste waarde van lowest te nemen.'''
+    _df = df.sort_values(axis=0, by=lowest, ascending=True)
+    return(_df[~_df.duplicated(subset=subset, keep='first')])
+
+
+def select_vk_on_date(df, bg, eg, peildatum):
+    """
+    df is the dataframe of a bagobj. Every bagobj has subsequent voorkomens
+    (vk), numbered 1, 2, 3 with subsequent intervals startdate, enddate (bg, eg)
+    return a df with the vk of the bagobj on peildatum.
+    """
+    _mask = (df[bg] <= peildatum) & (peildatum < df[eg])
+    return df[_mask]
+
+
+def peildatum(df, subset, bg, eg, peildatum):
+    ''' df is the dataframe of a bagobject. Determine all the bagobject 
+    voorkomen on peildatum. If there's more than one vk, 
+    take the most recent. This is done by using eg in the function 
+    ontdubbel_maxcol'''
+    _df = select_vk_on_date(df, bg, eg, peildatum)
+    # print([bagobj, eg])
+    # print(_df.info())
+    return ontdubbel_maxcol(_df, subset, eg)
+
+
+def makecounter(df, grouper, newname):
+     ''' Add a column with name newname that is a counter 
+     for the column grouper.''' 
+     # make a new counter for vbovkid. call it vbovkid2
+     tmp = df.groupby(grouper).cumcount()+1
+     df[newname] = tmp.to_frame()
+     return df

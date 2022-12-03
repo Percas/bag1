@@ -19,9 +19,9 @@ import baglib
 import time
 import bag01_unzip
 import bag12_xml2csv
-import bag23a_vbovk_pndvk
-import bag23a_vbovk_wplvk
-import bag23b_levcycl
+import bag23a_vbovk2_pndvk
+# import bag23a_vbovk_wplvk
+# import bag23b_levcycl
 from config import LOCATION
 
 # ############### Define functions ################################
@@ -62,11 +62,11 @@ bag12_xml2csv.bag_xml2csv(current_month=current_month,
                           loglevel=printit)
 
 # leidt voor elk vbo voorkomen (vbovk) een precies 1 pndvk af. Het hoofdpndvk
-bag23a_vbovk_pndvk.bag_vbovk_pndvk(current_month=current_month,
+bag23a_vbovk2_pndvk.bag_vbovk_pndvk(current_month=current_month,
                                    koppelvlak2=DIR02,
                                    koppelvlak3=DIR03,
                                    loglevel=printit)
-
+'''
 # leidt voor een vbovk een woonplaats voorkomen (wplvk) af
 bag23a_vbovk_wplvk.bag_vbovk_pndvk(current_month=current_month,
                                    koppelvlak2=DIR02,
@@ -79,7 +79,7 @@ bag23b_levcycl.bag_levcycl(current_month=current_month,
                            koppelvlak2=DIR02,
                            koppelvlak3=DIR03,
                            loglevel=printit)
-
+'''
 toc = time.perf_counter()
 baglib.print_time(toc - tic, '\n------------- Einde bag_main in',
                   printit)

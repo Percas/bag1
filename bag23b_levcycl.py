@@ -73,9 +73,9 @@ def bag_levcycl(current_month='202208',
     
     INPUT_FILES_DICT = {'vbo': K2DIR + 'vbo.csv',
                        'pnd': K2DIR + 'pnd.csv',
-                       'vbovk-pndvk': K3DIR + 'vbovk-pndvk.csv',
-                       'vbovk-wplvk': K3DIR + 'vbovk-wplvk.csv',
-                       'vbovk-nvbo':  K3DIR + 'vbovk-nvbo.csv'}
+                       'vbovk-pndvk': K3DIR + 'vbovk_pndvk.csv',
+                       'vbovk-wplvk': K3DIR + 'vbovk_wplvk.csv',
+                       'vbovk-nvbo':  K3DIR + 'vbovk_nvbo.csv'}
     
     # bagobj_d = {} # dict to store the bagobject df's
     # peildatum = baglib.last_day_of_month(current_month)
