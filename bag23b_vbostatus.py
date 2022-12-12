@@ -79,7 +79,7 @@ def bag_vbo_status(current_month='testdata',
     print('-----------------------------------------------------------')
     
     print('\n-----------------------------------------------------------')
-    print('----1. Inlezen van de inputbestand -----------------------\n')
+    print('----1. Inlezen van de inputbestand --------------------------')
     print('-----------------------------------------------------------')
     
     stat_df = pd.read_csv(vbovk_pndvk_file, 
@@ -94,13 +94,23 @@ def bag_vbo_status(current_month='testdata',
                                    'pndstatus': 'string'})
     (nrec, nkey) = baglib.df_comp(stat_df, key_lst=vbovk)
     # print(stat_df.info())
+
+    # stat_df['vbostat'] = stat_df['vbostatus']
+    print('\n-----------------------------------------------------------')
+    print('\t2a. indikken v3, v4, v6, v8 is voorraad, p1, p2 is bouw')
+    print('-----------------------------------------------------------')
+    stat_df['vbostatus'] = stat_df['vbostatus'].replace(to_replace={'v3' : 'vv', 'v4': 'vv', 'v6': 'vv', 'v8': 'vv'})
+    stat_df['pndstatus'] = stat_df['pndstatus'].replace(to_replace={'p3' : 'pv', 'pv': 'pg', 'p1': 'pb', 'p2': 'pb'})
+    
     
     stat_df['status'] = stat_df['vbostatus'] + stat_df['pndstatus']
     cols = ['vboid', 'vbovkid', 'vbovkid2', 'vbovkbg', 'vbovkeg', 'status']
     stat_df = stat_df[cols]
 
+    
+
     print('\n-----------------------------------------------------------')
-    print('\t2a. Verwijderen opeenvolgende gelijke statussen...')
+    print('\t2b. Verwijderen opeenvolgende gelijke statussen...')
     print('-----------------------------------------------------------')
     cols = ['vboid', 'vbovkid', 'vbovkid2', 'vbovkbg', 'status']
     cols2 = ['vboid', 'status']
@@ -123,7 +133,7 @@ def bag_vbo_status(current_month='testdata',
     stat_df = stat_df[cols].drop_duplicates().sort_values('statusrij')
     (nrec, nkey) = baglib.df_comp(stat_df, key_lst=['vboid'], nrec=nrec, nkey=nkey, u_may_change=True)
    
-    print(stat_df.head(30))
+    # print(stat_df.head(30))
     
     print('\tBewaren van', stat_df.shape[0], 'vbo met statusrij...')
     outputfile = k3dir + 'vbo_metstatusrij.csv'
