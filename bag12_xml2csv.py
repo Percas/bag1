@@ -153,7 +153,7 @@ def bag_xml2csv(current_month='202208',
     baglib.make_dir(outputdir)
     
     print('Huidige maand (verslagmaand + 1):', current_month)
-    
+    '''    
     status_dict = {
         'Plaats ingetrokken':                           'splai',
         'Plaats aangewezen':                            'splaa',
@@ -180,6 +180,35 @@ def bag_xml2csv(current_month='202208',
         'Sloopvergunning verleend':                     'pslov',
         'Woonplaats aangewezen':                        'wwoan',
         'Woonplaats ingetrokken':                       'wwoin'}
+    '''
+
+    status_dict = {
+        'Plaats ingetrokken':                           's2',
+        'Plaats aangewezen':                            's1',
+        'Naamgeving ingetrokken':                       's3',
+        'Naamgeving aangewezen':                        's4',
+        'Naamgeving uitgegeven':                        'w3',
+        'Verblijfsobject gevormd':                      'v1',
+        'Verblijfsobject in gebruik':                   'v4',
+        'Verblijfsobject in gebruik (niet ingemeten)':  'v3',
+        'Verblijfsobject ingetrokken':                  'v5',
+        'Verbouwing verblijfsobject':                   'v8',
+        'Verblijfsobject ten onrechte opgevoerd':       'v7',
+        'Niet gerealiseerd verblijfsobject':            'v2',
+        'Verblijfsobject buiten gebruik':               'v6',
+        'Bouwvergunning verleend':                      'p1',
+        'Bouw gestart':                                 'p2',
+        'Pand in gebruik (niet ingemeten)':             'p3',
+        'Pand in gebruik':                              'p4',
+        'Verbouwing pand':                              'p5',
+        'Pand gesloopt':                                'p6',
+        'Niet gerealiseerd pand':                       'p7',
+        'Pand ten onrechte opgevoerd':                  'p8',
+        'Pand buiten gebruik':                          'p9',
+        'Sloopvergunning verleend':                     'p0',
+        'Woonplaats aangewezen':                        'w1',
+        'Woonplaats ingetrokken':                       'w2'}
+
     ligtype_dict = {
             'Verblijfsobject':       0,
             'Standplaats':           1,

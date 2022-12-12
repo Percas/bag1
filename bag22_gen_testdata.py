@@ -8,9 +8,10 @@ van x %, als volgt
 2. vbo die bij num horen
 3. pnd die bij vbo horen
 4. kopieer sta, lig, opr, wpl in zijn geheel
+5. neem vbovk in vbovk_pndvk.csv die bij vbo horen
 
 Aanpak:
-    1. lees num, vbo, pnd
+    1. lees num, vbo, pnd, vbovk_pndvk (de laatste uit koppelvlak 3)
     2. selecteer x % num
     3. selecteer hierbij de vbo
     4. selecteer hierbij de pnd
@@ -57,6 +58,7 @@ DIR03 = DATADIR + '03-bewerktedata/'
 ONTBASEDIR = BASEDIR + 'ont/'
 ONTDATADIR = ONTBASEDIR + 'data/'
 ONTDIR02 = ONTDATADIR + '02-csv/'
+ONTDIR03 = ONTDATADIR + '03-bewerktedata/'
 
 month_lst = os.listdir(DIR02)
 if len(sys.argv) <= 1:
@@ -69,79 +71,105 @@ if current_month not in month_lst:
 
 
 k2dir = DIR02 + current_month + '/'
+k3dir = DIR03 + current_month + '/'
 
 ontk2dir = ONTDIR02 + current_month + '/'
+ontk3dir = ONTDIR03 + current_month + '/'
 
 current_month = int(current_month)
 current_year = int(current_month/100)
 
 INPUT_FILS_DICT = {'vbo': k2dir + 'vbo.csv',
                    'pnd': k2dir + 'pnd.csv',
-                   'num': k2dir + 'num.csv'}
+                   'num': k2dir + 'num.csv',
+                   'vbovk_pndvk': k3dir + 'vbovk_pndvk.csv'}
 
+OUTPUT_FILS_DICT = {'vbo': ontk2dir + 'vbo.csv',
+                    'pnd': ontk2dir + 'pnd.csv',
+                    'num': ontk2dir + 'num.csv',
+                    'vbovk_pndvk': ontk3dir + 'vbovk_pndvk.csv'}
 
 vbovk = ['vboid', 'vbovkid']
 pndvk = ['pndid', 'pndvkid']
+ontbd = {}
 
 KEY_DICT = {'vbo': vbovk,
             'pnd': pndvk}
   
 printit = True
   
-PERC = 1
+PERC = 3
 
 print('\tHuidige maand:', current_month)
 print('\tPercentage testdata vbo, pnd, num:', PERC, '%')
 
 # #############################################################################
-print('\n----1. Inlezen van vbo.csv, pnd.csv en num.csv-----')
+print('\n Inlezen van vbo.csv, pnd.csv, num.csv, vbovk_pndvk-----')
 # #############################################################################
 
 bd = baglib.read_input_csv(INPUT_FILS_DICT, BAG_TYPE_DICT)
 
 print('\n----Selecteer', PERC, 'procent van records in num.csv---')
-ontnumvk_df = bd['num'].sample(frac=PERC/100)
+ontbd['num'] = bd['num'].sample(frac=PERC/100)
 
-print('\tSelecteer alle vk van de gekozen NUM')
-ontnumvk_df = pd.merge(ontnumvk_df['numid'].drop_duplicates(),
+print('\nSelecteer alle vk van de gekozen NUM')
+ontbd['num'] = pd.merge(ontbd['num']['numid'].drop_duplicates(),
                        bd['num'], how='inner')
 print('\tPercentage num records geselecteerd:',
-      round(100 * ontnumvk_df.shape[0] / bd['num'].shape[0], 3))
-# print(ontnumvk_df.head())
+      round(100 * ontbd['num'].shape[0] / bd['num'].shape[0], 3))
+# print(ontbd['num'].head())
 
-print('\tSelecteer alle vbovk op dat num...')
-ontvbovk_df = pd.merge(bd['vbo'],
-                       ontnumvk_df['numid'].drop_duplicates(),
+print('\nSelecteer alle vbovk op dat num...')
+ontbd['vbo'] = pd.merge(bd['vbo'],
+                       ontbd['num']['numid'].drop_duplicates(),
                        how='inner')
-# print(ontvbovk_df.info())
+# print(ontbd['vbo'].info())
 print('\tPercentage vbo records geselecteerd:',
-      round(100 * ontvbovk_df.shape[0] / bd['vbo'].shape[0], 3))
+      round(100 * ontbd['vbo'].shape[0] / bd['vbo'].shape[0], 3))
 
-print('\tSelecteer bij die vbos de bijbehordende panden...')
-ontpndvk_df = pd.merge(ontvbovk_df['pndid'].drop_duplicates(),
+print('\nSelecteer bij die vbos de bijbehordende panden...')
+ontbd['pnd'] = pd.merge(ontbd['vbo']['pndid'].drop_duplicates(),
                        bd['pnd'], how='inner')
-# print(ontpndvk_df.info())
+# print(ontbd['pnd'].info())
 print('\tPercentage pnd records geselecteerd:',
-      round(100 * ontpndvk_df.shape[0] / bd['pnd'].shape[0], 3))
+      round(100 * ontbd['pnd'].shape[0] / bd['pnd'].shape[0], 3))
 
-print('\tCreating directories and files in ONT:')
+print('\nSelecteer bij de vbos de bijbehorende vbovk_pndvk...')
+ontbd['vbovk_pndvk'] = pd.merge(ontbd['vbo']['vboid'].drop_duplicates(),
+                       bd['vbovk_pndvk'], how='inner')
+# print(ontbd['pnd'].info())
+print('\tPercentage vbovk_pndvk records geselecteerd:',
+      round(100 * ontbd['vbovk_pndvk'].shape[0] / bd['vbovk_pndvk'].shape[0], 3))
+
+
+print('\nCreating directories and files in ONT:')
 baglib.make_dir(ontk2dir)
-# Path(OUTPUTDIR).mkdir(parents=True, exist_ok=True)
+baglib.make_dir(ontk3dir)
 
-print('\tWriting', ontnumvk_df.shape[0], 'records num.csv to',
+# #############################################################################
+print('\n Bewaren in O: vbo.csv, pnd.csv, num.csv, vbovk_pndvk-----')
+# #############################################################################
+
+for bob in INPUT_FILS_DICT.keys():
+    print('\tWriting', ontbd[bob].shape[0], 'records to', OUTPUT_FILS_DICT[bob])
+    ontbd[bob].to_csv(OUTPUT_FILS_DICT[bob], index=False)
+    
+'''
+print('\tWriting', ontbd['num'].shape[0], 'records num.csv to',
       ontk2dir, '...')
 outputfile = ontk2dir + 'num.csv'
-ontnumvk_df.to_csv(outputfile, index=False)
+ontbd['num'].to_csv(outputfile, index=False)
 
-print('\tWriting', ontpndvk_df.shape[0], 'records pnd.csv to',
+print('\tWriting', ontbd['pnd'].shape[0], 'records pnd.csv to',
       ontk2dir, '...')
 outputfile = ontk2dir + 'pnd.csv'
-ontpndvk_df.to_csv(outputfile, index=False)
+ontbd['pnd'].to_csv(outputfile, index=False)
 
-print('\tWriting', ontvbovk_df.shape[0], 'records vbo.csv to',
+print('\tWriting', ontbd['vbo'].shape[0], 'records vbo.csv to',
       ontk2dir, '...')
 outputfile = ontk2dir + 'vbo.csv'
-ontvbovk_df.to_csv(outputfile, index=False)
+ontbd['vbo'].to_csv(outputfile, index=False)
+'''
 
 print('-------Kopieer de rest van de bestanden------')
 rest = ['sta', 'lig', 'opr', 'wpl']

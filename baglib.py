@@ -308,8 +308,11 @@ def df_comp(df, key_lst=[], nrec=0, nkey=0, u_may_change=True):
     Return the triple (number of records, unique nr of rec, percentage unique).
     '''
     _nrec = df.shape[0]
+    _key_lst = key_lst
+    
     if key_lst == []:
         _nkey = df.index.drop_duplicates().shape[0]
+        _key_lst = df.index.names
     else:
         _nkey = df[key_lst].drop_duplicates().shape[0]
         # print('DEBUG df_comp')
@@ -325,12 +328,12 @@ def df_comp(df, key_lst=[], nrec=0, nkey=0, u_may_change=True):
         print('\t\tAantal input records ongewijzigd:\n\t\tRecords in = uit =',
               nrec)
     if nkey != _nkey:
-        print('\t\tAantal', key_lst,  'in:', nkey,
-              'aantal', key_lst, 'uit:', _nkey)
+        print('\t\tAantal', _key_lst,  'in:', nkey,
+              'aantal', _key_lst, 'uit:', _nkey)
         if not u_may_change:
             print('FOUT: aantal unieke eenheden gewijzigd!')
     else:
-        print('\t\tAantal', key_lst, 'ongewijzigd: vk in = uit =',
+        print('\t\tAantal', _key_lst, 'ongewijzigd: vk in = uit =',
               nkey)
     # in_equals_out = (_n_rec == n_rec) and (_n_rec_u == n_rec_u) 
     # print('\tNr of records in equals out:', in_equals_out)

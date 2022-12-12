@@ -58,7 +58,7 @@ def bag_vbovk_pndvk(current_month='testdata',
     tic = time.perf_counter()
     
     print('-------------------------------------------')
-    print('------------- Start bag_vbovk_pndvk -------')
+    print('--- Start bag_vbovk2_pndvk;', current_month, ' -----')
     print('-------------------------------------------')
 
     # #############################################################################
@@ -123,6 +123,9 @@ def bag_vbovk_pndvk(current_month='testdata',
     # print('huidige maand (verslagmaand + 1):', current_month)
     
     bd = baglib.read_input_csv(INPUT_FILS_DICT, BAG_TYPE_DICT)
+    cols = ['pndid', 'pndvkid', 'pndvkbg', 'pndvkeg', 'bouwjaar', 'pndstatus', 'pndgmlx', 'pndgmly']
+    bd['pnd'] = bd['pnd'][cols]
+
     (nrec['vbo'], nkey['vbo']) = baglib.df_comp(bd['vbo'], key_lst=vbovk)
     (nrec['pnd'], nkey['pnd']) = baglib.df_comp(bd['pnd'], key_lst=pndvk)
     nkey1 = nkey['vbo']
@@ -130,7 +133,7 @@ def bag_vbovk_pndvk(current_month='testdata',
     print('\t\tAantal records en sleutelrecords in pnd:', nrec['pnd'], nkey['pnd'])
     
     # #############################################################################
-    print('\n----2. Aanmaken nieuwe vbo vk -----------------------\n')
+    print('\n--2. Aanmaken vbovk zodat een vbovk volledig binnen pndvk past----\n')
     # #############################################################################
 
     print('\t\t2.1a Bepaal de begindatum van een vbo:')
@@ -249,7 +252,10 @@ def bag_vbovk_pndvk(current_month='testdata',
                                                 nrec=nrec['vbo'],
                                                 nkey=nkey['vbo'],
                                                 u_may_change=False)
+    # cols = ['vboid', 'vbovkid', 'vbovkid2', 'vbovkbg']
+    # print(vbo_df[cols].head(30))
     # print(bd['vbo'].head(30))
+    
     
     print('\t\t2.10 Voeg pndid nog toe')
     print('\t\t Hierna is vboid, vbovk2 niet meer uniek vanwege dubbele pndn',
@@ -263,8 +269,9 @@ def bag_vbovk_pndvk(current_month='testdata',
                                                 nkey=nkey['vbo'],
                                                 u_may_change=True)
     # print(bd['vbo'].head(30))
+    del vbo_df
     
-    print('\n\t\t2.11 Schakel over identificatie van vbovk obv vbovkid2')
+    print('\n\t\t2.11 Schakel over bij vk identificatie naar vbovkid2')
     vbovk = ['vboid', 'vbovkid2']
     KEY_DICT = {'vbo': vbovk,
                 'pnd': pndvk}
@@ -311,9 +318,13 @@ def bag_vbovk_pndvk(current_month='testdata',
                          bd['pnd'],
                          how='left',
                          on='pndid')
-    (nrec['vbo'], nkey['vbo']) = baglib.df_comp(bd['vbo'], key_lst=vbovk,
-                                                nrec=nrec['vbo'], nkey=nkey['vbo'], 
-                                                u_may_change=False)
+    del bd['pnd']
+    
+    # print(bd['vbo'].info())
+    # (nrec['vbo'], nkey['vbo']) = baglib.df_comp(bd['vbo'], key_lst=vbovk,
+    #                                             nrec=nrec['vbo'], nkey=nkey['vbo'], 
+    #                                             u_may_change=False)
+    
     bd['vbo'].set_index(vbovk, inplace=True)
     
     # zuinig met geheugen: Sommige types kunnen teruggecast worden.
@@ -412,13 +423,14 @@ def bag_vbovk_pndvk(current_month='testdata',
     #controle
     (nrec['vbo'], nkey['vbo']) = baglib.df_comp(bd['vbo'], nrec=nrec['vbo'],
                                                 nkey=nkey['vbo'],
+                                                # key_lst=vbovk,
                                                 u_may_change=False)
     
     bd['vbo']['prio2'] = bd['vbo']['prio']\
         - abs(bd['vbo']['vbogmlx'] - bd['vbo']['pndgmlx'])\
         - abs(bd['vbo']['vbogmly'] - bd['vbo']['pndgmly'])
     
-    print(bd['vbo'][['prio', 'prio2']].head(10))
+    # print(bd['vbo'][['prio', 'prio2']].head(10))
     
 
     print('\tSelecteer nu het pand met de hoogste prio. Alle pndvk krijgen een\n',
@@ -438,10 +450,10 @@ def bag_vbovk_pndvk(current_month='testdata',
     # toc = time.perf_counter()
     # print('\t\ttictoc - prio, sort and drop duplicates', toc - tic, 'seconds')
     
-    print('\tBewaar de pnd prios in pndvk_prio.csv')
-    outputfile = OUTPUTDIR + 'pndvk_prio.csv'
-    bd['vbo'][['pndid', 'pndvkid', 'prio']]\
-        .drop_duplicates().to_csv(outputfile, index=False)
+    # print('\tBewaar de pnd prios in pndvk_prio.csv')
+    # outputfile = OUTPUTDIR + 'pndvk_prio.csv'
+    # bd['vbo'][['pndid', 'pndvkid', 'prio']]\
+    #     .drop_duplicates().to_csv(outputfile, index=False)
     
     # toc = time.perf_counter()
     # print('\t\ttictoc - saving pnd-prio file in', toc - tic, 'seconds')
@@ -453,18 +465,21 @@ def bag_vbovk_pndvk(current_month='testdata',
     # #############################################################################
     # tic = time.perf_counter()
     
-    
+    if doel2_vbovk_u > 20000000:
+        print('Dit gaat even duren...')
+        
     outputfile = OUTPUTDIR + 'vbovk_pndvk.csv'
     
     # vbovk_hoofdpndvk_df = vbovk_prio_df[['vboid', 'vbovkid', 'pndid', 'pndvkid']]
     # vbovk_hoofdpndvk_df.sort_values(['vboid', 'vbovkid']).to_csv(outputfile,
     #                                                            index=False)
-    
-    bd['vbo'][['vbovkid', 'pndid', 'pndvkid']].sort_index().to_csv(outputfile, index=True)
+    cols = ['vbovkid', 'vbovkbg', 'vbovkeg', 'vbostatus', 'pndid', 'pndvkid', 'pndstatus']
+    bd['vbo'][cols].sort_index().to_csv(outputfile, index=True)
     
     toc = time.perf_counter()
-    print('\t\ttictoc - saving vbo-pnd file in', toc - tic, 'seconds')
-    
+    # print('\t\ttictoc - saving vbo-pnd file in', toc - tic, 'seconds')
+    baglib.print_time(toc - tic, 'vbovk2_pndvk duurde', printit)
+
     '''
     if vbovk_geen_pndvk_df.shape[0] != 0:
         print('\tWe verrijken vbovk_geen_pndvk met "het laagste pndvk dat geen\n',
@@ -684,7 +699,7 @@ def prio_pnd(pnd1_df,
     return pnd1_df
        
 # ########################################################################
-print('------------- Start bag_vbovk_pndvk lokaal ------------- \n')
+print('------------- Start bag_vbovk2_pndvk lokaal ------------- \n')
 # ########################################################################
 
 
