@@ -98,7 +98,7 @@ KEY_DICT = {'vbo': vbovk,
   
 printit = True
   
-PERC = 3
+PERC = 1
 
 print('\tHuidige maand:', current_month)
 print('\tPercentage testdata vbo, pnd, num:', PERC, '%')
@@ -142,37 +142,21 @@ print('\tPercentage vbovk_pndvk records geselecteerd:',
       round(100 * ontbd['vbovk_pndvk'].shape[0] / bd['vbovk_pndvk'].shape[0], 3))
 
 
-print('\nCreating directories and files in ONT:')
+print('\nMappen aanmaken in de ontwikkelomgeving ont (indien nodig):')
 baglib.make_dir(ontk2dir)
 baglib.make_dir(ontk3dir)
 
 # #############################################################################
-print('\n Bewaren in O: vbo.csv, pnd.csv, num.csv, vbovk_pndvk-----')
+print('\n Bewaren in van vbo.csv, pnd.csv, num.csv, vbovk_pndvk-----')
 # #############################################################################
 
 for bob in INPUT_FILS_DICT.keys():
     print('\tWriting', ontbd[bob].shape[0], 'records to', OUTPUT_FILS_DICT[bob])
     ontbd[bob].to_csv(OUTPUT_FILS_DICT[bob], index=False)
     
-'''
-print('\tWriting', ontbd['num'].shape[0], 'records num.csv to',
-      ontk2dir, '...')
-outputfile = ontk2dir + 'num.csv'
-ontbd['num'].to_csv(outputfile, index=False)
-
-print('\tWriting', ontbd['pnd'].shape[0], 'records pnd.csv to',
-      ontk2dir, '...')
-outputfile = ontk2dir + 'pnd.csv'
-ontbd['pnd'].to_csv(outputfile, index=False)
-
-print('\tWriting', ontbd['vbo'].shape[0], 'records vbo.csv to',
-      ontk2dir, '...')
-outputfile = ontk2dir + 'vbo.csv'
-ontbd['vbo'].to_csv(outputfile, index=False)
-'''
 
 print('-------Kopieer de rest van de bestanden------')
-rest = ['sta', 'lig', 'opr', 'wpl']
+rest = ['sta', 'lig', 'opr', 'wpl', 'wplgem']
 for r in rest:
     print('\t1-1 kopieren van', r, 'naar ontwikkelomgeving')
     shutil.copy(k2dir + r + '.csv', ontk2dir)

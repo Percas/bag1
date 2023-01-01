@@ -19,6 +19,7 @@ import baglib
 import time
 import bag01_unzip
 import bag12_xml2csv
+import bag12_gemwpl2csv
 import bag23a_vbovk2_pndvk
 # import bag23a_vbovk_wplvk
 # import bag23b_levcycl
@@ -61,11 +62,18 @@ bag12_xml2csv.bag_xml2csv(current_month=current_month,
                           koppelvlak2=DIR02,
                           loglevel=printit)
 
+bag12_gemwpl2csv.bag_gemwpl2csv(current_month=current_month,
+                                koppelvlak1=DIR01,
+                                koppelvlak2=DIR02,
+                                loglevel=printit)
+
 # leidt voor elk vbo voorkomen (vbovk) een precies 1 pndvk af. Het hoofdpndvk
+'''
 bag23a_vbovk2_pndvk.bag_vbovk_pndvk(current_month=current_month,
                                    koppelvlak2=DIR02,
                                    koppelvlak3=DIR03,
                                    loglevel=printit)
+'''
 '''
 # leidt voor een vbovk een woonplaats voorkomen (wplvk) af
 bag23a_vbovk_wplvk.bag_vbovk_pndvk(current_month=current_month,

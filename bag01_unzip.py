@@ -18,7 +18,7 @@ from config import LOCATION
 
 # Main function for this package:
 
-def bag_unzip(current_month='202208',
+def bag_unzip(current_month='testdata',
               koppelvlak0='../data/00-zip/',
               koppelvlak1='../data/01-xml/',
               loglevel=True):
@@ -41,7 +41,7 @@ def bag_unzip(current_month='202208',
                           'num': '9999NUM',
                           'opr': '9999OPR',
                           'wpl': '9999WPL',
-                          'gemwpl': 'GEM-WPL-RELATIE'}
+                          'wplgem': 'GEM-WPL-RELATIE'}
 
     for bagobj in bagobj_starts_with.keys():
         for unzip_file_name in unzip_files:

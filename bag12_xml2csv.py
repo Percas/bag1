@@ -138,7 +138,7 @@ from config import LOCATION
 # The main function:
 
     
-def bag_xml2csv(current_month='202208',
+def bag_xml2csv(current_month='testdata',
                 koppelvlak1='../data/01-xml/',
                 koppelvlak2='../data/02-csv/',
                 loglevel=True):
@@ -321,26 +321,26 @@ def bag_xml2csv(current_month='202208',
     
             for level0 in root.iter(tag):   # level0 is the bagobject-tree
                 input_bagobject_filecount += 1
-                id1 = assigniffound(level0, ['Objecten:identificatie'], ns)
+                id1 = baglib.assigniffound(level0, ['Objecten:identificatie'], ns)
                 status = status_dict[
-                    assigniffound(level0, ['Objecten:status'], ns)]
+                    baglib.assigniffound(level0, ['Objecten:status'], ns)]
     
-                vkid = assigniffound(level0, ['Objecten:voorkomen',
-                                              'Historie:Voorkomen',
-                                              'Historie:voorkomenidentificatie'],
-                                     ns)
+                vkid = baglib.assigniffound(level0, ['Objecten:voorkomen',
+                                                     'Historie:Voorkomen',
+                                                     'Historie:voorkomenidentificatie'],
+                                            ns)
     
-                date_str = assigniffound(level0, ['Objecten:voorkomen',
-                                                  'Historie:Voorkomen',
-                                                  'Historie:beginGeldigheid'],
-                                         ns)
-                vkbg = date2int(date_str)
-                date_str = assigniffound(level0, ['Objecten:voorkomen',
-                                                  'Historie:Voorkomen',
-                                                  'Historie:eindGeldigheid'],
-                                         ns,
-                                         futureday_str)
-                vkeg = date2int(date_str)
+                date_str = baglib.assigniffound(level0, ['Objecten:voorkomen',
+                                                         'Historie:Voorkomen',
+                                                         'Historie:beginGeldigheid'],
+                                                ns)
+                vkbg = baglib.date2int(date_str)
+                date_str = baglib.assigniffound(level0, ['Objecten:voorkomen',
+                                                         'Historie:Voorkomen',
+                                                         'Historie:eindGeldigheid'],
+                                                ns,
+                                                futureday_str)
+                vkeg = baglib.date2int(date_str)
     
                 output_record = {bagobject + 'id':     id1,
                                  bagobject + 'status':  status,
@@ -352,32 +352,32 @@ def bag_xml2csv(current_month='202208',
     
                 if bagobject in vsl:
                     output_record['numid'] = \
-                        assigniffound(level0,
-                                      ['Objecten:heeftAlsHoofdadres',
-                                       'Objecten-ref:NummeraanduidingRef'],
-                                      ns)
+                        baglib.assigniffound(level0,
+                                             ['Objecten:heeftAlsHoofdadres',
+                                              'Objecten-ref:NummeraanduidingRef'],
+                                             ns)
     
                 # specific for sta, lig
                 
                 if bagobject in {'sta', 'lig'}:
-                    gml_string = assigniffound(level0, ['Objecten:geometrie',
-                                                        'gml:Polygon',
-                                                        'gml:exterior',
-                                                        'gml:LinearRing',
-                                                        'gml:posList'],
-                                                 ns)
+                    gml_string = baglib.assigniffound(level0, ['Objecten:geometrie',
+                                                               'gml:Polygon',
+                                                               'gml:exterior',
+                                                               'gml:LinearRing',
+                                                               'gml:posList'],
+                                                      ns)
                     if gml_string is not None:
                         xyz = gml_string.split()
                         (output_record[bagobject + 'gmlx'],
                          output_record[bagobject + 'gmly']) = middelpunt(xyz)
     
                     output_record['docnr'] = \
-                        assigniffound(level0, ['Objecten:documentnummer'],
-                                      ns)
+                        baglib.assigniffound(level0, ['Objecten:documentnummer'],
+                                             ns)
     
-                    output_record['docdd'] = date2int(\
-                        assigniffound(level0, ['Objecten:documentdatum'],
-                                      ns))
+                    output_record['docdd'] = baglib.date2int(\
+                        baglib.assigniffound(level0, ['Objecten:documentdatum'],
+                                             ns))
     
                     outp_lst_d.append(output_record.copy())
                     output_bagobject_filecount += 1
@@ -387,23 +387,23 @@ def bag_xml2csv(current_month='202208',
     
                 if bagobject == 'vbo':
     
-                    gml_string = assigniffound(level0, ['Objecten:geometrie',
-                                                        'Objecten:punt',
-                                                        'gml:Point',
-                                                        'gml:pos'],
+                    gml_string = baglib.assigniffound(level0, ['Objecten:geometrie',
+                                                               'Objecten:punt',
+                                                               'gml:Point',
+                                                               'gml:pos'],
                                                ns)
                     if gml_string is not None:
                         xyz = gml_string.split()
                         output_record[bagobject + 'gmlx'] = float(xyz[0])
                         output_record[bagobject + 'gmly'] = float(xyz[1])
                     else: # BUGFIX: ook een VBO kan een Polygon zijn
-                        gml_string = assigniffound(level0, ['Objecten:geometrie',
-                                                            'Objecten:vlak',
-                                                            'gml:Polygon',
-                                                            'gml:exterior',
-                                                            'gml:LinearRing',
-                                                            'gml:posList'],
-                                                     ns)
+                        gml_string = baglib.assigniffound(level0, ['Objecten:geometrie',
+                                                                   'Objecten:vlak',
+                                                                   'gml:Polygon',
+                                                                   'gml:exterior',
+                                                                   'gml:LinearRing',
+                                                                   'gml:posList'],
+                                                          ns)
                         if gml_string is not None:
                             xyz = gml_string.split()
                             (output_record[bagobject + 'gmlx'],
@@ -426,9 +426,9 @@ def bag_xml2csv(current_month='202208',
                                    
                     
                     output_record['oppervlakte'] = \
-                        assigniffound(level0,
-                                      ['Objecten:oppervlakte'],
-                                      ns)
+                        baglib.assigniffound(level0,
+                                             ['Objecten:oppervlakte'],
+                                             ns)
                     level1 = level0.find('Objecten:maaktDeelUitVan', ns)
     
     
@@ -452,23 +452,23 @@ def bag_xml2csv(current_month='202208',
                 if bagobject == 'pnd':
     
                     output_record['bouwjaar'] = \
-                        assigniffound(level0, ['Objecten:oorspronkelijkBouwjaar'],
-                                      ns)
+                        baglib.assigniffound(level0, ['Objecten:oorspronkelijkBouwjaar'],
+                                             ns)
     
                     output_record['docnr'] = \
-                        assigniffound(level0, ['Objecten:documentnummer'],
-                                      ns)
+                        baglib.assigniffound(level0, ['Objecten:documentnummer'],
+                                             ns)
     
-                    output_record['docdd'] = date2int(\
-                        assigniffound(level0, ['Objecten:documentdatum'],
-                                      ns))
+                    output_record['docdd'] = baglib.date2int(\
+                        baglib.assigniffound(level0, ['Objecten:documentdatum'],
+                                             ns))
     
-                    gml_string = assigniffound(level0, ['Objecten:geometrie',
-                                                        'gml:Polygon',
-                                                        'gml:exterior',
-                                                        'gml:LinearRing',
-                                                        'gml:posList'],
-                                               ns)
+                    gml_string = baglib.assigniffound(level0, ['Objecten:geometrie',
+                                                               'gml:Polygon',
+                                                               'gml:exterior',
+                                                               'gml:LinearRing',
+                                                               'gml:posList'],
+                                                      ns)
                     if gml_string is not None:
                         xyz = gml_string.split()
                         (output_record[bagobject + 'gmlx'],
@@ -481,12 +481,12 @@ def bag_xml2csv(current_month='202208',
                 # ######### num: Nummeraanduiding                           #######
                 if bagobject == 'num':
                     output_record['huisnr'] = \
-                        assigniffound(level0, ['Objecten:huisnummer'], ns)
+                        baglib.assigniffound(level0, ['Objecten:huisnummer'], ns)
                     output_record['postcode'] = \
-                        assigniffound(level0, ['Objecten:postcode'], ns)
+                        baglib.assigniffound(level0, ['Objecten:postcode'], ns)
                     output_record['typeao'] = \
-                        assigniffound(level0, ['Objecten:typeAdresseerbaarObject'],
-                                      ns)
+                        baglib.assigniffound(level0, ['Objecten:typeAdresseerbaarObject'],
+                                             ns)
                     level1 = level0.find('Objecten:ligtAan', ns)
                     if level1 is not None:
                         level2 = level1.findall('Objecten-ref:OpenbareRuimteRef',
@@ -508,9 +508,9 @@ def bag_xml2csv(current_month='202208',
                 # #################################################################
                 if bagobject == 'opr':
                     output_record['oprnaam'] = \
-                        assigniffound(level0, ['Objecten:naam'], ns)
+                        baglib.assigniffound(level0, ['Objecten:naam'], ns)
                     output_record['oprtype'] = \
-                        assigniffound(level0, ['Objecten:type'], ns)
+                        baglib.assigniffound(level0, ['Objecten:type'], ns)
                     level1 = level0.find('Objecten:ligtIn', ns)
                     if level1 is not None:
                         for j in level1:
@@ -525,7 +525,7 @@ def bag_xml2csv(current_month='202208',
                 # #################################################################
                 if bagobject == 'wpl':
                     output_record['wplnaam'] = \
-                        assigniffound(level0, ['Objecten:naam'], ns)
+                        baglib.assigniffound(level0, ['Objecten:naam'], ns)
                     outp_lst_d.append(output_record.copy())
                     output_bagobject_filecount += 1
     
@@ -562,70 +562,6 @@ def bag_xml2csv(current_month='202208',
     toc = time.perf_counter()
     baglib.print_time(toc - tic, '\n------------- Einde bag_xml2csv in', printit)
 
-def assigniffound(node,
-                  taglist,
-                  namespace,
-                  value_if_not_found=None):
-    '''
-        Parameters
-    ----------
-    node: elem element
-       the node of the subtree to be searched
-    taglist : list of strings
-       list of tags containing the tages of the nodes to be processed
-       while going one level deeper in the xml tree
-    namespace : string
-        the dictionary ns with the namespace stuff
-    value_if_not_found: if the tag in the taglist is not found, assigniffound
-        returns this value
-
-    Returns
-    -------
-    assignifffound digs through the xml tree until it reaches the node with
-    the last tagname. If this node is found, its .text property is returned,
-    if not the parameter value_if_not_found is returned
-
-
-           level1 = level0.find('Objecten:voorkomen', ns)
-           if level1 is not None:
-               level2 = level1.find('Historie:Voorkomen', ns)
-               if level2 is not None:
-                   vkid = assignifexist(level2, 'Historie:voorkomenidentificatie', ns)
-                   vkbg = assignifexist(level2, 'Historie:beginGeldigheid', ns)
-                   vkegexist = level2.find('Historie:eindGeldigheid', ns)
-                   if vkegexist is not None:
-                       vkeg = vkegexist.text
-                   else:
-                       vkeg = '2999-01-01'
-    Example taglist:
-    _taglist = ['Objecten:voorkomen',
-                'Historie:Voorkomen',
-                'Historie:voorkomenidentificatie']
-    '''
-
-    i = 0
-    current_level = node
-    while i < len(taglist):
-        level_down = current_level.find(taglist[i], namespace)
-        if level_down is not None:
-            i += 1
-            current_level = level_down
-        else:
-            return value_if_not_found
-    return current_level.text
-
-def date2int(_date_str):
-    '''
-    Parameters
-    ----------
-    datestring : string
-        string of format 2019-03-24
-    Returns
-    -------
-    the integer 20190314
-    '''
-    _str = _date_str.replace('-', '')
-    return int(_str)
 
 def middelpunt(float_lst):
     '''Return tuple that is the middle of a polygon float_lst. float_list

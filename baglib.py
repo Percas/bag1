@@ -78,29 +78,72 @@ BAG_TYPE_DICT = {'vboid': 'string',
 
 
 # ############### Define functions ################################
-'''
-def myprint(left_text, right_result):
-    # """Print a text and the result."""
-    # print(f"{left_text : <45}" + str(right_result))
-    print(f"{left_text : <45}" + str(right_result))
+def assigniffound(node,
+                  taglist,
+                  namespace,
+                  value_if_not_found=None):
+    '''
+        Parameters
+    ----------
+    node: elem element
+       the node of the subtree to be searched
+    taglist : list of strings
+       list of tags containing the tages of the nodes to be processed
+       while going one level deeper in the xml tree
+    namespace : string
+        the dictionary ns with the namespace stuff
+    value_if_not_found: if the tag in the taglist is not found, assigniffound
+        returns this value
 
-def prtxt(astring):
-    print(astring)
+    Returns
+    -------
+    assignifffound digs through the xml tree until it reaches the node with
+    the last tagname. If this node is found, its .text property is returned,
+    if not the parameter value_if_not_found is returned
 
 
-def get_df_from_csv(idir, csv_file, dtype_dict, cols):
-    """Return dataframe from csv_file in dir_path."""
-    try:
-        # prtxt('Contents of this dir: ' +
-        #          str(os.listdir(idir)))
-        _df = read_csv(idir,
-                       csv_file,
-                       dtype_dict, cols)
-        return _df
-    except FileNotFoundError:
-        prtxt('Error: kan dit bestand niet openen: ' +
-                  idir + csv_file)
-'''
+           level1 = level0.find('Objecten:voorkomen', ns)
+           if level1 is not None:
+               level2 = level1.find('Historie:Voorkomen', ns)
+               if level2 is not None:
+                   vkid = assignifexist(level2, 'Historie:voorkomenidentificatie', ns)
+                   vkbg = assignifexist(level2, 'Historie:beginGeldigheid', ns)
+                   vkegexist = level2.find('Historie:eindGeldigheid', ns)
+                   if vkegexist is not None:
+                       vkeg = vkegexist.text
+                   else:
+                       vkeg = '2999-01-01'
+    Example taglist:
+    _taglist = ['Objecten:voorkomen',
+                'Historie:Voorkomen',
+                'Historie:voorkomenidentificatie']
+    '''
+
+    i = 0
+    current_level = node
+    while i < len(taglist):
+        level_down = current_level.find(taglist[i], namespace)
+        if level_down is not None:
+            i += 1
+            current_level = level_down
+        else:
+            return value_if_not_found
+    return current_level.text
+
+def date2int(_date_str):
+    '''
+    Parameters
+    ----------
+    datestring : string
+        string of format 2019-03-24
+    Returns
+    -------
+    the integer 20190314
+    '''
+    _str = _date_str.replace('-', '')
+    return int(_str)
+
+
 def get_arg1(arg_lst, ddir):
     _lst = os.listdir(ddir)
     if len(arg_lst) <= 1:
@@ -328,7 +371,7 @@ def df_comp(df, key_lst=[], nrec=0, nkey=0, u_may_change=True):
         print('\t\tAantal input records ongewijzigd:\n\t\tRecords in = uit =',
               nrec)
     if nkey != _nkey:
-        print('\t\tAantal', _key_lst,  'in:', nkey,
+        print('\t\tAantal eenheden in:', nkey,
               'aantal', _key_lst, 'uit:', _nkey)
         if not u_may_change:
             print('FOUT: aantal unieke eenheden gewijzigd!')
@@ -400,10 +443,334 @@ def peildatum(df, subset, bg, eg, peildatum):
     return ontdubbel_maxcol(_df, subset, eg)
 
 
-def makecounter(df, grouper, newname):
+def makecounter(df, grouper, newname, sortlist):
      ''' Add a column with name newname that is a counter 
      for the column grouper.''' 
      # make a new counter for vbovkid. call it vbovkid2
+     # tmp = df.groupby(grouper).cumcount()+1
+     # print('DEBUG', df.info())
+     # print('DEBUG', sortlist)
+     # tmp = df.sort_values(by=sortlist, axis=0)
+     
      tmp = df.groupby(grouper).cumcount()+1
      df[newname] = tmp.to_frame()
      return df
+
+
+def debugprint(title='', df='vbo_df', colname='vboid',
+               vals=[], sort_on=[], debuglevel=10):
+    '''print a the lines of the df where df[colname]==val.'''
+    if debuglevel > 10:
+        print('\n\t\tDEBUGPRINT:', title)
+        _df = df.loc[df[colname].isin(vals)].sort_values(by=sort_on)        
+        print('\t\tAantal records:', _df.shape[0], '\n')
+        print(_df.to_string(index=False))
+    print()
+
+
+
+def vksplitter(df='vbo_df', gf='pnd_df', fijntype ='vbo', groftype = 'pnd', 
+               future_date = 20321231, test_d={}):
+    
+    '''Splits voorkomens (vk) voor df, zodat elk vk van df in een gf vk past.
+    df is het "fijntype" en gf is het "groftype".
+    
+    dfid identificeert de eenheden van df, bijvoorbeeld vbo, 
+    waarvan de vk als records in df staan. gfid idem voor gf (pnd)
+
+    input: beschouw twee vk van een pand (gfid) en 1 vk van een vbo (dfid)
+    gfid:            o------------------oo-------------o
+    dfid:                   o------------------o
+
+    output: het vbovk wordt gesplitst zodat het binnen een pnd vk valt
+    gfid:            o------------------oo-------------o
+    dfid:                   o-----------oo-------o
+    
+    dfvkbg is de kolom met de vk begindatums van df.
+    gfvkbg idem voor gf.
+    
+    We gaan dit aanpakken door de begindatums van de vk (dfvkbg en gfvkbg)
+    in 'e'en kolom te verzamelen en dit te sorteren en ontdubbelen per dfid
+    
+    uitgangspunt is om geen nieuwe vk aan te maken v'o'or het eerste vk 
+    van dfid.
+ 
+    Voorwaarden: de kolommen in de volgende 7 assignments moeten bestaan
+    in de dataframes df en gf:
+    
+ '''
+    print('-----------------------------------------------------------')   
+    print('------ Start vksplitter; fijntype:', fijntype, ', groftype:', 
+          groftype)   
+    print('-----------------------------------------------------------')   
+    # de volgende kolommen moeten bestaan voor fijntype en groftype:
+    dfid = fijntype + 'id'
+    dfvkbg = fijntype + 'vkbg'
+    dfvkeg = fijntype + 'vkeg'
+    dfvkid = fijntype + 'vkid'
+    gfid = groftype + 'id'
+    gfvkbg = groftype + 'vkbg'
+    gfvkeg = groftype + 'vkeg'
+    gfvkid = groftype + 'vkid'
+    
+    # deze kolom gaan we maken om de nieuwe vk te identificeren:
+    dfvkid2 = fijntype + 'vkid2'
+    # aantallen in de uitgangssituatie     
+
+    # print('DDDDDEBBBBBUUUUG', [dfid, dfvkid])
+
+    (_nrec1, _nkey1) = df_comp(df, key_lst=[dfid, dfvkid])
+    _debuglevel = 0
+
+    
+    # #############################################################################
+    print('\n----', fijntype+'vk-splitter stap 1\n----',
+          'Verzamel de vkbg van', fijntype, 'en', groftype, 'in _df en maak',
+          'hiermee nieuwe', fijntype, 'vk\n')
+    # #############################################################################
+
+    print('\t\tWe beginnen de reguliere vk van', fijntype, 'gebaseerd op',
+          dfvkbg, '\n\t\tHet bestaande', dfvkid, 'gaat straks een rol spelen bij het imputeren')
+    
+    (_nrec, _nkey) = df_comp(df=df, key_lst=[dfid, dfvkbg])
+    cols = [dfid, dfvkid, dfvkbg]
+    _df = df[cols].drop_duplicates()
+    (_nrec, _nkey) = df_comp(df=_df, key_lst=[dfid, dfvkbg], nrec=_nrec, nkey=_nkey, u_may_change=True)
+    
+    debugprint(title='1. drie '+dfid, df=_df, colname=dfid,
+               vals=test_d[dfid], sort_on=cols, debuglevel=_debuglevel)
+
+
+   # #############################################################################
+    print('\n----', fijntype+'vk-splitter stap 2\n----',
+          'Voeg van', groftype, 'de', gfvkbg, 'aan toe. Hiervoor',
+          'hebben we de koppeling '+fijntype+'-'+groftype, 'nodig,\n plus',
+          'de', gfvkbg, 'van', groftype)
+    # #############################################################################
+    
+    _gf = pd.merge(gf[[gfid, gfvkbg]], 
+                   df[[dfid, gfid]].drop_duplicates(),
+                   how='inner', on=gfid)
+    # print(_gf.head(50))
+    
+    cols = [dfid, gfvkbg]
+    debugprint(title='2a. drie '+dfid+' met '+gfvkbg+' van de bijbehorende '+gfid,
+               df=_gf, colname=dfid, vals=test_d[dfid], sort_on=cols, 
+               debuglevel=_debuglevel)
+
+    cols = [dfid, dfvkbg]
+    _gf = _gf[[dfid, gfvkbg]].drop_duplicates().rename({gfvkbg: dfvkbg}, axis='columns')
+    debugprint(title='2b. drie '+dfid+' met de unieke '+gfvkbg+' hernoemd naar '+dfvkbg,
+               df=_gf, colname=dfid, vals=test_d[dfid], sort_on=cols, 
+               debuglevel=_debuglevel)
+    
+    
+    _df = pd.concat([_df, _gf]).drop_duplicates(subset=[dfid, dfvkbg], keep='first')
+    (_nrec, _nkey) = df_comp(df=_df, key_lst=[dfid, dfvkbg], nrec=_nrec, nkey=_nkey, u_may_change=True)
+    
+    debugprint(title='2c. drie '+dfid+' met nu ook de unieke '+dfvkbg+' erbij. De NaNs treden op\n\
+               \t\t als de '+dfvkbg+' eerst een '+gfvkbg+' van de '+gfid+' was.',
+               df=_df, colname=dfid, vals=test_d[dfid], sort_on=cols, 
+               debuglevel=_debuglevel)
+
+        
+    # #############################################################################
+    print('\n----', fijntype+'vk-splitter stap 3\n----',
+          'Voeg hier van', groftype, 'de', gfvkeg, 'aan toe, voor zover',
+          'deze ongelijk is aan', future_date)
+    print('\t\tHiervoor hebben we de koppeling\n\t\t', fijntype, '-', groftype,
+          'nodig, plus de', gfvkeg, 'van', groftype)
+    # #############################################################################
+    print('\t\tTBD ----------------')
+    
+    '''
+    _gf = pd.merge(gf[[gfid, gfvkeg]], 
+                   df[[dfid, gfid]].drop_duplicates(),
+                   how='inner', on=gfid)
+    # print(_gf.head(50))
+    debugprint(title='3a. vier wpl met die drie straatjes geeft 13 records door veel verschillende bg',
+               df=_gf, 
+               colname='oprid',
+               vals=['0457300000000259', '0457300000000260', '0003300000116985'], 
+               sort_on=['oprid', 'wplvkeg'], debuglevel=_debuglevel)
+    
+    
+    _gf = _gf[[dfid, gfvkeg]].drop_duplicates().rename({gfvkeg: dfvkbg}, axis='columns')
+    debugprint(title='3b. zonder woonplaats, duplicaten eruit, bg hernoemd',
+               df=_gf,, 
+               colname='oprid',
+               vals=['0457300000000259', '0457300000000260', '0003300000116985'], 
+               sort_on=['oprid', 'oprvkbg'], debuglevel=_debuglevel)
+    
+    _gf = _gf[_gf[dfvkbg] != future_date]
+    
+    _df = pd.concat([_df, _gf]).drop_duplicates(subset=[dfid, dfvkbg] , keep='first')
+    (_nrec, _nkey) = df_comp(df=_df, key_lst=[dfid, dfvkbg], nrec=_nrec, nkey=_nkey, u_may_change=True)
+    
+    debugprint(title='3c. drie straatjes samengevoegde vkbg van opr en wpl. oprvkdi=nan is van wpl',
+               df=_df, 
+               colname='oprid',
+               vals=['0457300000000259', '0457300000000260', '0003300000116985'], 
+               sort_on=['oprid', 'oprvkbg'], debuglevel=_debuglevel)
+    '''
+    
+    # #############################################################################
+    print('\n----', fijntype+'vk-splitter stap 4\n----',
+          'Opvullen van de nans van de', dfvkid, 'met ffill')
+    # #############################################################################
+    print('\n\t\t\tDe sortering luistert nauw:')
+    # https://stackoverflow.com/questions/27012151/forward-fill-specific-columns-in-pandas-dataframe
+ 
+    print('\n\t\t\tSorteer op', dfid, dfvkbg, '(nan last), waarna je met\n',
+          '\t\t\tffill de nans kunt opvullen van de', dfvkid)
+    cols = [dfid, dfvkbg]
+    _df = _df.sort_values(by=cols, na_position='last')
+    
+    _df.loc[:,dfvkid].iat[0] = 1 # if the first record in NaN, then fill gives an error
+    
+    _df.loc[:,dfvkid] = _df.loc[:,dfvkid].ffill().astype({dfvkid:int})
+
+    # print(_df.head(30))
+    debugprint(title='4a. drie '+dfid+'. Deze stap vult NaNs verkeerd als de vk rij begint met een NaN',
+               df=_df, colname=dfid, vals=test_d[dfid], sort_on=cols, 
+               debuglevel=_debuglevel)
+
+
+    # #############################################################################
+    print('\n----', fijntype+'vk-splitter stap 5\n----',
+          'Voeg', dfvkeg, 'toe in twee stappen:\n')
+    # #############################################################################
+
+    print('\t\t\t5a. neem de', dfvkbg, 'van het volgende record (sortering uit stap 5)')
+ 
+    _df[dfvkeg] = _df[dfvkbg].shift(periods=-1)
+    (_nrec, _nkey) = df_comp(_df, key_lst=[dfid, dfvkbg],
+                             nrec=_nrec, nkey=_nkey,
+                             u_may_change=False)
+
+    debugprint(title='5a. drie '+dfid+' met hun '+dfvkeg+'. Deze staat verkeerd voor de laatste van de vk rij',
+               df=_df, colname=dfid, vals=test_d[dfid], sort_on=cols, 
+               debuglevel=_debuglevel)
+
+    # print(_df[_df[dfvkeg].isna()])
+
+    print('\t\t\t5b. corrigeer de vbovkeg van het meest recente', fijntype, 'voorkomen')
+    print('\t\t\tDit krijgt een datum in de toekomst:', future_date)
+    idx = _df.groupby([dfid])[dfvkbg].transform(max) == _df[dfvkbg]
+    _df.loc[idx, dfvkeg] = future_date
+    _df = _df.astype({dfvkeg:int})
+
+    debugprint(title='5b. drie '+dfid+' met de laatste '+dfvkeg+' uit hun vk rijtje op '+str(future_date)+' gezet.',
+               df=_df, colname=dfid, vals=test_d[dfid], sort_on=cols, 
+               debuglevel=_debuglevel)
+
+    (_nrec, _nkey) = df_comp(_df, key_lst=[dfid, dfvkbg],
+                           nrec=_nrec, nkey=_nkey,
+                           u_may_change=False)
+
+
+    # #############################################################################
+    print('\n----', fijntype+'vk-splitter stap 6\n----',
+          'Koppel', gfid, gfvkid, 'erbij.')
+    # #############################################################################
+    
+    print('\n\t\t\t6a. voeg', gfid, 'toe met de input df van', fijntype)
+    cols = [dfid, dfvkid, gfid]
+    _df = pd.merge(_df, df[cols], how='inner', on=[dfid, dfvkid])
+    
+    debugprint(title='6a. drie '+dfid+' met uit het input df',
+               df=df[cols], colname=dfid, vals=test_d[dfid], sort_on=cols, 
+               debuglevel=_debuglevel)
+
+
+    debugprint(title='6a. drie '+dfid+' met hun '+gfid,
+               df=_df, colname=dfid, vals=test_d[dfid], sort_on=cols, 
+               debuglevel=_debuglevel)
+    (_nrec, _nkey) = df_comp(_df, key_lst=[dfid, dfvkbg],
+                           nrec=_nrec, nkey=_nkey,
+                           u_may_change=True)
+    
+    print('\n\t\t\t6b. voeg eerst', gfvkid, gfvkbg, gfvkeg,
+          'toe met de input dataframe van', groftype)
+    print('\t\t\t', dfid, 'wordt nu gekoppeld met elk vk van zijn', gfid)
+    cols = [gfid, gfvkid, gfvkbg, gfvkeg]
+    _df = pd.merge(_df, gf[cols], how='inner', on=gfid)
+    debugprint(title='6b. drie '+gfid,
+               df=gf[cols], colname=gfid, vals=test_d[gfid], sort_on=cols, 
+               debuglevel=_debuglevel)
+
+    debugprint(title='6b. drie '+dfid+' met hun '+gfid+', '+gfvkid,
+               df=_df, colname=dfid, vals=test_d[dfid], sort_on=cols, 
+               debuglevel=_debuglevel)
+
+        
+    print('\n\t\t\t6c. Filter zodat het midden van een', fijntype, 'vk binnen een',
+          groftype, 'vk valt.\n\t\t\tDit kan nu dankzij het splitsen van het', 
+          fijntype, 'vk')
+    _df['midden'] = (_df[dfvkbg] + _df[dfvkeg] ) * 0.5
+    msk = (_df[gfvkbg] < _df['midden']) & (_df['midden'] < _df[gfvkeg])
+    cols = [dfid, dfvkid, gfid, gfvkid, dfvkbg, dfvkeg]
+    # cols = [dfid, dfvkid, gfid, gfvkid, dfvkbg, gfvkbg, gfvkeg, 'midden']
+    _df = _df[msk][cols]
+
+
+    debugprint(title='6c. drie '+dfid+' met hun '+dfvkid+' gekoppeld met '+gfid+' en '+gfvkid,
+               df=_df, colname=dfid, vals=test_d[dfid], sort_on=cols, 
+               debuglevel=_debuglevel)
+
+    (_nrec, _nkey) = df_comp(_df, key_lst=[dfid, dfvkbg],
+                           nrec=_nrec, nkey=_nkey,
+                           u_may_change=True)
+
+    # #############################################################################
+    print('\n----', fijntype+'vk-splitter stap 7\n----',
+          'Maak een nieuwe teller voor',fijntype, 'genaamd', dfvkid2, 
+          '\n\t\tom deze te kunnen onderscheiden van de bestaande', dfvkid)
+    # #############################################################################
+    cols = [dfid, dfvkbg]
+    _df = _df.sort_values(by=cols, na_position='last')
+    _df = makecounter(_df, grouper=dfid, newname=dfvkid2, sortlist=[dfid, dfvkbg, gfid])
+    print('\t\t\tSchakel hierop over om voorkomens te identificeren')
+
+
+    debugprint(title='7a. drie '+dfid+' met hun nieuwe vk tellers '+dfvkid2,
+               df=_df, colname=dfid, vals=test_d[dfid], sort_on=cols, 
+               debuglevel=_debuglevel)
+
+
+    (_nrec, _nkey) = df_comp(_df, key_lst=[dfid, dfvkid2], nrec=_nrec, 
+                             nkey=_nkey, u_may_change=True)
+ 
+ 
+
+    # #############################################################################
+    print('\n----', fijntype+'vk-splitter stap 8\n----',
+          'Toevoegen van de kolommen uit', fijntype,
+          'die we nog misten')
+    # #############################################################################
+    
+    _df = pd.merge(_df,
+                   df.drop([gfid, dfvkbg, dfvkeg], axis=1).drop_duplicates(),
+                   how='inner',
+                   left_on=[dfid, dfvkid], right_on=[dfid, dfvkid])
+
+    debugprint(title='8. drie '+dfid+' met nieuwe geimputeerde vks',
+               df=_df, colname=dfid, vals=test_d[dfid], sort_on=cols, 
+               debuglevel=_debuglevel)
+
+
+    (_nrec, _nkey) = df_comp(_df, key_lst=[dfid, dfvkid2],
+                             nrec=_nrec, nkey=_nkey,
+                             u_may_change=False)
+
+
+
+    print('\n-----------------------------------------------------------')   
+    print('------ Einde vksplitter; fijntype:', fijntype, ', groftype:', 
+          groftype)   
+    print('------ Perc toegenomen', fijntype, 'voorkomens:', 
+          round(100 * (_nkey/_nkey1 - 1), 1), '%')
+    print('-----------------------------------------------------------')   
+
+    return _df
+    

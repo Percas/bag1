@@ -128,157 +128,10 @@ def bag_vbovk_pndvk(current_month='testdata',
 
     (nrec['vbo'], nkey['vbo']) = baglib.df_comp(bd['vbo'], key_lst=vbovk)
     (nrec['pnd'], nkey['pnd']) = baglib.df_comp(bd['pnd'], key_lst=pndvk)
-    nkey1 = nkey['vbo']
-    print('\t\tAantal records en sleutelrecords in vbo:', nrec['vbo'], nkey['vbo'])
-    print('\t\tAantal records en sleutelrecords in pnd:', nrec['pnd'], nkey['pnd'])
+    # nkey1 = nkey['vbo']
+    print('\t\tAantal records en', vbovk, 'in vbo:', nrec['vbo'], nkey['vbo'])
+    print('\t\tAantal records en', pndvk, 'in pnd:', nrec['pnd'], nkey['pnd'])
     
-    # #############################################################################
-    print('\n--2. Aanmaken vbovk zodat een vbovk volledig binnen pndvk past----\n')
-    # #############################################################################
-
-    print('\t\t2.1a Bepaal de begindatum van een vbo:')
-    vbo_startdd = bd['vbo'].groupby('vboid')['vbovkbg'].min().to_frame().\
-        rename(columns={'vbovkbg': 'startdd'}).reset_index()
-    # print(vbo_startdd)
-
-    print('\t\t2.1b Neem de unieke vbo-pnd uit vbo df...')
-    vbo_df = bd['vbo'][['vboid', 'pndid']].drop_duplicates()
-    (nrec['vbo'], nkey['vbo']) = baglib.df_comp(vbo_df, key_lst=['vboid'])
-    print('\t\tAantal records en aantal unieke vbo:', nrec['vbo'], nkey['vbo'])
-    
-    print('\t\t2.1c Koppel deze')
-    vbo_df = pd.merge(vbo_df, vbo_startdd)
-
-    print('\n\t\t2.2 Voeg aan de vbo, pnd de pndvkbg (vk begindatum) toe van pndvk df...')
-    print('\t\t\tEenheid id is hier vbo + pndvkbg!')
-    # print(vbo_df.info())
-    # print(bd['pnd'].info())
-    vbo_df = pd.merge(vbo_df,
-                      bd['pnd'][['pndid', 'pndvkbg']])[['vboid', 'pndvkbg', 'startdd']]
-    (nrec['vbo'], nkey['vbo']) = baglib.df_comp(vbo_df, key_lst=['vboid', 'pndvkbg'],
-                                                nrec=nrec['vbo'],
-                                                nkey=nkey['vbo'],
-                                                u_may_change=True)
-    
-    # print(vbo_df)
-    print('\n\t\t2.2b Verwijder de data waar het pnd eerder begint dan t vbo')
-    vbo_df = vbo_df[vbo_df['pndvkbg'] >= vbo_df['startdd']][['vboid', 'pndvkbg']]
-    (nrec['vbo'], nkey['vbo']) = baglib.df_comp(vbo_df, key_lst=['vboid', 'pndvkbg'],
-                                                nrec=nrec['vbo'],
-                                                nkey=nkey['vbo'],
-                                                u_may_change=True)
-    # print(vbo_df)
-
-    print('\n\t\t2.3 Hernoem de kolom pndvkbg naar vbovkbg...')
-    vbo_df.rename({'pndvkbg': 'vbovkbg'}, axis='columns', inplace=True)
-    (nrec['vbo'], nkey['vbo']) = baglib.df_comp(vbo_df, key_lst=['vboid', 'vbovkbg'],
-                                                nrec=nrec['vbo'],
-                                                nkey=nkey['vbo'],
-                                                u_may_change=False)
-
-    # concat so that all vbovkbg are in one frame
-    print('\n\t\t2.4 Concateer de begindatum van de vbovk met de begindatum\n',
-          '\t\t\tvan de pndvk...')
-    vbo_df = pd.concat([bd['vbo'][['vboid', 'vbovkid', 'vbovkbg']], vbo_df])
-    (nrec['vbo'], nkey['vbo']) = baglib.df_comp(vbo_df, key_lst=['vboid', 'vbovkbg'],
-                                                nrec=nrec['vbo'],
-                                                nkey=nkey['vbo'],
-                                                u_may_change=True)
-    # print(vbo_df.head(30))
- 
-    print('\n\t\t2.5 verwijder dubbele vkbg bij een vboid, sorteer en zorg\n',
-          '\t\t\tdat de lege (nieuwe) vbovk gevuld worden met het dichtst\n',
-          '\t\t\tbijzijnde kleinere vk nummer tbv latere opvulling van dit\n',
-          '\t\t\tnieuwe vk. Dit gaat met pandas.ffill')
-    vbo_df = vbo_df.drop_duplicates(subset=['vboid', 'vbovkbg']).\
-        sort_values(by=['vboid', 'vbovkbg']).\
-            ffill().dropna().astype({'vbovkid': int})
-    (nrec['vbo'], nkey['vbo']) = baglib.df_comp(vbo_df, key_lst=['vboid', 'vbovkbg'],
-                                                nrec=nrec['vbo'],
-                                                nkey=nkey['vbo'],
-                                                u_may_change=False)
-    # print(vbo_df.head(30))
-
-    print('\n\t\t2.6 Maak een nieuwe teller voor vbovk: vbovk2...')
-    vbo_df = baglib.makecounter(vbo_df, grouper='vboid', newname='vbovkid2')
-    (nrec['vbo'], nkey['vbo']) = baglib.df_comp(vbo_df, key_lst=['vboid', 'vbovkid2'],
-                                                nrec=nrec['vbo'],
-                                                nkey=nkey['vbo'],
-                                                u_may_change=False)
-    # print(vbo_df.head(30))
-  
-    print('\n\t\t2.7 Voeg vbovkeg toe in twee stappen:')
-    print('\t\t\t1.7.1 neem de vbovkbg van het volgende record')
-    vbo_df['vbovkeg'] = vbo_df['vbovkbg'].shift(periods=-1)
-    (nrec['vbo'], nkey['vbo']) = baglib.df_comp(vbo_df, key_lst=['vboid', 'vbovkid2'],
-                                                nrec=nrec['vbo'],
-                                                nkey=nkey['vbo'],
-                                                u_may_change=False)
-  
-    
-    print('\t\t\t2.7.2 corrigeer de vbovkeg van het meest recente voorkomen')
-    print('\t\t\tDit krijgt een datum in de verre toekomst...')
-    idx = vbo_df.groupby(['vboid'])['vbovkid2'].transform(max) == vbo_df['vbovkid2']
-    vbo_df.loc[idx, 'vbovkeg'] = FUTURE_DATE
-    (nrec['vbo'], nkey['vbo']) = baglib.df_comp(vbo_df, key_lst=['vboid', 'vbovkid2'],
-                                                nrec=nrec['vbo'],
-                                                nkey=nkey['vbo'],
-                                                u_may_change=False)
-  
-
-    print('\n\t\t2.8 Terugcasten naar integer van vbovkeg...')    
-    vbo_df = vbo_df.astype({'vbovkeg': np.uintc})
-    (nrec['vbo'], nkey['vbo']) = baglib.df_comp(vbo_df, key_lst=['vboid', 'vbovkid2'],
-                                                nrec=nrec['vbo'],
-                                                nkey=nkey['vbo'],
-                                                u_may_change=False)
-    # print(vbo_df.head(30))
- 
-
-    print('\n\t\t ----- Perc toegenomen voorkomens:', 
-          round(100 * (nkey['vbo']/nkey1 - 1), 1), '%')
-    
-    # print(bd['vbo'].head(30))
-    # print('\n\n\t\t --------- aantal records in bd[vbo]: ', bd['vbo'].shape[0])
-    # print(vbo_df.head(30))
-
-    print('\n\t\t2.9 Imputeren nieuwe vbovk nog zonder pndid... ')
-    cols = ['vboid', 'vbovkid', 'vbostatus', 'vbogmlx', 'vbogmly']
-    vbo_df = pd.merge(vbo_df,
-                      bd['vbo'][cols].drop_duplicates(),
-                      how='inner',
-                      left_on=vbovk, right_on=vbovk)
-    (nrec['vbo'], nkey['vbo']) = baglib.df_comp(vbo_df, key_lst=['vboid', 'vbovkid2'],
-                                                nrec=nrec['vbo'],
-                                                nkey=nkey['vbo'],
-                                                u_may_change=False)
-    # cols = ['vboid', 'vbovkid', 'vbovkid2', 'vbovkbg']
-    # print(vbo_df[cols].head(30))
-    # print(bd['vbo'].head(30))
-    
-    
-    print('\t\t2.10 Voeg pndid nog toe')
-    print('\t\t Hierna is vboid, vbovk2 niet meer uniek vanwege dubbele pndn',
-    'bij 1 vbo')
-    bd['vbo'] = pd.merge(vbo_df,
-                         bd['vbo'][['vboid', 'vbovkid', 'pndid']],
-                         how='inner',
-                         left_on=vbovk, right_on=vbovk)
-    (nrec['vbo'], nkey['vbo']) = baglib.df_comp(bd['vbo'], key_lst=['vboid', 'vbovkid2'],
-                                                nrec=nrec['vbo'],
-                                                nkey=nkey['vbo'],
-                                                u_may_change=True)
-    # print(bd['vbo'].head(30))
-    del vbo_df
-    
-    print('\n\t\t2.11 Schakel over bij vk identificatie naar vbovkid2')
-    vbovk = ['vboid', 'vbovkid2']
-    KEY_DICT = {'vbo': vbovk,
-                'pnd': pndvk}
-
-
-    # print(bd['vbo'].info())
-
     # #############################################################################
     print('\n----3. Verwijder eendagsvliegen -----------------------\n')
     # #############################################################################
@@ -293,6 +146,23 @@ def bag_vbovk_pndvk(current_month='testdata',
         print('\tCheck na verwijderen', bob, 'met voorkomens', vk, ':')
         (nrec[bob], nkey[bob]) = baglib.df_comp(bd[bob], key_lst=vk, 
                                                 nrec=nrec[bob], nkey=nkey[bob])
+    
+    # #############################################################################
+    print('\n--2. Aanmaken vbovk zodat een vbovk volledig binnen pndvk past----\n')
+    # #############################################################################
+    
+    bd['vbo'] = baglib.vksplitter(df=bd['vbo'], gf=bd['pnd'], 
+                                  fijntype ='vbo', groftype = 'pnd', 
+                                  future_date = FUTURE_DATE)
+
+    
+    print('\n\t\tEind stap 2: Schakel over bij vk identificatie naar vbovkid2')
+    vbovk = ['vboid', 'vbovkid2']
+    KEY_DICT = {'vbo': vbovk,
+                'pnd': pndvk}
+
+
+    print(bd['vbo'].info())
     
     # print(bd['vbo'].head(30))
     
@@ -317,13 +187,14 @@ def bag_vbovk_pndvk(current_month='testdata',
     bd['vbo'] = pd.merge(bd['vbo'],
                          bd['pnd'],
                          how='left',
-                         on='pndid')
+                         on=pndvk)
     del bd['pnd']
     
-    # print(bd['vbo'].info())
+    print(bd['vbo'].info())
     # (nrec['vbo'], nkey['vbo']) = baglib.df_comp(bd['vbo'], key_lst=vbovk,
     #                                             nrec=nrec['vbo'], nkey=nkey['vbo'], 
     #                                             u_may_change=False)
+    
     
     bd['vbo'].set_index(vbovk, inplace=True)
     
@@ -335,8 +206,10 @@ def bag_vbovk_pndvk(current_month='testdata',
     
     # toc = time.perf_counter()
     # baglib.print_time(toc - tic, 'gebruikte tijd:', printit)
+
+    doel2_vbovk_u = nkey['vbo']
     
-  
+    '''
     # #############################################################################
     print('\n----5. Selecteer pndvk waarin  het midden vh vbovk valt---\n')
     # #############################################################################
@@ -395,7 +268,7 @@ def bag_vbovk_pndvk(current_month='testdata',
         
         print('\tNieuwe doel:', doel2_vbovk_u)
     '''
-
+    '''
         vbovk_u = bd['vbo'][['vboid', 'vbovkid']].drop_duplicates()
         missing_vbovk_df = pd.concat([vbovk_pndvk_u,
                                       vbovk_u]).drop_duplicates(keep=False)
@@ -480,6 +353,7 @@ def bag_vbovk_pndvk(current_month='testdata',
     # print('\t\ttictoc - saving vbo-pnd file in', toc - tic, 'seconds')
     baglib.print_time(toc - tic, 'vbovk2_pndvk duurde', printit)
 
+    
     '''
     if vbovk_geen_pndvk_df.shape[0] != 0:
         print('\tWe verrijken vbovk_geen_pndvk met "het laagste pndvk dat geen\n',
@@ -497,9 +371,9 @@ def bag_vbovk_pndvk(current_month='testdata',
             vbovk_geen_pndvk_df.to_csv(outputfile)
     else:
         print('\tEr is geen bestand aangemaakt met vbovk zonder pndvk')
-    '''
-    '''
+
     
+        
     # #############################################################################
     print('\n----6. Bepalen n_vbo_in_pndvk, gerelateerd aan vbo.typeinliggend\n')
     # #############################################################################
