@@ -36,10 +36,25 @@ Keuzen
 2. een vbo kan niet zonder num, kan niet zonder opr kan niet zonder
     wpl kan niet zonder gemeente bestaan.
 
-Aanpak:
+-------------------------
+Functie splits_bobvk.py:
+-------------------------
+    bob = bagobject
+
 1. Bepaal voor wpl-gem of er nieuwe wplvk moeten worden aangemaakt. Een nieuw
 wplvk wordt alleen aangemaakt er een nieuw gemvk is
-...
+2. Idem voor opr-wpl
+3. Idem voor num-opr
+4. Idem voor vbo-num
+5. Idem voor vbo-pnd
+
+Voor deze 5 relaties gebruiken we de functie vksplitter. Deze werkt als volgt:
+
+-------------------------
+Functie vksplitter.py:
+-------------------------
+We specificeren het voor vbo-pnd. Het geldt echter voor elk van bovenstaande
+5 relaties.
 
 1. Bepaal voor elke vbo-pnd combinatie het interval waarop beide bestaan:
     vbopnd_bg en vbopnd_eg
@@ -117,7 +132,7 @@ opr1    o---------oo------------------------------------>
 
 # ################ import libraries ###############################
 import pandas as pd
-# import numpy as np
+import numpy as np
 import sys
 # import os
 import time
@@ -127,6 +142,444 @@ from config import LOCATION
 
 
 # ############### Define functions ################################
+
+def vksplitter(df='vbo_df', gf='pnd_df', fijntype ='vbo', groftype = 'pnd', 
+               future_date = 20321231, test_d={}, debuglevel=0):
+    
+    '''Splits voorkomens (vk) voor df, zodat elk vk van df in een gf vk past.
+    df is het "fijntype" en gf is het "groftype".
+    
+    dfid identificeert de eenheden van df, bijvoorbeeld vbo, 
+    waarvan de vk als records in df staan. gfid idem voor gf (pnd)
+
+    input: beschouw twee vk van een pand (gfid) en 1 vk van een vbo (dfid)
+    gfid:            o------------------oo-------------o
+    dfid:                   o------------------o
+
+    output: het vbovk wordt gesplitst zodat het binnen een pnd vk valt
+    gfid:            o------------------oo-------------o
+    dfid:                   o-----------oo-------o
+    
+    dfvkbg is de kolom met de vk begindatums van df.
+    gfvkbg idem voor gf.
+    
+    We gaan dit aanpakken door de begindatums van de vk (dfvkbg en gfvkbg)
+    in 'e'en kolom te verzamelen en dit te sorteren en ontdubbelen per dfid
+    
+    uitgangspunt is om geen nieuwe vk aan te maken v'o'or het eerste vk 
+    van dfid.
+ 
+    Voorwaarden: de kolommen in de volgende 7 assignments moeten bestaan
+    in de dataframes df en gf:
+    
+ '''
+    print('-----------------------------------------------------------')   
+    print('------ Start vksplitter; fijntype:', fijntype, ', groftype:', 
+          groftype)   
+    print('-----------------------------------------------------------')   
+    # de volgende kolommen moeten bestaan voor fijntype en groftype:
+    dfid = fijntype + 'id'
+    dfvkbg = fijntype + 'vkbg'
+    dfvkeg = fijntype + 'vkeg'
+    dfvkid = fijntype + 'vkid'
+    gfid = groftype + 'id'
+    gfvkbg = groftype + 'vkbg'
+    gfvkeg = groftype + 'vkeg'
+    gfvkid = groftype + 'vkid'
+    dfgf_bg = fijntype + groftype + '_bg'
+    dfgf_eg = fijntype + groftype + '_eg'
+    
+    
+    # deze kolom gaan we maken om de nieuwe vk te identificeren:
+    dfvkid2 = fijntype + 'vkid2'
+    # aantallen in de uitgangssituatie     
+
+    # print('DDDDDEBBBBBUUUUG', [dfid, dfvkid])
+
+    (_nrec1, _nkey1) = baglib.df_comp(df, key_lst=[dfid, dfvkid])
+
+
+
+    # #############################################################################
+    print('\n----', fijntype+'vk-splitter stap 0\n----',
+          'Bepaal voor elke', fijntype+'-'+groftype, 'relatie het interval',
+          dfgf_bg+'-'+dfgf_eg, 'waarop beide bestaan\n')
+    # #############################################################################
+
+
+    relatie = fijntype+'-'+groftype
+    print('\t0a. Bepaal voor', relatie, 'de kleinste', dfvkbg)
+    cols = [dfid, gfid, dfvkbg]
+    dfgf_bgeg = df[cols].groupby([dfid, gfid]).min()
+
+    baglib.debugprint(title='bij stap 0a',
+                      df=dfgf_bgeg.reset_index(), colname=dfid,
+                      vals=test_d[dfid], sort_on=dfid, debuglevel=debuglevel)
+
+    print('\t0b. Voeg hier de grootste', dfvkeg, 'aan toe')
+
+    cols = [dfid, gfid, dfvkeg]
+    dfgf_bgeg = pd.merge(dfgf_bgeg, df[cols].groupby([dfid, gfid]).max(), on=[dfid, gfid]).reset_index()
+    
+    baglib.debugprint(title='bij stap 0b',
+                      df=dfgf_bgeg, colname=dfid,
+                      vals=test_d[dfid], sort_on=dfid, debuglevel=debuglevel)
+
+
+    print('\t0c. Voeg hieraan toe de kleinste', gfvkbg)
+    cols = [gfid, gfvkbg, gfvkeg]
+    dfgf = pd.merge(dfgf_bgeg[[dfid, gfid]], gf[cols], on=gfid)
+    cols = [dfid, gfid, gfvkbg]
+    dfgf_bgeg = pd.merge(dfgf_bgeg, dfgf[cols].groupby([dfid,gfid]).min().reset_index(), on=[dfid, gfid])
+    
+    baglib.debugprint(title='bij stap 0c',
+                      df=dfgf_bgeg, colname=dfid,
+                      vals=test_d[dfid], sort_on=dfid, debuglevel=debuglevel)
+    
+    
+    print('\t0d. Voeg hieraan toe de grootste', gfvkeg)
+    cols = [dfid, gfid, gfvkeg]
+    dfgf_bgeg = pd.merge(dfgf_bgeg, dfgf[cols].groupby([dfid,gfid]).max().reset_index(), on=[dfid, gfid])
+    
+    baglib.debugprint(title='bij stap 0d',
+                      df=dfgf_bgeg, colname=dfid,
+                      vals=test_d[dfid], sort_on=dfid, debuglevel=debuglevel)
+    
+    print('\t0e. Bepaal', dfgf_bg, 'als maximum van', dfvkbg, 'en', gfvkbg)
+    dfgf_bgeg[dfgf_bg] = dfgf_bgeg[[dfvkbg, gfvkbg]].max(axis=1)
+    dfgf_bgeg.drop([dfvkbg, gfvkbg], axis=1, inplace=True)
+
+    baglib.debugprint(title='bij stap 0e',
+                      df=dfgf_bgeg, colname=dfid,
+                      vals=test_d[dfid], sort_on=dfid, debuglevel=debuglevel)
+    
+    print('\t0f. Bepaal', dfgf_eg, 'als minimum van', dfvkeg, 'en', gfvkeg)
+    dfgf_bgeg[dfgf_eg] = dfgf_bgeg[[dfvkeg, gfvkeg]].min(axis=1)
+    dfgf_bgeg.drop([dfvkeg, gfvkeg], axis=1, inplace=True)
+
+    baglib.debugprint(title='bij stap 0e',
+                      df=dfgf_bgeg, colname=dfid,
+                      vals=test_d[dfid], sort_on=dfid, debuglevel=debuglevel)
+    
+    print('\t0g. Bepaal beide data ook voor', dfid, 'alleen')
+    cols = [dfid, dfgf_bg, dfgf_eg]
+    df_bgeg = dfgf_bgeg[cols].groupby(dfid).agg({dfgf_bg: 'min', dfgf_eg: 'max'}).reset_index()
+    # print(df_bgeg)
+
+    baglib.debugprint(title='bij stap 0f',
+                      df=df_bgeg, colname=dfid,
+                      vals=test_d[dfid], sort_on=dfid, debuglevel=debuglevel)
+    
+    # #############################################################################
+    print('\n----', fijntype+'vk-splitter stap 1\n----',
+          'Verzamel de vkbg van', fijntype, 'en', groftype, 'in _df en maak',
+          'hiermee nieuwe', fijntype, 'vk\n')
+    # #############################################################################
+
+    print('\t\tWe beginnen de reguliere vk van', fijntype, 'gebaseerd op',
+          dfvkbg, '\n\t\tHet bestaande', dfvkid, 'gaat straks een rol spelen bij het imputeren')
+    
+    (_nrec, _nkey) = baglib.df_comp(df=df, key_lst=[dfid, dfvkbg])
+    cols = [dfid, dfvkid, dfvkbg]
+    _df = df[cols].drop_duplicates()
+    (_nrec, _nkey) = baglib.df_comp(df=_df, key_lst=[dfid, dfvkbg], nrec=_nrec, nkey=_nkey, u_may_change=True)
+    
+    baglib.debugprint(title='bij stap 1',
+                      df=_df, colname=dfid,
+                      vals=test_d[dfid], sort_on=cols, debuglevel=debuglevel)
+
+
+   # #############################################################################
+    print('\n----', fijntype+'vk-splitter stap 2\n----',
+          'Voeg van', groftype, 'de', gfvkbg, 'hier aan toe. Hiervoor',
+          'hebben we de koppeling '+fijntype+'-'+groftype, 'nodig,\n plus',
+          'de', gfvkbg, 'van', groftype)
+    # #############################################################################
+    
+    _gf = pd.merge(gf[[gfid, gfvkbg]], 
+                   df[[dfid, gfid]].drop_duplicates(),
+                   how='inner', on=gfid)
+    # print(_gf.head(50))
+    
+    cols = [dfid, gfvkbg]
+    baglib.debugprint(title='bij stap 2a. '+dfid+' met '+gfvkbg+' van de bijbehorende '+gfid,
+               df=_gf, colname=dfid, vals=test_d[dfid], sort_on=cols, 
+               debuglevel=debuglevel)
+
+    cols = [dfid, dfvkbg]
+    _gf = _gf[[dfid, gfvkbg]].drop_duplicates().rename({gfvkbg: dfvkbg}, axis='columns')
+    baglib.debugprint(title='bij stap 2b. '+dfid+' met de unieke '+gfvkbg+' hernoemd naar '+dfvkbg,
+               df=_gf, colname=dfid, vals=test_d[dfid], sort_on=cols, 
+               debuglevel=debuglevel)
+    
+    
+    _df = pd.concat([_df, _gf]).drop_duplicates(subset=[dfid, dfvkbg], keep='first')
+    (_nrec, _nkey) = baglib.df_comp(df=_df, key_lst=[dfid, dfvkbg], nrec=_nrec, nkey=_nkey, u_may_change=True)
+    
+    baglib.debugprint(title='bij 2c. '+dfid+' met nu ook de unieke '+dfvkbg+' erbij. De NaNs treden op\n\
+               \t\t als de '+dfvkbg+' eerst een '+gfvkbg+' van de '+gfid+' was.',
+               df=_df, colname=dfid, vals=test_d[dfid], sort_on=cols, 
+               debuglevel=debuglevel)
+
+        
+    # #############################################################################
+    print('\n----', fijntype+'vk-splitter stap 3\n----',
+          'Voeg hier van', groftype, 'de', gfvkeg, 'aan toe, voor zover',
+          'deze ongelijk is aan', future_date)
+    print('\t\tHiervoor hebben we de koppeling\n\t\t', fijntype, '-', groftype,
+          'nodig, plus de', gfvkeg, 'van', groftype)
+    # #############################################################################
+    print('\t\tTBD ----------------')
+    
+    '''
+    _gf = pd.merge(gf[[gfid, gfvkeg]], 
+                   df[[dfid, gfid]].drop_duplicates(),
+                   how='inner', on=gfid)
+    # print(_gf.head(50))
+    baglib.debugprint(title='3a. vier wpl met die drie straatjes geeft 13 records door veel verschillende bg',
+               df=_gf, 
+               colname='oprid',
+               vals=['0457300000000259', '0457300000000260', '0003300000116985'], 
+               sort_on=['oprid', 'wplvkeg'], debuglevel=debuglevel)
+    
+    
+    _gf = _gf[[dfid, gfvkeg]].drop_duplicates().rename({gfvkeg: dfvkbg}, axis='columns')
+    baglib.debugprint(title='3b. zonder woonplaats, duplicaten eruit, bg hernoemd',
+               df=_gf,, 
+               colname='oprid',
+               vals=['0457300000000259', '0457300000000260', '0003300000116985'], 
+               sort_on=['oprid', 'oprvkbg'], debuglevel=debuglevel)
+    
+    _gf = _gf[_gf[dfvkbg] != future_date]
+    
+    _df = pd.concat([_df, _gf]).drop_duplicates(subset=[dfid, dfvkbg] , keep='first')
+    (_nrec, _nkey) = baglib.df_comp(df=_df, key_lst=[dfid, dfvkbg], nrec=_nrec, nkey=_nkey, u_may_change=True)
+    
+    baglib.debugprint(title='3c. drie straatjes samengevoegde vkbg van opr en wpl. oprvkdi=nan is van wpl',
+               df=_df, 
+               colname='oprid',
+               vals=['0457300000000259', '0457300000000260', '0003300000116985'], 
+               sort_on=['oprid', 'oprvkbg'], debuglevel=debuglevel)
+    '''
+    
+    # #############################################################################
+    print('\n----', fijntype+'vk-splitter stap 4\n----',
+          'Opvullen van de nans van de', dfvkid, 'met ffill')
+    # #############################################################################
+    print('\n\t\tDe sortering luistert nauw:\n')
+    # https://stackoverflow.com/questions/27012151/forward-fill-specific-columns-in-pandas-dataframe
+
+    baglib.debugprint(title='begin van stap 4',
+               df=_df, colname=dfid, vals=test_d[dfid], sort_on=cols, 
+               debuglevel=debuglevel)
+
+
+    print('\t\t4a. Werwijder', dfid, 'die buiten de range van de', relatie, 'vallen')
+    _df = pd.merge(_df, df_bgeg, how='inner', on=dfid)
+    msk = _df[dfvkbg] >= _df[dfgf_bg]
+    _df = _df[msk]
+
+    baglib.debugprint(title='bij stap 4a',
+               df=_df, colname=dfid, vals=test_d[dfid], sort_on=cols, 
+               debuglevel=debuglevel)
+
+    print('\t\t4b. Maak van het', dfvkid, 'met het laagste', dfvkbg, 'een 1',
+          'om te voorkomen dat we met NaN gaan ffillen')
+    
+    # tmp_df gaat alle de records identificeren die op 1 gezet moeten worden.
+
+
+    cols = [dfid, dfvkbg]
+    _df.sort_values(by=cols, inplace=True)
+    tmp_df = _df[cols].groupby(dfid).first().reset_index()
+    # kolom tmp wordt gebruikt om te bepalen van welke records de dfvkid op 1
+    # gezet moet worden. Dit is zo als deze kolom de waarde True (of eigenlijk
+    # not nan heeft). Daarom: 
+    tmp_df['tmp'] = True
+
+    baglib.debugprint(title='4b1. NaNs goed zetten bij die '+dfid+' waar de vk rij begint met een NaN',
+               df=tmp_df, colname=dfid, vals=test_d[dfid], sort_on=cols, 
+               debuglevel=debuglevel)
+    
+    # doe een leftmerge met _df en je weet in _df welke records het betreft...
+    colsid = [dfid, dfvkbg, dfvkid]
+    _df = pd.merge(_df[colsid], tmp_df, how='left', on=cols)
+
+    baglib.debugprint(title='4c',
+               df=_df, colname=dfid, vals=test_d[dfid], sort_on=cols, 
+               debuglevel=debuglevel)
+
+    # ... namelijk de waarden waar tmp niet gelijk aan nan is
+    _df.loc[_df['tmp'].notna(), dfvkid] = 1
+    _df.drop(columns='tmp', inplace=True)
+    
+    baglib.debugprint(title='4d begin staat op 1',
+               df=_df, colname=dfid, vals=test_d[dfid], sort_on=cols, 
+               debuglevel=debuglevel)
+
+    # sys.exit('buggy end: tmp_df does not select min of vbovkbg!?')
+
+
+
+    print('\n\t\t4b. Sorteer op', dfid, dfvkbg, '(nan last), waarna je met\n',
+          '\t\t\tffill de nans kunt opvullen van de', dfvkid)
+    cols = [dfid, dfvkbg]
+    _df = _df.sort_values(by=cols, na_position='last')
+    
+    _df.loc[:,dfvkid].iat[0] = 1 # if the first record in NaN, then fill gives an error
+    
+    _df.loc[:,dfvkid] = _df.loc[:,dfvkid].ffill().astype({dfvkid:int})
+
+    # print(_df.head(30))
+    baglib.debugprint(title='4a. NaNs staan nog verkeerd bij die '+dfid+' waar de vk rij begint met een NaN',
+               df=_df, colname=dfid, vals=test_d[dfid], sort_on=cols, 
+               debuglevel=debuglevel)
+
+
+    # #############################################################################
+    print('\n----', fijntype+'vk-splitter stap 5\n----',
+          'Voeg', dfvkeg, 'toe in twee stappen:\n')
+    # #############################################################################
+
+    print('\t\t\t5a. neem de', dfvkbg, 'van het volgende record (sortering uit stap 5)')
+ 
+    _df[dfvkeg] = _df[dfvkbg].shift(periods=-1)
+    (_nrec, _nkey) = baglib.df_comp(_df, key_lst=[dfid, dfvkbg],
+                             nrec=_nrec, nkey=_nkey,
+                             u_may_change=False)
+
+    baglib.debugprint(title='bij stap 5a. '+dfid+' met hun '+dfvkeg+'. Deze staat verkeerd voor de laatste van de vk rij',
+               df=_df, colname=dfid, vals=test_d[dfid], sort_on=cols, 
+               debuglevel=debuglevel)
+
+    # print(_df[_df[dfvkeg].isna()])
+
+    print('\t\t\t5b. corrigeer de vbovkeg van het meest recente', fijntype, 'voorkomen')
+    print('\t\t\tDit krijgt een datum in de toekomst:', future_date)
+    idx = _df.groupby([dfid])[dfvkbg].transform(max) == _df[dfvkbg]
+    _df.loc[idx, dfvkeg] = future_date
+    _df = _df.astype({dfvkeg:int})
+
+    baglib.debugprint(title='bij stap 5b. '+dfid+' met de laatste '+dfvkeg+' uit hun vk rijtje op '+str(future_date)+' gezet.',
+               df=_df, colname=dfid, vals=test_d[dfid], sort_on=cols, 
+               debuglevel=debuglevel)
+
+    (_nrec, _nkey) = baglib.df_comp(_df, key_lst=[dfid, dfvkbg],
+                           nrec=_nrec, nkey=_nkey,
+                           u_may_change=False)
+
+
+    # #############################################################################
+    print('\n----', fijntype+'vk-splitter stap 6\n----',
+          'Maak een nieuwe teller voor',fijntype, 'vk genaamd', dfvkid2, 
+          '\n\t\tom deze te kunnen onderscheiden van de bestaande', dfvkid)
+    # #############################################################################
+    cols = [dfid, dfvkbg]
+    _df = _df.sort_values(by=cols, na_position='last')
+    _df = baglib.makecounter(_df, grouper=dfid, newname=dfvkid2, sortlist=[dfid, dfvkbg, gfid])
+    print('\t\tHet voorkomen (vk) van een', dfid, 'was tot nu toe geidentificeerd met de',
+          '\n\t\tbegindatum van dat vk. Schakel vanaf nu over op', dfvkid2,
+          'om vk te identificeren')
+
+    baglib.debugprint(title='bij stap 6. '+dfid+' met hun nieuwe vk tellers '+dfvkid2,
+               df=_df, colname=dfid, vals=test_d[dfid], sort_on=cols, 
+               debuglevel=debuglevel)
+
+    (_nrec, _nkey) = baglib.df_comp(_df, key_lst=[dfid, dfvkid2], nrec=_nrec, 
+                             nkey=_nkey, u_may_change=True)
+
+    
+    # #############################################################################
+    print('\n----', fijntype+'vk-splitter stap 7\n----',
+          'Koppel', gfid, gfvkid, 'erbij.')
+    # #############################################################################
+    
+    print('\n\t\t\t7a. voeg', gfid, 'toe met de input df van', fijntype)
+    cols = [dfid, dfvkid, gfid]
+    baglib.debugprint(title='input voor stap 7a. '+dfid+' met '+gfid+' uit het input df',
+               df=df[cols].drop_duplicates(),
+               colname=dfid, vals=test_d[dfid], sort_on=cols, 
+               debuglevel=debuglevel)
+
+
+    _df = pd.merge(_df, df[cols].drop_duplicates(), how='inner', on=[dfid, dfvkid])
+    
+
+
+    baglib.debugprint(title='resultaat van stap 7a. '+dfid+' met hun '+gfid,
+               df=_df, colname=dfid, vals=test_d[dfid], sort_on=[dfid, dfvkid2], 
+               debuglevel=debuglevel)
+    
+    (_nrec, _nkey) = baglib.df_comp(_df, key_lst=[dfid, dfvkbg],
+                           nrec=_nrec, nkey=_nkey,
+                           u_may_change=True)
+    
+    print('\n\t\t\t7b. voeg eerst', gfvkid, gfvkbg, gfvkeg,
+          'toe met de input dataframe van', groftype)
+    print('\t\t\t', dfid, 'wordt nu gekoppeld met elk vk van zijn', gfid)
+    cols = [gfid, gfvkid, gfvkbg, gfvkeg]
+    _df = pd.merge(_df, gf[cols], how='inner', on=gfid)
+    baglib.debugprint(title='input voor stap 7b. '+gfid,
+               df=gf[cols], colname=gfid, vals=test_d[gfid], sort_on=cols, 
+               debuglevel=debuglevel)
+
+    baglib.debugprint(title='bij stap 7b. '+dfid+' met hun '+gfid+', '+gfvkid,
+               df=_df, colname=dfid, vals=test_d[dfid], sort_on=cols, 
+               debuglevel=debuglevel-20)
+
+        
+    print('\n\t\t\t7c. Filter zodat het midden van een', fijntype, 'vk binnen een',
+          groftype, 'vk valt.\n\t\t\tDit kan nu dankzij het splitsen van het', 
+          fijntype, 'vk')
+    _df['midden'] = (_df[dfvkbg] + _df[dfvkeg] ) * 0.5
+    msk = (_df[gfvkbg] < _df['midden']) & (_df['midden'] < _df[gfvkeg])
+    cols = [dfid, dfvkid2, dfvkid, gfid, gfvkid, dfvkbg, dfvkeg]
+    _df = _df[msk][cols]
+
+    baglib.debugprint(title='bij stap 7c. '+dfid+' met hun '+dfvkid+' gekoppeld met '+gfid+' en '+gfvkid,
+               df=_df, colname=dfid, vals=test_d[dfid], sort_on=cols, 
+               debuglevel=debuglevel)
+
+    (_nrec, _nkey) = baglib.df_comp(_df, key_lst=[dfid, dfvkbg],
+                           nrec=_nrec, nkey=_nkey,
+                           u_may_change=True)
+
+    # #############################################################################
+    print('\n----', fijntype+'vk-splitter stap 8\n----',
+          'Toevoegen van de kolommen uit', fijntype,
+          'die we nog misten')
+    # #############################################################################
+    
+    _df = pd.merge(_df,
+                   df.drop([gfid, dfvkbg, dfvkeg], axis=1).drop_duplicates(),
+                   how='inner',
+                   left_on=[dfid, dfvkid], right_on=[dfid, dfvkid])
+
+    baglib.debugprint(title='bij stap 8: '+dfid+' met nieuwe geimputeerde vks',
+               df=_df, colname=dfid, vals=test_d[dfid], sort_on=cols, 
+               debuglevel=debuglevel-20)
+
+
+    (_nrec, _nkey) = baglib.df_comp(_df, key_lst=[dfid, dfvkid2],
+                             nrec=_nrec, nkey=_nkey,
+                             u_may_change=False)
+
+
+
+    print('\n-----------------------------------------------------------')   
+    print('------ Einde vksplitter; fijntype:', fijntype, ', groftype:', 
+          groftype)   
+    print('------ Perc toegenomen', fijntype, 'voorkomens:', 
+          round(100 * (_nkey/_nkey1 - 1), 1), '%')
+    print('-----------------------------------------------------------')   
+
+    return _df.rename(columns={dfvkid: dfvkid+'_oud', dfvkid2: dfvkid})
+    
+    
+def find_double_vk(df, bobid, bobvkid):
+    '''Find the double voorkomen (vk) in df, identified by bobid, bobvkid.'''
+    return df.groupby([bobid, bobvkid]).size().to_frame('aantal').sort_values(by='aantal', ascending=False)
+
 
 def bag_splits_vbovk(current_month='testdata',
                      koppelvlak2='../data/02-csv',
@@ -170,12 +623,11 @@ def bag_splits_vbovk(current_month='testdata',
     wplvk = ['wplid', 'wplvkid']
     # wplgemvk = ['wplid', 'wplgemvkid']        
     
-    KEY_DICT = {# 'vbo': vbovk,
-                # 'pnd': pndvk,
-                # 'num': numvk,
+    KEY_DICT = {'vbo': vbovk,
+                'pnd': pndvk,
+                'num': numvk,
                 'opr': oprvk,
                 'wpl': wplvk}
-                # 'wplgem': wplgemvk}
     
     bd = {}         # dict with df with bagobject (vbo en pnd in this case)
     nrec = {}
@@ -184,13 +636,18 @@ def bag_splits_vbovk(current_month='testdata',
     # printit = True
     
     FUTURE_DATE = 20321231
-    DEBUGLEVEL = 0
+    DEBUGLEVEL = 10
     
     TEST_D = {'wplid': ['3386', '1012', '3631'],
               'oprid': ['0457300000000259', '0457300000000260', '0003300000116985'],
-              'numid': ['1979200000000546', '0457200000521759', '0457200000521256'],
-              'vboid': ['0457010000060735', '0457010000061531', '1979010000000545'],
-              'pndid': ['0457100000064572', '0457100000065899', '1979100000000651']}
+              # 'numid': ['1979200000000546', '0457200000521759', '0457200000521256'],
+              # 'numid': ['0388200000212289'],
+              'numid': ['0003200000136934'],
+              # 'vboid': ['0457010000060735', '0457010000061531', '1979010000000545', '0388010000212290'],
+              # 'vboid': ['0388010000212290'],
+              'vboid': ['0003010000128544'],
+              # 'vboid': ['0007010000000192'],
+              'pndid': ['0388100000202416', '0388100000231732', '0388100000232080', '0388100000232081']}
 
     print('\n---------------DOELSTELLING--------------------------------')
     print('----splits VBO voorkomens (vbovk) als er tijdens de loooptijd')
@@ -198,7 +655,7 @@ def bag_splits_vbovk(current_month='testdata',
     print('-----------------------------------------------------------')
 
     # #########################################################################
-    print('\n----0a. Inlezen van de inputbestandenv -----------------------\n')
+    print('\n----0a. Inlezen van de inputbestanden-----------------------\n')
     # #########################################################################
     
     # print('huidige maand (verslagmaand + 1):', current_month)
@@ -214,654 +671,93 @@ def bag_splits_vbovk(current_month='testdata',
         bd[bob] = baglib.fix_eendagsvlieg(bd[bob], bob+'vkbg', bob+'vkeg')
         (nrec[bob], nkey[bob]) = baglib.df_comp(bd[bob], key_lst=vk, 
                                                 nrec=nrec[bob], nkey=nkey[bob])
-    
-    baglib.debugprint(df=bd['opr'], 
-                      colname='oprid', vals=['0457300000000260'], 
-                      sort_on=[], debuglevel=DEBUGLEVEL)
-
-    baglib.debugprint(df=bd['wpl'], colname='wplid',
-                   vals=['1012'], sort_on=[], debuglevel=DEBUGLEVEL)
+        print('\t\tCheck: zitten er dubbele vk in', bob+':')
+        print(find_double_vk(bd[bob], bob+'id', bob+'vkid').head(2))
+        print()
 
     # #############################################################################
     print('\n----1. Roep vksplitter aan -----------------------\n')
     # #############################################################################
+
     
-    bd['opr'] = baglib.vksplitter(df=bd['opr'], gf=bd['wpl'],
+    bd['opr'] = vksplitter(df=bd['opr'], gf=bd['wpl'],
                                   fijntype='opr', groftype='wpl',
                                   future_date=FUTURE_DATE,
-                                  test_d=TEST_D)
+                                  test_d=TEST_D, debuglevel=DEBUGLEVEL)
 
     cols = ['oprid', 'oprvkid2']
     baglib.debugprint(title='Testje na vksplitter',
                       df=bd['opr'], colname='oprid', vals=TEST_D['oprid'], sort_on=cols, 
                       debuglevel=DEBUGLEVEL)
-
-    bd['num'] = baglib.vksplitter(df=bd['num'], gf=bd['opr'],
+    
+    bd['num'] = vksplitter(df=bd['num'], gf=bd['opr'],
                                   fijntype='num', groftype='opr',
                                   future_date=FUTURE_DATE,
-                                  test_d=TEST_D)
+                                  test_d=TEST_D, debuglevel=DEBUGLEVEL)
+    print(bd['num'].info())
     
-    bd['vbo'] = baglib.vksplitter(df=bd['vbo'], gf=bd['num'],
+    
+    bd['vbo'] = vksplitter(df=bd['vbo'], gf=bd['num'],
                                   fijntype='vbo', groftype='num',
                                   future_date=FUTURE_DATE,
-                                  test_d=TEST_D)
-    
-    # bd['vbo'].drop(labels='vbovkid2', axis=1, inplace=True)
-    
-    # bd['vbo'] = bd['vbo'].rename(columns={'vbovkid': 'vbovkid_oud'})
-    # bd['vbo'] = bd['vbo'].rename(columns={'vbovkid2': 'vbovkid'})
-    
-    bd['vbo'].rename(columns={'vbovkid': 'vbovkid_oud', 'vbovkid2': 'vbovkid'}, inplace=True)
+                                  test_d=TEST_D, debuglevel=DEBUGLEVEL+20)
 
+    # rename column _oud so it won't get confused when we invoke vksplitter 
+    # for vbo for the second time, but now with pnd as groftype
+    bd['vbo'].rename(columns={'vbovkid_oud': 'vbovkid_org'}, inplace=True)
+    
+    
+    
+    bd['vbo'] = vksplitter(df=bd['vbo'], gf=bd['pnd'],
+                           fijntype='vbo', groftype='pnd',
+                           future_date=FUTURE_DATE,
+                           test_d=TEST_D, debuglevel=DEBUGLEVEL)
+
+    bd['vbo'].drop(columns='vbovkid_oud', inplace=True)    
     # print(bd['vbo'].info())
-    # print(bd['vbo'][['vboid', 'vbovkid']].head())
-    
-    bd['vbo'] = baglib.vksplitter(df=bd['vbo'], gf=bd['pnd'],
-                                  fijntype='vbo', groftype='pnd',
-                                  future_date=FUTURE_DATE,
-                                  test_d=TEST_D)
-
-    '''
-    # #############################################################################
-
-    # #############################################################################
-    print('\n----1. Bepaal voor elke vbo-pnd combinatie het interval waarop',
-          ' beide bestaan ---\n')
-    # #############################################################################
-
-    # vk = voorkomen 
-    # bg = begindatum geldigheid
-    # eg = einddatum geldigheid
-    vbopnd_bg_eg = bd['vbo'].groupby(['vboid', 'pndid']).agg({'vbovkbg': 'min', 
-                                                              'vbovkeg': 'max'}).reset_index()
-    pnd_bg_eg = bd['pnd'].groupby('pndid').agg({'pndvkbg': 'min', 'pndvkeg' : 'max'}).reset_index()
-    (nrec, nkey) = baglib.df_comp(vbopnd_bg_eg, key_lst=['vboid', 'pndid'])
-    # print(vbopnd_bg_eg.head())
-    # print(pnd_bg_eg.head())
-    
-    vbopnd_bg_eg = pd.merge(vbopnd_bg_eg, pnd_bg_eg, how='left', on='pndid')
-    del pnd_bg_eg
-    
-    vbopnd_bg_eg['vbopnd_bg'] = vbopnd_bg_eg[['vbovkbg', 'pndvkbg']].max(axis=1)
-    vbopnd_bg_eg['vbopnd_eg'] = vbopnd_bg_eg[['vbovkeg', 'pndvkeg']].min(axis=1)
-
-    baglib.debugprint(df=vbopnd_bg_eg,
-                      colname='vboid', val='0762010000011444', 
-                      sortlist=['vboid', 'pndid', 'vbovkbg'], debuglevel=DEBUGLEVEL)
-
-
-    vbopnd_bg_eg.drop(['vbovkbg', 'vbovkeg', 'pndvkbg', 'pndvkeg'], axis=1, inplace=True)
-    (nrec, nkey) = baglib.df_comp(vbopnd_bg_eg, key_lst=['vboid', 'pndid'],
-                                  nrec=nrec, nkey=nkey, u_may_change=True)
-    # print(vbopnd_bg_eg.head())
-
-
-    # #############################################################################
-    print('\n----2. Verzamel de vkbg van vbo en pnd in vbopnd en maak hiermee',
-          'nieuwe vbovk ---\n')
-    # #############################################################################
-
-    print('\t\t2a. Begin met pndid, pndvkid en pndvkbg')
-    print('\t\tUniek in het record is vboid, pndid, pndvkbg')
-    (nrec, nkey) = baglib.df_comp(vbopnd_bg_eg, key_lst=['vboid', 'pndid'])
-    pnd_df = pd.merge(vbopnd_bg_eg, bd['pnd'][['pndid', 'pndvkid', 'pndvkbg']],
-                      how='inner', on='pndid')
-    print('\t\tAantal records moet grofweg verdubbelen: "van pnd naar pandvk" ')
-    (nrec, nkey) = baglib.df_comp(pnd_df, key_lst=['vboid', 'pndid', 'pndvkbg'],
-                                  nrec=nrec, nkey=nkey, u_may_change=True)
-    
-
-    print('\n\t\t2b. Hernoem de kolom pndvkbg naar vbovkbg zodat we de',
-          '\n\t\tkolommen van vkbg van vbo en pnd kunnen concateneren')
-    pnd_df.rename({'pndvkbg': 'vbovkbg'}, axis='columns', inplace=True)
-
-
-    print('\n\t\t2c. Parallel hieraan: neem vboid, pndid en vbovkbg')
-    print('\t\tSleutel van dit record is vboid, pndid, vbovkbg')
-    (nrec, nkey) = baglib.df_comp(vbopnd_bg_eg, key_lst=['vboid', 'pndid'])
-
-
-    vbopnd_df = pd.merge(vbopnd_bg_eg, bd['vbo'][['vboid', 'vbovkid', 'vbovkbg']],
-                         how='inner', on='vboid')
-    print('\t\tAantal records moet grofweg verdubbelen: "van vbo naar vbovk" ')
-    (nrec, nkey) = baglib.df_comp(vbopnd_df, key_lst=['vboid', 'pndid', 'vbovkbg'],
-                                  nrec=nrec, nkey=nkey, u_may_change=True)
-    
-
-    print('\n\t\t2d. Concateneer de beide kolommen met pd.concat')
-    print('\t\tHet aantal records is de som van 2a en 2c')
-    vbopnd_df = pd.concat([vbopnd_df, pnd_df])
-    (nrec, nkey) = baglib.df_comp(vbopnd_df, key_lst=['vboid', 'pndid', 'vbovkbg'],
-                                  nrec=nrec, nkey=nkey, u_may_change=True)
-    # print('\t\tVanaf nu moet het aantal vk constant blijven:', nkey)
+   
     
     '''
-    '''
-    print('\n\t\t2b. Verwijder de records waar het pndvkbg eerder begint dan',
-          'de vbopnd_bg')
-    vbopnd_df = vbopnd_df[vbopnd_df['pndvkbg'] >= vbopnd_df['vbopnd_bg']].drop(['vbopnd_bg', 'vbopnd_eg'], axis=1)
-    # .drop('vbopnd_bg', axis=1)
-    (nrec, nkey) = baglib.df_comp(vbopnd_df, key_lst=['vboid', 'pndid', 'pndvkbg'],
-                                  nrec=nrec, nkey=nkey, u_may_change=True)
-    '''
-    '''
-    # print(vbopnd_df.sort_values(by=['vboid', 'pndid', 'vbovkbg']).head(30))
-
-    print('\n\t\t2f. We gaan in eerst de nans van de pndvkid opvullen en daarna\n',
-          '\t\tde nans van de vbovkid. Beide met ffill')
-    # print('\n\t\t\tDe sortering luistert nauw:')
-    # https://stackoverflow.com/questions/27012151/forward-fill-specific-columns-in-pandas-dataframe
-
-    baglib.debugprint(df=vbopnd_df,
-                      cols=['pndid', 'vbovkid', 'pndvkid', 'vbovkbg'],
-                      colname='vboid', val='0762010000011444', 
-                      sortlist=['vboid', 'pndid', 'vbovkbg'], debuglevel=DEBUGLEVEL)
-
-    
-    print('\n\t\t\t2f1. Sorteer op pndid, vbovkbg, pndvkid (nan last) waarna',
-          '\n\t\t\tje met ffill de nans kunt opvullen van de pndvkid')
-    cols = ['vboid', 'pndid', 'vbovkbg', 'pndvkid']
-    vbopnd_df = vbopnd_df.sort_values(by=cols, na_position='last')
-    vbopnd_df.loc[:,'pndvkid'] = vbopnd_df.loc[:,'pndvkid'].ffill().astype({'pndvkid':int})
-
-    # print(vbopnd_df.head(30))
-    baglib.debugprint(df=vbopnd_df,
-                      cols=['pndid', 'vbovkid', 'pndvkid', 'vbovkbg'],
-                      colname='vboid', val='0762010000011444', 
-                      sortlist=['vboid', 'pndid', 'vbovkbg'], debuglevel=DEBUGLEVEL)
-
-    print('\n\t\t\t2f2. Sorteer op vboid, vbovkbg, vbovkid, nan last, waarna',
-          '\n\t\t\tje met ffill de nans kunt opvullen.\n',
-          '\t\t\tVerwijder daarna de dubbele records')
-    cols = ['vboid', 'pndid', 'vbovkbg', 'vbovkid']
-    vbopnd_df = vbopnd_df.sort_values(by=cols, na_position='last')
-    vbopnd_df.loc[:,'vbovkid'] = vbopnd_df.loc[:,'vbovkid'].ffill().astype({'vbovkid':int})
-    vbopnd_df.drop_duplicates(inplace=True)
-    (nrec, nkey) = baglib.df_comp(vbopnd_df, key_lst=['vboid', 'pndid', 'vbovkbg'],
-                                  nrec=nrec, nkey=nkey, u_may_change=True)
-
-    # print(vbopnd_df.head(30))
-    baglib.debugprint(df=vbopnd_df,
-                      cols=['pndid', 'vbovkid', 'pndvkid', 'vbovkbg'],
-                      colname='vboid', val='0762010000011444', 
-                      sortlist=['vboid', 'pndid', 'vbovkbg'], debuglevel=DEBUGLEVEL)
- 
-    print('\n\t\t2g. Verwijder de records waar het vbovkbg eerder begint dan',
-          'de vbopnd_bg')
-    vbopnd_df = vbopnd_df[vbopnd_df['vbovkbg'] >= vbopnd_df['vbopnd_bg']].drop(['vbopnd_bg', 'vbopnd_eg'], axis=1)
-    print('\t\tAantal records neemt beetje af als pnd of vbo eerder begint dan de combinatie vbopnd')
-    (nrec, nkey) = baglib.df_comp(vbopnd_df, key_lst=['vboid', 'vboid', 'vbovkbg'],
-                                  nrec=nrec, nkey=nkey, u_may_change=True)
-
-    baglib.debugprint(df=vbopnd_df,
-                      cols=['pndid', 'vbovkid', 'pndvkid', 'vbovkbg'],
-                      colname='vboid', val='0762010000011444', 
-                      sortlist=['vboid', 'pndid', 'vbovkbg'], debuglevel=DEBUGLEVEL+10)
-
-
-
-
-
-
-
-
-
-    print('\n\t\t6 Maak een nieuwe teller voor vbopnd om deze te kunnen\n',
-          '\t\tonderscheiden van de bestaande vbovkid')
-    
-    vbopnd_df = vbopnd_df.sort_values(by=['vboid', 'vbovkbg'])
-    vbopnd_df = baglib.makecounter(vbopnd_df[['vboid', 'vbovkbg']].drop_duplicates(),
-                                   grouper='vboid', 
-                                   newname='vbovkid2', sortlist=['vboid', 'vbovkbg'])
-    (nrec, nkey) = baglib.df_comp(vbopnd_df, key_lst=['vboid', 'vbovkid2'],
-                                  nrec=nrec, nkey=nkey,
-                                  u_may_change=False)
-
-
-    
-
-    baglib.debugprint(df=vbopnd_df,
-                      cols=[],
-                      colname='vboid', val='0762010000011444', 
-                      sortlist=['vbovkbg', 'vboid'], debuglevel=DEBUGLEVEL+10)
-
-    '''
-    '''
-    # print(_df.head(50))
-    print('DEBUG')
-    tmp_df = _df.groupby([dfid, dfvkbg]).size().to_frame('aa')
-    print(tmp_df.sort_values(by='aa', ascending=False).head(30))
-
-    print('DEBUG')
-    tmp2_df = _df.groupby([dfid, dfvkid2]).size().to_frame('aa')
-    print(tmp2_df.sort_values(by='aa', ascending=False).head(30))
-
-    
-    print('\n\t\t7 Voeg', dfvkeg, 'toe in twee stappen:')
-    print('\t\t\t7a. neem de', dfvkbg, 'van het volgende record')
-    _df[dfvkeg] = _df[dfvkbg].shift(periods=-1)
-    (_nrec, _nkey) = df_comp(_df, key_lst=[dfid, dfvkid2],
-                             nrec=_nrec, nkey=_nkey,
-                             u_may_change=False)
-
-    print('\t\t\t7b. corrigeer de vbovkeg van het meest recente voorkomen')
-    print('\t\t\tDit krijgt een datum in de toekomst:', future_date)
-    idx = _df.groupby([dfid])[dfvkid2].transform(max) == _df[dfvkid2]
-    _df.loc[idx, dfvkeg] = future_date
-    (_nrec, _nkey) = df_comp(_df, key_lst=[dfid, dfvkid2],
-                             nrec=_nrec, nkey=_nkey,
-                             u_may_change=False)
-
-    print('\n\t\t8 Terugcasten naar integer van', dfvkeg)    
-    _df = _df.astype({dfvkeg: np.uintc})
-    (_nrec, _nkey) = df_comp(_df, key_lst=[dfid, dfvkid2],
-                             nrec=_nrec, nkey=_nkey,
-                             u_may_change=False)
-    # print(vbo_df.head(30))
- 
-    print('\n\t\t ----- Perc toegenomen voorkomens:', 
-          round(100 * (_nkey/_nkey1 - 1), 1), '%')
+    baglib.debugprint(title='Resultaat voor voorbeeld vbo:',
+               df=bd['vbo'][cols], colname='vboid', vals=TEST_D['vboid'], sort_on=['vboid', 'vbovkid'], 
+               debuglevel=20)
     
     # print(bd['vbo'].head(30))
-    # print('\n\n\t\t --------- aantal records in bd[vbo]: ', bd['vbo'].shape[0])
-    # print(vbo_df.head(30))
-
-    '''
-
-
-
-
-
-
-
-
-
-
-    '''    
-
-4. Als een vbopnd_eg < future_date, beeindig dan het vbovk in vbopnd
-    future_date is een vaste dag in de verre toekomst
-
-
-    # #############################################################################
-    print('\n--2. Aanmaken vbovk zodat een vbovk volledig binnen pndvk past----\n')
-    # #############################################################################
-    
-    '''    
-        
-    '''
-        print('\t\t------- Start vksplitter; fijn:', fijntype, 'grof:', groftype)   
-        # de volgende kolommen moeten bestaan voor fijntype en groftype:
-        dfid = fijntype + 'id'
-        dfvkbg = fijntype + 'vkbg'
-        dfvkeg = fijntype + 'vkeg'
-        dfvkid = fijntype + 'vkid'
-        gfid = groftype + 'id'
-        gfvkbg = groftype + 'vkbg'
-        gfvkid = groftype + 'vkid'
-        
-        # deze kolom gaan we maken om de nieuwe vk te identificeren:
-        dfvkid2 = fijntype + 'vkid2'
-        # aantallen in de uitgangssituatie     
-        (_nrec1, _nkey1) = df_comp(df, key_lst=[dfid, dfvkid])
-
-        print('\t\t1a. We willen geen nieuwe vk voor de\n',
-              '\t\tbegindatum van het eerste vk van een df. Daarom bepalen we de\n',
-              '\t\tstartdd van elk', dfid)
-        dfid_startdd = df.groupby(dfid)[dfvkbg].min().to_frame().\
-            rename(columns={dfvkbg: 'startdd'}).reset_index()
-        # print(dfid_startdd)
-
-        print('\n\t\t1b Neem daarna de unieke', dfid,'-', gfid, 'uit',
-              fijntype +'_df')
-        _df = df[[dfid, gfid]].drop_duplicates()
-        (_nrec, _nkey) = df_comp(_df, key_lst=[dfid])
-        
-        print('\t\tAantal records en aantal unieke', dfid, ':', _nrec, _nkey)
-        
-        
-        print('\n\t\t1c Voeg de startdd uit 1a. aan het', dfvkid, 'toe')
-        _df = pd.merge(_df, dfid_startdd, left_on=dfid, right_on=dfid)
-
-        print('\n\t\t2a. Voeg daarna de', gfvkbg, 'aan het', dfvkid, 'toe')
-        print('\t\t\tEenheid van zo een record is nu', dfid,'+', gfvkbg,'!')
-        # print(vbo_df.info())
-        # print(bd['pnd'].info())
-        _df = pd.merge(_df,
-                       # gf[[gfid, gfvkbg]])[[dfid, gfvkbg, 'startdd']]
-                       gf[[gfid, gfvkid, gfvkbg]])[[dfid, gfvkbg, gfvkid, 'startdd']]
-        (_nrec, _nkey) = df_comp(_df, key_lst=[dfid, gfvkbg],
-                                 nrec=_nrec,
-                                 nkey=_nkey,
-                                 u_may_change=True)
-
-
-        print('\n\t\t2b. Verwijder cf. het uitgangspunt de records waar het', gfid,
-              '\n\t\teerder begint dan de startdd van het', dfid)
-        # _df = _df[_df[gfvkbg] >= _df['startdd']][[dfid, gfvkbg]]
-        _df = _df[_df[gfvkbg] >= _df['startdd']].drop('startdd', axis=1)
-        (_nrec, _nkey) = df_comp(_df, key_lst=[dfid, gfvkbg],
-                                 nrec=_nrec,
-                                 nkey=_nkey,
-                                 u_may_change=True)
-        # print(_df.head(40))
-        # print(_df.info())
-        print('\n\t\t3 Hernoem de kolom', gfvkbg, 'naar', dfvkbg, 'zodat we de',
-              '\n\t\tkolommen van', dfid, 'en', gfid, 'kunnen concateneren')
-        _df.rename({gfvkbg: dfvkbg}, axis='columns', inplace=True)
-        (_nrec, _nkey) = df_comp(_df, key_lst=[dfid, dfvkbg],
-                                 nrec=_nrec,
-                                 nkey=_nkey,
-                                 u_may_change=True)
-        # print(_df.head(40))
-        # concat so that all dfvkbg are in one frame
-        print('\n\t\t4 Concateneer de beide kolommen met pd.concat')
-        print('\t\tHet aantal records wordt meer dan verdubbeld want er\n',
-              '\t\tzijn meer', fijntype, 'vk dan', groftype, 'vk')
-        _df = pd.concat([df[[dfid, dfvkid, dfvkbg]], _df])
-        (_nrec, _nkey) = df_comp(_df, key_lst=[dfid, dfvkbg],
-                                 nrec=_nrec,
-                                 nkey=_nkey,
-                                 u_may_change=True)
-        print('\t\tVanaf nu moet het aantal vk constant blijven:', _nkey)
-
-
-        # print(_df.sort_values(by=[dfid, dfvkbg]).head(30))
-        
-        print('\n\t\t5. We gaan in eerst de nans van de', dfvkid, 'en daarna\n',
-              '\t\tde nans van de', gfvkid, 'opvullen. Beide met ffill')
-        print('\n\t\t\tDe sortering luistert nauw:')
-        # https://stackoverflow.com/questions/27012151/forward-fill-specific-columns-in-pandas-dataframe
-        print('DEBUG')
-        print(_df[_df[dfid]=='0762010000011444'].sort_values(by=dfvkbg))
-        
-        print('\n\t\t\t5a. Sorteer op', dfid, dfvkid, '(nan last), waarna je met\n',
-              '\t\t\tffill de nans kunt opvullen van de', dfvkid)
-        cols = [dfid, dfvkbg, dfvkid]
-        _df = _df.sort_values(by=cols, na_position='last')
-        _df.loc[:,dfvkid] = _df.loc[:,dfvkid].ffill().astype({dfvkid:int})
-
-        # print(_df.head(30))
-        print('DEBUG')
-        print(_df[_df[dfid]=='0762010000011444'].sort_values(by=dfvkbg))
-
-        print('\n\t\t\t5b. Sorteer op', dfid, gfvkid, 'nan last, waarna je met\n',
-              '\t\t\tffill de nans kunt opvullen van het', gfvkid, '.\n',
-              '\t\t\tVerwijder daarna de dubbele records')
-        print('Issue: als het eerste vbo afgesloten is voor het begin van het eerste pndvk, kun je de nan niet ffill en... ')
-        cols = [dfid, dfvkbg, gfvkid]
-        _df = _df.sort_values(by=cols, na_position='last')
-        _df.loc[:,gfvkid] = _df.loc[:,gfvkid].ffill().astype({gfvkid:int})
-        _df.drop_duplicates(inplace=True)
-
-        (_nrec, _nkey) = df_comp(_df, key_lst=[dfid, dfvkbg],
-                                 nrec=_nrec, nkey=_nkey,
-                                 u_may_change=False)
-        # print(vbo_df.head(30))
-        # print(_df.head(30))
-        print('DEBUG')
-        print(_df[_df[dfid]=='0762010000011444'].sort_values(by=dfvkbg))
-        
-        
-        print('\n\t\t6 Maak een nieuwe teller voor', dfvkid2, 
-              '\n\t\tom deze te kunnen onderscheiden van de bestaande', dfvkid)
-        _df = makecounter(_df, grouper=dfid, newname=dfvkid2)
-        (_nrec, _nkey) = df_comp(_df, key_lst=[dfid, dfvkid2],
-        # (_nrec, _nkey) = df_comp(_df, key_lst=[dfid, dfvkbg],
-                                 nrec=_nrec, nkey=_nkey,
-                                 u_may_change=False)
-
-        print('DEBUG')
-        print(_df[_df[dfid]=='0762010000011444'].sort_values(by=dfvkbg))
-
-        # print(_df.head(50))
-        print('DEBUG')
-        tmp_df = _df.groupby([dfid, dfvkbg]).size().to_frame('aa')
-        print(tmp_df.sort_values(by='aa', ascending=False).head(30))
-
-        print('DEBUG')
-        tmp2_df = _df.groupby([dfid, dfvkid2]).size().to_frame('aa')
-        print(tmp2_df.sort_values(by='aa', ascending=False).head(30))
-
-        
-        print('\n\t\t7 Voeg', dfvkeg, 'toe in twee stappen:')
-        print('\t\t\t7a. neem de', dfvkbg, 'van het volgende record')
-        _df[dfvkeg] = _df[dfvkbg].shift(periods=-1)
-        (_nrec, _nkey) = df_comp(_df, key_lst=[dfid, dfvkid2],
-                                 nrec=_nrec, nkey=_nkey,
-                                 u_may_change=False)
-
-        print('\t\t\t7b. corrigeer de vbovkeg van het meest recente voorkomen')
-        print('\t\t\tDit krijgt een datum in de toekomst:', future_date)
-        idx = _df.groupby([dfid])[dfvkid2].transform(max) == _df[dfvkid2]
-        _df.loc[idx, dfvkeg] = future_date
-        (_nrec, _nkey) = df_comp(_df, key_lst=[dfid, dfvkid2],
-                                 nrec=_nrec, nkey=_nkey,
-                                 u_may_change=False)
-
-        print('\n\t\t8 Terugcasten naar integer van', dfvkeg)    
-        _df = _df.astype({dfvkeg: np.uintc})
-        (_nrec, _nkey) = df_comp(_df, key_lst=[dfid, dfvkid2],
-                                 nrec=_nrec, nkey=_nkey,
-                                 u_may_change=False)
-        # print(vbo_df.head(30))
-     
-        print('\n\t\t ----- Perc toegenomen voorkomens:', 
-              round(100 * (_nkey/_nkey1 - 1), 1), '%')
-        
-        # print(bd['vbo'].head(30))
-        # print('\n\n\t\t --------- aantal records in bd[vbo]: ', bd['vbo'].shape[0])
-        # print(vbo_df.head(30))
-
-        # print('\n\t\t9 Imputeren nieuwe vk nog zonder gfid (pndid)... ')
-        print('\n\t\t9. Toevoegen van de kolommen uit', dfid,
-              'die we nog misten')
-        # cols = ['vboid', 'vbovkid', 'vbostatus', 'vbogmlx', 'vbogmly']
-        # print(_df.info())
-        
-        _df = pd.merge(_df,
-                       df.drop([gfid, dfvkbg, dfvkeg], axis=1).drop_duplicates(),
-                       how='inner',
-                       left_on=[dfid, dfvkid], right_on=[dfid, dfvkid])
-        (_nrec, _nkey) = df_comp(_df, key_lst=[dfid, dfvkid2],
-                                 nrec=_nrec, nkey=_nkey,
-                                 u_may_change=False)
-        # cols = ['vboid', 'vbovkid', 'vbovkid2', 'vbovkbg']
-        # print(vbo_df[cols].head(30))
-        # print(_df.info())
-        
-        vk = [dfid, dfvkid]
-        
-        print('\t\t2.10 Voeg gfid (pndid) nog toe')
-        print('\t\t Hierna is dfid, vkid2 (vboid, vbovk2) niet meer uniek vanwege dubbele gfid (pndn)',
-        'bij 1 dfid (vbo)')
-        _df = pd.merge(_df,
-                       df[[dfid, dfvkid, gfid]],
-                       how='inner',
-                       left_on=vk, right_on=vk)
-        (_nrec, _nkey) = df_comp(_df, key_lst=[dfid, dfvkid2],
-                                 nrec=_nrec,
-                                 nkey=_nkey,
-                                 u_may_change=True)
-        # print(bd['vbo'].head(30))
-        print('\t\t------- Einde functie vksplitter -------')
-        return _df
-    
-    bd['vbo'] = baglib.vksplitter(df=bd['vbo'], gf=bd['pnd'], 
-                                  fijntype ='vbo', groftype = 'pnd', 
-                                  future_date = FUTURE_DATE)
-
-    
-    print('\n\t\tEind stap 2: Schakel over bij vk identificatie naar vbovkid2')
-    vbovk = ['vboid', 'vbovkid2']
-    KEY_DICT = {'vbo': vbovk,
-                'pnd': pndvk}
-
-
-    print(bd['vbo'].info())
-    
-    # print(bd['vbo'].head(30))
+    (nrec['vbo'], nkey['vbo']) = baglib.df_comp(bd['vbo'], key_lst=vbovk) 
     
     doel_vbovk_u = nkey['vbo']
     n_vbovk = nrec['vbo']
     print('\tConcreet doel:', doel_vbovk_u, 'vbovk van een pndvk voorzien.')
-    
-    
-    # #############################################################################
-    print('\n----4. Voeg de informatie van de pndvk toe aan de vbovk----')
-    # #############################################################################
-    print('\tDOEL reminder: aantal unieke vbovk:', doel_vbovk_u)
-    print('\tStart met de', nrec['vbo'], '(niet unieke) vbovk. Elk vbovk heeft 1 of',
-          '\n\tmeer pndid (dubbele bij de zelf aangemaakte vbovk).\n',
-          '\tDus\n',
-          '\t\tvbovk1, pndid1\n',
-          '\t\tvbovk1, pndid2 (dit vbovk is dan zelf aangemaakt (en dubbel))\n',
-          '\t\tvbovk2, pndid3\n',
-          '\tKoppel nu aan pndid1, pndid2, pndid3 alle voorkomens van het\n',
-          '\tbetreffende pnd. Het aantal records wordt hiermee ruim verdubbeld')
 
-    bd['vbo'] = pd.merge(bd['vbo'],
-                         bd['pnd'],
-                         how='left',
-                         on=pndvk)
-    del bd['pnd']
-    
-    print(bd['vbo'].info())
-    # (nrec['vbo'], nkey['vbo']) = baglib.df_comp(bd['vbo'], key_lst=vbovk,
-    #                                             nrec=nrec['vbo'], nkey=nkey['vbo'], 
-    #                                             u_may_change=False)
-    
-    
-    bd['vbo'].set_index(vbovk, inplace=True)
     
     # zuinig met geheugen: Sommige types kunnen teruggecast worden.
     bd['vbo'] = baglib.recast_df_floats(bd['vbo'], BAG_TYPE_DICT)
     (nrec['vbo'], nkey['vbo']) = baglib.df_comp(bd['vbo'], nrec=nrec['vbo'],
                                                 nkey=nkey['vbo'],
                                                 u_may_change=False)
-    
-    # toc = time.perf_counter()
-    # baglib.print_time(toc - tic, 'gebruikte tijd:', printit)
+    '''
+    toc = time.perf_counter()
+    baglib.print_time(toc - tic, 'gebruikte tussentijd:', printit)
 
-    doel2_vbovk_u = nkey['vbo']
-    '''
-    '''
-    # #############################################################################
-    print('\n----5. Selecteer pndvk waarin  het midden vh vbovk valt---\n')
-    # #############################################################################
-    
-    bd['vbo']['midden'] = bd['vbo']['vbovkbg']/2 + bd['vbo']['vbovkeg']/2
-    msk = (bd['vbo']['pndvkbg'] < bd['vbo']['midden']) & \
-        (bd['vbo']['midden'] < bd['vbo']['pndvkeg'])
-    bd['vbo'] = bd['vbo'][msk]
-    
-    # controle
-    (nrec['vbo'], nkey['vbo']) = baglib.df_comp(bd['vbo'], nrec=nrec['vbo'],
-                                                nkey=nkey['vbo'],
-                                                u_may_change=True)
-    
-    doel2_vbovk_u = nkey['vbo']
-    verschil_u =  doel_vbovk_u - doel2_vbovk_u
-    
-    print('\t\tAantal vbovk zonder pndvk:', verschil_u)
-    
-    
-    print('\n\tVoor gegeven vbovk zou je gegeven een pnd, precies 1 pndvk moeten\n',
-          '\tvinden op dag vbovkeg. Hiermee zou het aantal op', n_vbovk,
-          '\n\tmoeten uitkomen, waarin', doel_vbovk_u,
-          'unieke vbovk zitten. In de\n',
-          '\tpraktijk vinden we echter twee andere situaties:\n',
-          '\t\t Situatie 5a: meer dan 1 pndvk koppelt met de vbovk\n',
-          '\t\t Situatie 5b: geen enkel pndvk koppelt met de vbovk\n',
-          '\tWe zullen deze apart beschouwen:')
-    print('\t\t3a, >1 is niet zo erg. Dat lossen we op met de prio functie\n',
-          '\t\t3b  is een datafout. Bewaar deze vbovk in vbovk_geen_pndvk')
-    
-    # welke unieke vbovk houden we over:
-    print('\n\t---5a: meer dan 1 pndvk koppelt met een vbovk')
-    print('\tStartpunt (reminder) aantal records vbovk:', nrec['vbo'])
-    print('\tvbovk na het koppelen met pndvk obv vbovkeg: ')
-    if bd['vbo'].shape[0] == 0:
-        sys.exit('Fout: in pnd.csv staat geen enkel pand dat koppelt met\
-                 vbo.csv. Verder gaan heeft geen zin. Programma stopt...')
-    
-    print('\t\tDe reden dat 5a optreedt is technisch van aard::\n',
-          '\t\tIn bepaald-hoofdpand zoeken we pndvk bij vbovk met formule\n',
-          '\t\t\tpndvkbg <= vbovkeg <= pndvkeg\n',
-          '\t\tOmdat hier twee keer <= staat hou je nog enkele dubbele\n',
-          '\t\tvbovk. Als je echter links of rechts < zou doen, dan blijkt\n',
-          '\t\tdat je koppelingen met pndvk gaat missen')
-    
-    
-    if verschil_u != 0:  # er zijn vbovk met 0 pndvk
-        print('\tbij deze vbovk is er dus op datum vkeg geen pndvk te vinden:',
-              '\n\t\tAantal unieke vbovk in: ', doel_vbovk_u,
-              # '\n\t\tAantal unieke vbovk uit:', result_dict['3_vbovk_pndvk_uniek'],
-              '\n\t\tVerschil van de unieke: ', verschil_u),
-        perc_doel = round(100 * (doel_vbovk_u - verschil_u) / doel_vbovk_u, 3)
-        print('\tDoor deze', verschil_u, 'vbovk die geen pndvk hebben halen we\n',
-              '\tons bovengenoemd DOEL voor', perc_doel, '%.')
-        
-        print('\tNieuwe doel:', doel2_vbovk_u)
-    '''
-    '''
-        vbovk_u = bd['vbo'][['vboid', 'vbovkid']].drop_duplicates()
-        missing_vbovk_df = pd.concat([vbovk_pndvk_u,
-                                      vbovk_u]).drop_duplicates(keep=False)
-        vbovk_geen_pndvk_df = pd.merge(missing_vbovk_df, vbovk_df, how='left')
-        n_vbovk_geen_pndvk = vbovk_geen_pndvk_df.shape[0]
-    else:
-        print('\tSituatie 3b komt niet voor: aantal unieke vbovk is (DOEL):',
-                doel_vbovk_u)
-    
-    # toc = time.perf_counter()
-    # baglib.print_time(toc - tic, 'countin vbovk in', printit)
-    
-    '''
-    '''
     
     # #############################################################################
-    print('\n----7. Bewaren in koppelvlak3: vbovk -> hoofdpndvk met',
-          doel2_vbovk_u, 'records...')
+    print('\n2.----Bewaren in koppelvlak3 -------------------')
     # #############################################################################
     # tic = time.perf_counter()
+ 
+    for bob, vk in KEY_DICT.items():
+        print('\tBewaren koppelbaar gemaakte', bob+'.csv')
+        outputfile = OUTPUTDIR + bob+'.csv'
     
-    if doel2_vbovk_u > 20000000:
-        print('Dit gaat even duren...')
-        
-    outputfile = OUTPUTDIR + 'vbovk_pndvk.csv'
-    
-    # vbovk_hoofdpndvk_df = vbovk_prio_df[['vboid', 'vbovkid', 'pndid', 'pndvkid']]
-    # vbovk_hoofdpndvk_df.sort_values(['vboid', 'vbovkid']).to_csv(outputfile,
-    #                                                            index=False)
-    cols = ['vbovkid', 'vbovkbg', 'vbovkeg', 'vbostatus', 'pndid', 'pndvkid', 'pndstatus']
-    bd['vbo'][cols].sort_index().to_csv(outputfile, index=True)
+        # cols = ['vbovkid', 'vbovkbg', 'vbovkeg', 'vbostatus', 'pndid', 'pndvkid', 'numid', 'numvkid']
+        bd[bob].sort_values(by=[bob+'id', bob+'vkid']).to_csv(outputfile, index=False)
     
     toc = time.perf_counter()
-    # print('\t\ttictoc - saving vbo-pnd file in', toc - tic, 'seconds')
-    baglib.print_time(toc - tic, 'vbovk2_pndvk duurde', printit)
-
-    '''
-    '''
-    if vbovk_geen_pndvk_df.shape[0] != 0:
-        print('\tWe verrijken vbovk_geen_pndvk met "het laagste pndvk dat geen\n',
-              '\teendagsvlieg is". Dat is meestal het vk dat het dichtst in de\n',
-              '\tbuurt ligt van de vkeg van het vbovk...')
-        vbovk_geen_pndvk_df = pd.merge(vbovk_geen_pndvk_df,
-                                       pnd_laagstevk_df, how='left')
-        if vbovk_geen_pndvk_df.shape[0] != n_vbovk_geen_pndvk:
-            print('ERROR: aantal vk gewijzigd:', n_vbovk_geen_pndvk, '=>',
-                  vbovk_geen_pndvk_df.shape[0])
-        else:
-            print('\tBewaren van vbovk_geen_pndvk.csv met', n_vbovk_geen_pndvk,
-                  'records...')
-            outputfile = OUTPUTDIR + 'vbovk_geen_pndvk.csv'
-            vbovk_geen_pndvk_df.to_csv(outputfile)
-    else:
-        print('\tEr is geen bestand aangemaakt met vbovk zonder pndvk')
-
-    '''
-       
+    baglib.print_time(toc - tic, 'bag_splits_vbovk duurde', printit)
+    
+    
+    
+    
 # ########################################################################
 print('------------- Start bag_splits_vbovk lokaal ------------- \n')
 # ########################################################################
