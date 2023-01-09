@@ -23,4 +23,5 @@ LOCATION = {
     'OMGEVING': 'Ontwikkelomgeving',
     'DATADIR_IN': '/home/anton/python/bag/ont/data/',
     'DATADIR_OUT': '/home/anton/python/bag/ont/data/'}
+FUTURE_DATE = 20321231
     

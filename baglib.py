@@ -256,7 +256,8 @@ def print_time(seconds, info, printit):
         print(info, seconds / 60, 'min\n')
         # print(info, time.strftime('%H:%M:%S', time.gmtime(int(seconds))))
 
-def df_comp(df, key_lst=[], nrec=0, nkey=0, u_may_change=True):
+def df_comp(loglevel,
+            df, key_lst=[], nrec=0, nkey=0, u_may_change=True):
     '''
     Check if df has n_rec records and n_rec_u unique records.
     Use key_lst to determine the unique keys. If empty use df.index.
@@ -264,6 +265,7 @@ def df_comp(df, key_lst=[], nrec=0, nkey=0, u_may_change=True):
     '''
     _nrec = df.shape[0]
     _key_lst = key_lst
+    _ll = loglevel
     
     if key_lst == []:
         _nkey = df.index.drop_duplicates().shape[0]
@@ -278,17 +280,17 @@ def df_comp(df, key_lst=[], nrec=0, nkey=0, u_may_change=True):
         return (_nrec, _nkey)
     
     if nrec != _nrec:
-        print('\t\tAantal records in:', nrec, 'aantal uit:', _nrec)
+        aprint(_ll, '\t\tAantal records in:', nrec, 'aantal uit:', _nrec)
     else:
-        print('\t\tAantal input records ongewijzigd:\n\t\tRecords in = uit =',
+        aprint(_ll, '\t\tAantal input records ongewijzigd: records in = uit =',
               nrec)
     if nkey != _nkey:
-        print('\t\tAantal eenheden in:', nkey,
+        aprint(_ll, '\t\tAantal eenheden in:', nkey,
               'aantal', _key_lst, 'uit:', _nkey)
         if not u_may_change:
-            print('FOUT: aantal unieke eenheden gewijzigd!')
+            aprint(_ll+40, 'FOUT: aantal unieke eenheden gewijzigd!')
     else:
-        print('\t\tAantal', _key_lst, 'ongewijzigd: vk in = uit =',
+        aprint(_ll, '\t\tAantal', _key_lst, 'ongewijzigd: vk in = uit =',
               nkey)
     # in_equals_out = (_n_rec == n_rec) and (_n_rec_u == n_rec_u) 
     # print('\tNr of records in equals out:', in_equals_out)
@@ -303,12 +305,12 @@ def ontdubbel_idx_maxcol(df, max_cols):
     return _df[~_df.index.duplicated(keep='first')] 
 
 
-def read_input_csv(file_d, bag_type_d):
+def read_input_csv(loglevel=10, file_d={}, bag_type_d={}):
     '''Read the input csv files in file_d dict and return them in a dict of
     df. Use the bag_type_d dict to get the (memory) minimal types.'''
     _bdict = {}
     for _k, _f in file_d.items():
-        print('\tInlezen', _k, '...')
+        aprint(loglevel+20, '\tInlezen', _k, '...')
         _bdict[_k] = pd.read_csv(_f, 
                                  dtype=bag_type_d,
                                  keep_default_na=False)
@@ -355,28 +357,19 @@ def peildatum(df, subset, bg, eg, peildatum):
     return ontdubbel_maxcol(_df, subset, eg)
 
 
-def makecounter(df, grouper, newname, sortlist):
-     ''' Add a column with name newname that is a counter 
-     for the column grouper.''' 
-     # make a new counter for vbovkid. call it vbovkid2
-     # tmp = df.groupby(grouper).cumcount()+1
-     # print('DEBUG', df.info())
-     # print('DEBUG', sortlist)
-     # tmp = df.sort_values(by=sortlist, axis=0)
-     
-     tmp = df.groupby(grouper).cumcount()+1
-     df[newname] = tmp.to_frame()
-     return df
-
+def aprint(*args):
+    # _f = args.pop(0)
+    if args[0] >= 40:
+        print(*args[1:])
 
 def debugprint(title='', df='vbo_df', colname='vboid',
-               vals=[], sort_on=[], debuglevel=10):
+               vals=[], sort_on=[], loglevel=10):
     '''print a the lines of the df where df[colname]==val.'''
-    if debuglevel > 10:
+    if loglevel >= 40:
         print('\n\t\tDEBUGPRINT:', title)
         _df = df.loc[df[colname].isin(vals)].sort_values(by=sort_on)        
         print('\t\tAantal', colname+':\t', _df[colname].unique().shape[0])
         print('\t\tAantal records:\t', _df.shape[0], '\n')
         print(_df.to_string(index=False))
-    print()
+        print()
 

@@ -71,8 +71,8 @@ def bag_wplgem2csv(current_month='testdata',
 
     # ######### works just for wplgem                ###########
 
-    bagobject = 'wplgem'
-    subdir = bagobject + '/'
+    bagobject = 'wpl'
+    subdir = 'wplgem/'
     ddir = INPUTDIR + subdir
     bag_files = os.listdir(ddir)
     print('\n\tGemeente-woonplaats map bevat', len(bag_files), 'bestand')
@@ -115,9 +115,9 @@ def bag_wplgem2csv(current_month='testdata',
     
             output_record = {'wplid':   wpl,
                              'gemid':   gem,
-                             'wplgemstatus':  status,
-                             'wplgemvkbg':    vkbg,
-                             'wplgemvkeg':    vkeg}
+                             'wplstatus':  status,
+                             'wplvkbg':    vkbg,
+                             'wplvkeg':    vkeg}
     
             output_dict.append(output_record.copy())
             output_bagobject_filecount += 1
@@ -131,14 +131,15 @@ def bag_wplgem2csv(current_month='testdata',
     df = pd.DataFrame.from_dict(output_dict)
     df.index.name = 'idx'
 
+    # print(df.info()) 
     
-    print('\n\tVoeg wplgemvkid toe')
+    print('\n\tVoeg wplvkid toe')
     print('\n\tDeze actie hoort thuis tussen koppelvlak 2 en 3, maar wordt\n',
           '\thier uitgevoerd zodat ook dit bestand een vkid heeft, net als alle andere.')
-    df = df.sort_values(['wplid', 'wplgemvkbg'])
+    df = df.sort_values(['wplid', 'wplvkbg'])
     # print(df.head(20))
-    df = baglib.makecounter(df, 'wplid', 'wplgemvkid')
-    # print(df[df['wplgemvkid']==2].head(20))
+    df = baglib.makecounter(df, 'wplid', 'wplvkid')
+    # print(df[df['wplvkid']==2].head(20))
     # print(df.head(50))
     
     outputfile = OUTPUTDIR + bagobject + '.csv'
