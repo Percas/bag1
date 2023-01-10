@@ -373,3 +373,17 @@ def debugprint(title='', df='vbo_df', colname='vboid',
         print(_df.to_string(index=False))
         print()
 
+def makecounter(df, grouper, newname):
+     ''' Add a column with name newname that is a counter 
+     for the column grouper.''' 
+     # make a new counter for vbovkid. call it vbovkid2
+     # tmp = df.groupby(grouper).cumcount()+1
+     # print('DEBUG', df.info())
+     # print('DEBUG', sortlist)
+     # tmp = df.sort_values(by=sortlist, axis=0)
+
+     tmp = df.groupby(grouper).cumcount()+1
+     df[newname] = tmp.to_frame()
+     return df
+
+
