@@ -21,7 +21,7 @@ Config file
 # ################ define datastructures ###############################
 LOCATION = {
     'OMGEVING': 'Ontwikkelomgeving',
-    'DATADIR_IN': '../data',
-    'DATADIR_OUT': '../data'}
+    'DATADIR_IN': 'data/',
+    'DATADIR_OUT': 'data/'}
 FUTURE_DATE = 20321231
     
