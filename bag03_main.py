@@ -20,7 +20,7 @@ import time
 import bag01_unzip
 import bag12_xml2csv
 import bag12_wplgem2csv
-import bag23a_koppel_op_vk
+import bag23a_fix_vk
 # import bag23a_vbovk_wplvk
 # import bag23b_levcycl
 from config import LOCATION
@@ -70,7 +70,7 @@ bag12_wplgem2csv.bag_wplgem2csv(current_month=current_month,
                                 koppelvlak2=DIR02,
                                 loglevel=printit)
 
-bag23a_koppel_op_vk.bag_koppel_op_vk(current_month=current_month,
+bag23a_fix_vk.bag_fix_vk(current_month=current_month,
                                      koppelvlak3=DIR03,
                                      koppelvlak2=DIR02,
                                      loglevel=20)
