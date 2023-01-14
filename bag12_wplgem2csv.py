@@ -138,7 +138,7 @@ def bag_wplgem2csv(current_month='testdata',
           '\thier uitgevoerd zodat ook dit bestand een vkid heeft, net als alle andere.')
     df = df.sort_values(['wplid', 'wplvkbg'])
     # print(df.head(20))
-    df = baglib.makecounter(df, 'wplid', 'wplvkid')
+    df = baglib.make_counter(20, df, 'wplid', 'wplvkid', ['wplid', 'wplvkbg'])
     # print(df[df['wplvkid']==2].head(20))
     # print(df.head(50))
     

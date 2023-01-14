@@ -20,7 +20,8 @@ import time
 import bag01_unzip
 import bag12_xml2csv
 import bag12_wplgem2csv
-import bag23a_koppel_op_vk
+import bag23a_fix_vk
+import bag23b_hoofdpnd
 # import bag23a_vbovk_wplvk
 # import bag23b_levcycl
 from config import LOCATION
@@ -70,17 +71,17 @@ bag12_wplgem2csv.bag_wplgem2csv(current_month=current_month,
                                 koppelvlak2=DIR02,
                                 loglevel=printit)
 
-bag23a_koppel_op_vk.bag_koppel_op_vk(current_month=current_month,
-                                     koppelvlak3=DIR03,
-                                     koppelvlak2=DIR02,
-                                     loglevel=20)
+bag23a_fix_vk.bag_fix_vk(current_month=current_month,
+                               koppelvlak3=DIR03,
+                               koppelvlak2=DIR02,
+                               loglevel=20)
 # leidt voor elk vbo voorkomen (vbovk) een precies 1 pndvk af. Het hoofdpndvk
-'''
-bag23a_vbovk2_pndvk.bag_vbovk_pndvk(current_month=current_month,
-                                   koppelvlak2=DIR02,
-                                   koppelvlak3=DIR03,
-                                   loglevel=printit)
-'''
+
+bag23b_hoofdpnd.bag_hoofdpnd(current_month=current_month,
+                         koppelvlak2=DIR02,
+                         koppelvlak3=DIR03,
+                         loglevel=20)
+
 '''
 # leidt voor een vbovk een woonplaats voorkomen (wplvk) af
 bag23a_vbovk_wplvk.bag_vbovk_pndvk(current_month=current_month,

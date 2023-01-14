@@ -11,18 +11,22 @@ Een voorkomen van een bag object kan gekoppeld zijn aan een ander bag
 object. Als voorbeeld:
 
 Een vbovk (verblijfsobject voorkomen) wordt aan een (of meerdere) pnd (pand) 
-of num (nummeraanduiding) gelinkt. Dat is feitelijk onzorgvuldig omdat tijdens 
+of num (nummeraanduiding) gelinkt. 
+
+Dat is feitelijk onzorgvuldig omdat tijdens 
 de looptijd van een vbovk zaken kunnen veranderen.
 
 Doel: Repareer de voorkomens van de 7 BAG objecten zodat bij een wezenlijke 
 verandering van het object ook daadwerkelijk een nieuw voorkomen van dat
-object gemaakt wordt. Hierdoor kun je voorkomens aan voorkomens koppelen in
-plaats van voorkomens aan een (compleet) BAG object.
+object gemaakt wordt. 
 
-Daarnaast worden er enkele andere reparatie werkzaamheden aan vk uitgevoerd
+Koppel hierna voorkomens aan voorkomens van het bovenliggende bagobject
+in plaats van plaats van voorkomens aan het bag object zelf.
+
+Voer daarnaast enkele andere reparatie werkzaamheden aan vk uit
 zoals in onderstaande stappen staat beschreven:
 
-Aanpak:
+Stappen:
     Stap 0: Inlezen
     Stap 1: Verwijder eendagsvliegen (vk die binnen een dag wijzigen)
     Stap 2: Ontdubbel: verwijder vk als er feitelijk niets wijzigt tussen twee
@@ -39,10 +43,12 @@ Aanpak:
 Resultaat:
     voor elk van bovenstaande 6 relaties koppelt een "onderliggend" vk aan een
     "bovenliggend" vk. We noemen dit het fijntype en het groftype omdat het
-    fijntype qua looptijd altijd volledig binnen het groftype valt.
+    fijntype qua looptijd altijd volledig binnen het groftype valt. Het 
+    resultaat heet ook wel een busbestand.
     
 Voorbeeld voor vbo:
-    voor vbo onderscheiden we 6 soorten wijzigingen:
+    voor vbo onderscheiden we 6 soorten wijzigingen die een nieuw vk tot gevolg
+    kunnen hebben van dat vbo:
     
     1. Een pnd van dat vbo krijgt een nieuw vk
     2. Een pnd van dat vbo wordt afgesloten en krijgt geen nieuw vk (todo)
@@ -105,10 +111,11 @@ def bag_fix_vk(loglevel = 10,
                future_date=FUTURE_DATE):
 
     tic = time.perf_counter()
+    ll = loglevel
     
-    print('-------------------------------------------')
-    print('--- Start bag_koppel_op_vk', current_month, ' -----')
-    print('-------------------------------------------')
+    baglib.aprint(ll+40, '-------------------------------------------')
+    baglib.aprint(ll+40, '--- Start bag_fix_vk', current_month, ' -----')
+    baglib.aprint(ll+40, '-------------------------------------------')
 
     # #############################################################################
     # print('00.............Initializing variables...............................')
@@ -170,7 +177,8 @@ def bag_fix_vk(loglevel = 10,
               'vboid': ['0388010000212290'],
               # 'vboid': ['0003010000128544'],
               # 'vboid': ['0007010000000192'],
-              'pndid': ['0388100000202416', '0388100000231732', '0388100000232080', '0388100000232081']}
+              # 'pndid': ['0388100000202416', '0388100000231732', '0388100000232080', '0388100000232081']
+              'pndid': ['0003100000117987']}
 
     print('\n---------------DOELSTELLING--------------------------------')
     print('Doel: Repareer de voorkomens van de 7 BAG objecten zodat bij een wezenlijke\n',
@@ -217,6 +225,9 @@ def bag_fix_vk(loglevel = 10,
     nrec_listdict.append(nrec.copy())
     nkey_listdict.append(nkey.copy())
     stappenteller +=1
+
+    baglib.debugprint(loglevel=ll+10, title='pnd eendagsvliegen verwijderd na stap '+str(stappenteller), 
+                      df=bd['pnd'], colname='pndid', vals=TEST_D['pndid'])
     
 
     # #############################################################################
@@ -288,6 +299,9 @@ def bag_fix_vk(loglevel = 10,
     stappenteller +=1
     
     
+    baglib.debugprint(loglevel=ll+10, title='pndvk input voor stap '+str(stappenteller), 
+                      df=bd['pnd'], colname='pndid', vals=TEST_D['pndid'])
+
     bd['vbo'] = vksplitter(df=bd['vbo'], gf=bd['pnd'],
                            fijntype='vbo', groftype='pnd',
                            future_date=FUTURE_DATE,
@@ -295,6 +309,8 @@ def bag_fix_vk(loglevel = 10,
 
     bd['vbo'].drop(columns='vbovkid_oud', inplace=True)    
     # print(bd['vbo'].info())
+    baglib.debugprint(loglevel=ll+10, title='vbovk gekoppeld aan pndvk na stap '+str(stappenteller), 
+                      df=bd['vbo'], colname='pndid', vals=TEST_D['pndid'])
     
     
     for bob, vk in KEY_DICT.items():
@@ -340,7 +356,7 @@ def bag_fix_vk(loglevel = 10,
     df.to_csv(outputfile)
 
     toc = time.perf_counter()
-    baglib.aprint(ll+40, 'gebruikte tussentijd:', toc - tic, '\n')
+    baglib.aprint(ll+40, 'bag_fix_vk duurde', (toc - tic)/60, 'min\n')
 
 
     
@@ -646,7 +662,7 @@ def vksplitter(loglevel=10,
           '\n\t\tom deze te kunnen onderscheiden van de bestaande', dfvkid)
     # #############################################################################
     
-    _df = make_counter(ll, _df, grouper=dfid, newname=dfvkid2, cols=[dfid, dfvkbg])
+    _df = baglib.make_counter(ll, _df, grouper=dfid, newname=dfvkid2, cols=[dfid, dfvkbg])
     
     baglib.debugprint(title='bij stap 6. '+dfid+' met hun nieuwe vk tellers '+dfvkid2,
                df=_df, colname=dfid, vals=test_d[dfid], sort_on=cols, 
@@ -793,22 +809,6 @@ def make_vkeg(loglevel, df, bob, future_date):
     return _df
 
 
-def make_counter(loglevel, df, grouper, newname, cols):
-     ''' Add a column with name newname that is a counter 
-     for the column grouper.''' 
-     # make a new counter for vbovkid. call it vbovkid2
-     # tmp = df.groupby(grouper).cumcount()+1
-     # print('DEBUG', df.info())
-     # print('DEBUG', sortlist)
-     # tmp = df.sort_values(by=sortlist, axis=0)
-     
-     baglib.aprint(loglevel, '\t\t\tmake_counter: maak een nieuwe teller voor de vk')
-     _tmp = df.sort_values(by=cols, na_position='last')
-     _tmp = _tmp.groupby(grouper).cumcount()+1
-     df[newname] = _tmp.to_frame()
-     return df
-
-
 def merge_vk(loglevel, df, bob, future_date, cols):
     ''' Neem de voorkomens van df samen als voor een dfid de waarden van de
     relevante cols gelijk zijn. We noemen dit "gelijke opeenvolgende vk". Neem 
@@ -845,7 +845,7 @@ def merge_vk(loglevel, df, bob, future_date, cols):
     _df = make_vkeg(_ll, _df, bob, future_date)
     
     baglib.aprint(_ll, '\t\tmerge_vk 3: maak een nieuwe vk teller', _dfvkid2)
-    _df = make_counter(_ll, _df, _dfid, _dfvkid2, [_dfid, _dfvkbg])
+    _df = baglib.make_counter(_ll, _df, _dfid, _dfvkid2, [_dfid, _dfvkbg])
 
     (_nrec1, _nkey1) = baglib.df_comp(_ll, _df, _vk, nrec=_nrec, nkey=_nkey, u_may_change=True)
 
@@ -855,16 +855,17 @@ def merge_vk(loglevel, df, bob, future_date, cols):
     return _df
     
 # ########################################################################
-print('------------- Start bag_koppel_op_vbovk lokaal ------------- \n')
 # ########################################################################
 
 # loglevel ll:
-# ll = -10 # minstel loggin
+ll = -10 # minstel loggin
 # ll = 0  # bijna geen logging
 # ll = 10 # hoofdkoppen
 # ll = 20 # koppen
-ll = 30 # tellingen
+# ll = 30 # tellingen
 # ll = 40 # data voorbeelden 
+
+baglib.aprint(ll+40, '------------- Start bag_koppel_op_vbovk lokaal ------------- \n')
 
 if __name__ == '__main__':
 

@@ -366,10 +366,36 @@ def debugprint(title='', df='vbo_df', colname='vboid',
                vals=[], sort_on=[], loglevel=10):
     '''print a the lines of the df where df[colname]==val.'''
     if loglevel >= 40:
-        print('\n\t\tDEBUGPRINT:', title)
+        print('\n\t\tDebug:', title)
         _df = df.loc[df[colname].isin(vals)].sort_values(by=sort_on)        
         print('\t\tAantal', colname+':\t', _df[colname].unique().shape[0])
         print('\t\tAantal records:\t', _df.shape[0], '\n')
         print(_df.to_string(index=False))
         print()
+
+'''
+def anastatus(df, overgang, loglevel=10):
+     Bepaal de vbos in df waar de statusovergang overgang in zit.
+
+    querystr = ''
+    for colname, status in overgang.items():
+        querystr.append(df[colname] == status)
+        return = df.query(querystr)
+'''
+
+def make_counter(loglevel, df, grouper, newname, cols):
+     ''' Add a column with name newname that is a counter 
+     for the column grouper.''' 
+     # make a new counter for vbovkid. call it newname
+     # tmp = df.groupby(grouper).cumcount()+1
+     # print('DEBUG', df.info())
+     # print('DEBUG', sortlist)
+     # tmp = df.sort_values(by=sortlist, axis=0)
+     
+     aprint(loglevel, '\t\t\tmake_counter: maak een nieuwe teller voor de vk')
+     _tmp = df.sort_values(by=cols, na_position='last')
+     _tmp = _tmp.groupby(grouper).cumcount()+1
+     df[newname] = _tmp.to_frame()
+     return df
+
 

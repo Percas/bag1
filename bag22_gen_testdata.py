@@ -82,12 +82,12 @@ current_year = int(current_month/100)
 INPUT_FILS_DICT = {'vbo': k2dir + 'vbo.csv',
                    'pnd': k2dir + 'pnd.csv',
                    'num': k2dir + 'num.csv',
-                   'vbovk_pndvk': k3dir + 'vbovk_pndvk.csv'}
+                   'vbovk_pndvk': k3dir + 'vbovk_hoofdpndvk.csv'}
 
 OUTPUT_FILS_DICT = {'vbo': ontk2dir + 'vbo.csv',
                     'pnd': ontk2dir + 'pnd.csv',
                     'num': ontk2dir + 'num.csv',
-                    'vbovk_pndvk': ontk3dir + 'vbovk_pndvk.csv'}
+                    'vbovk_pndvk': ontk3dir + 'vbovk_hoofdpndvk.csv'}
 
 vbovk = ['vboid', 'vbovkid']
 pndvk = ['pndid', 'pndvkid']
@@ -107,7 +107,7 @@ print('\tPercentage testdata vbo, pnd, num:', PERC, '%')
 print('\n Inlezen van vbo.csv, pnd.csv, num.csv, vbovk_pndvk-----')
 # #############################################################################
 
-bd = baglib.read_input_csv(INPUT_FILS_DICT, BAG_TYPE_DICT)
+bd = baglib.read_input_csv(40, INPUT_FILS_DICT, BAG_TYPE_DICT)
 
 print('\n----Selecteer', PERC, 'procent van records in num.csv---')
 ontbd['num'] = bd['num'].sample(frac=PERC/100)
@@ -156,7 +156,7 @@ for bob in INPUT_FILS_DICT.keys():
     
 
 print('-------Kopieer de rest van de bestanden------')
-rest = ['sta', 'lig', 'opr', 'wpl', 'wplgem']
+rest = ['sta', 'lig', 'opr', 'wpl']
 for r in rest:
     print('\t1-1 kopieren van', r, 'naar ontwikkelomgeving')
     shutil.copy(k2dir + r + '.csv', ontk2dir)

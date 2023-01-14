@@ -129,7 +129,7 @@ import pandas as pd
 import time
 import baglib                # general functions user defined
 from config import LOCATION
-
+from config import status_dict
 
 # --------------------------------------------------------------------------
 # ############### Define functions #################################
@@ -180,7 +180,6 @@ def bag_xml2csv(current_month='testdata',
         'Sloopvergunning verleend':                     'pslov',
         'Woonplaats aangewezen':                        'wwoan',
         'Woonplaats ingetrokken':                       'wwoin'}
-    '''
 
     status_dict = {
         'Plaats ingetrokken':                           's2',
@@ -208,7 +207,8 @@ def bag_xml2csv(current_month='testdata',
         'Sloopvergunning verleend':                     'p0',
         'Woonplaats aangewezen':                        'w1',
         'Woonplaats ingetrokken':                       'w2'}
-
+    '''
+    
     ligtype_dict = {
             'Verblijfsobject':       0,
             'Standplaats':           1,
