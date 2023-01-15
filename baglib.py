@@ -145,6 +145,7 @@ def date2int(_date_str):
 
 
 def get_arg1(arg_lst, ddir):
+    '''Lees het eerste argument van de aanroep. Dit moet een mapnaam zijn.'''
     _lst = os.listdir(ddir)
     if len(arg_lst) <= 1:
         # sys.exit('Usage: ' + arg_lst[0] + '  <month>, where <month> in '
@@ -399,3 +400,68 @@ def make_counter(loglevel, df, grouper, newname, cols):
      return df
 
 
+def prev_month(month='testdata23'):
+    '''For a month in format YYYYMM return the previous month.'''
+    if month == 'testdata23':
+        return 'testdata02'
+    else:
+        if str(month).endswith('01'):
+            return str(int(month) - 89)
+        else:
+            return str(int(month) - 1)
+
+
+def find_missing_vk(bob, current, previous, vk, future_date, loglevel=20, test_d=[]):
+    '''Compare current df with previous df on vk.
+    Controleer of afgesloten vk in previous ongewijzigd zijn in current.
+    Aanpak:
+        1. Neem de afgesloten vk in previous
+        2. Check of deze ongewijzigd zijn in current
+        3. print het aantal gewijzigde en return de gewijzigde als df
+        
+    '''
+    _ll = loglevel
+    aprint(_ll+20, '\n\tStart find_missing_vk' )
+    # first get all closed vk of the previous month
+    _closed_prevmonth = previous[previous[bob+'vkeg'] != future_date]
+
+    debugprint(loglevel=loglevel, title='afgesloten vk uit vorige maand', 
+               df=_closed_prevmonth, colname=vk[0], vals=test_d[vk[0]])
+
+    
+    # then get the same ones in the current month, as far as they exist
+    # this should be exactly the same as previous month
+    _same_vk_this_month = pd.merge(current[vk], _closed_prevmonth, how='inner', on=vk)
+    debugprint(loglevel=loglevel, title='vk in huidige die vorige mnd afgesloten waren', 
+               df=_same_vk_this_month, colname=vk[0], vals=test_d[vk[0]])
+    
+    # now find the differences. are there single vk in the concatenated df:
+    _doubled = pd.concat([_closed_prevmonth, _same_vk_this_month])
+    
+    # so now if any of _idx is true, that is a missing vk in the current month:
+
+    _missing = _doubled[~_doubled.duplicated(keep=False)]
+    debugprint(loglevel=loglevel, title='vk die missen in deze maand', 
+               df=_missing, colname=vk[0], vals=test_d[vk[0]])
+
+    if _missing.empty:
+        aprint(_ll+10, '\t\tfind_missing_vk heeft geen verdwenen', bob, 'vk gevonden')
+    else:
+        aprint(_ll+10, '\t\tfind_missing_vk heeft WEL verdwenen', bob, 'vk gevonden')
+        aprint(_ll, 'verdwenen vk:', _missing.head())        
+    aprint(_ll+20, '\tEnd find_missing_vk\n' )
+    return _missing
+
+'''
+
+def diff_idx_df(df1, df2):
+    # Return tuple: (dfboth, df1not2, df2not1).
+    print('\tdiff_idx_df: in beide, in 1 niet 2, in 2 niet 1:')
+    _df = pd.concat([df1, df2])
+    _dfboth = _df[~_df.index.duplicated(keep='first')]
+    _df = pd.concat([df1, _dfboth])
+    _df1not2 = _df[~_df.index.duplicated(keep=False)]
+    _df = pd.concat([df2, _dfboth])
+    _df2not1 = _df[~_df.index.duplicated(keep=False)]
+    return (_dfboth, _df1not2, _df2not1)
+'''

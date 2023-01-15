@@ -21,8 +21,8 @@ Config file
 # ################ define datastructures ###############################
 LOCATION = {
     'OMGEVING': 'Ontwikkelomgeving',
-    'DATADIR_IN': '/home/anton/python/bag/ont/data/',
-    'DATADIR_OUT': '/home/anton/python/bag/ont/data/'}
+    'DATADIR_IN': '../data/',
+    'DATADIR_OUT': '../data/'}
 FUTURE_DATE = 20321231
     
 status_dict = {

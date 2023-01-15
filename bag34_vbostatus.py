@@ -26,10 +26,10 @@ from config import status_dict
 
 # ############### Define functions ################################
 
-def bag_vbo_status(current_month='testdata',
-                   koppelvlak3='../data/03-bewerkte-data',
-                   koppelvlak4='../data/04-aggr',
-                   loglevel=10):
+def bag_vbostatus(current_month='testdata',
+                  koppelvlak3='../data/03-bewerkte-data',
+                  koppelvlak4='../data/04-aggr',
+                  loglevel=10):
 
     tic = time.perf_counter()
     ll = loglevel
@@ -277,7 +277,7 @@ if __name__ == '__main__':
     current_month = baglib.get_arg1(sys.argv, DIR02)
 
 
-    bag_vbo_status(current_month=current_month,
+    bag_vbostatus(current_month=current_month,
                    koppelvlak3=DIR03,
                    koppelvlak4=DIR04,
                    loglevel=ll)

@@ -105,7 +105,7 @@ from config import FUTURE_DATE
 # ############### Define functions ################################
 
 def bag_fix_vk(loglevel = 10,
-               current_month='testdata',
+               current_month='testdata23',
                koppelvlak2='../data/02-csv',
                koppelvlak3='../data/03-bewerkte-data',
                future_date=FUTURE_DATE):
@@ -125,8 +125,9 @@ def bag_fix_vk(loglevel = 10,
     K2DIR = INPUTDIR
     OUTPUTDIR = koppelvlak3 + current_month + '/'
     baglib.make_dir(OUTPUTDIR)
-    
-    if (current_month == 'testdata') or (current_month == 'backup_testdata'):
+
+
+    if current_month == 'testdata23':
         current_year = 2000
     else:
         current_month = int(current_month)
@@ -858,12 +859,12 @@ def merge_vk(loglevel, df, bob, future_date, cols):
 # ########################################################################
 
 # loglevel ll:
-ll = -10 # minstel loggin
+# ll = -10 # minstel loggin
 # ll = 0  # bijna geen logging
 # ll = 10 # hoofdkoppen
 # ll = 20 # koppen
 # ll = 30 # tellingen
-# ll = 40 # data voorbeelden 
+ll = 40 # data voorbeelden 
 
 baglib.aprint(ll+40, '------------- Start bag_koppel_op_vbovk lokaal ------------- \n')
 
