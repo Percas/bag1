@@ -158,6 +158,18 @@ def get_arg1(arg_lst, ddir):
     return _current_month
 
 
+def diff_df(df1, df2):
+    '''Return tuple: (dfboth, df1not2, df2not1).'''
+    print('\tdiff_idx_df: in beide, in 1 niet 2, in 2 niet 1:')
+    _df = pd.concat([df1, df2])
+    _dfboth = _df[~_df.duplicated(keep='first')]
+    _df = pd.concat([df1, _dfboth])
+    _df1not2 = _df[~_df.duplicated(keep=False)]
+    _df = pd.concat([df2, _dfboth])
+    _df2not1 = _df[~_df.duplicated(keep=False)]
+    return (_dfboth, _df1not2, _df2not1)
+
+
 def diff_idx_df(df1, df2):
     '''Return tuple: (dfboth, df1not2, df2not1).'''
     print('\tdiff_idx_df: in beide, in 1 niet 2, in 2 niet 1:')
@@ -236,15 +248,15 @@ def last_day_of_month(month_str):
     return _last
 
 
-def make_dir(path):
+def make_dir(path, loglevel=10):
     if not os.path.exists(path):
-        print('\n\tAanmaken outputmap', path)
+        aprint(loglevel, '\n\tAanmaken outputmap', path)
         os.makedirs(path)
 
-def recast_df_floats(df, dict1):
+def recast_df_floats(df, dict1, loglevel=10):
     '''Recast the float64 types in df to types in dict1 afer df.fillna(0)'''
     _float_cols = df.select_dtypes(include=['float']).columns
-    print('\tDowncasting types of:', list(_float_cols))
+    aprint(loglevel, '\tDowncasting types of:', list(_float_cols))
     _type_dict = {k: dict1[k] for k in _float_cols}
     df[_float_cols] = df[_float_cols].fillna(0)
     # df[_float_cols] = df[_float_cols].astype(_type_dict)
@@ -311,7 +323,7 @@ def read_input_csv(loglevel=10, file_d={}, bag_type_d={}):
     df. Use the bag_type_d dict to get the (memory) minimal types.'''
     _bdict = {}
     for _k, _f in file_d.items():
-        aprint(loglevel+20, '\tInlezen', _k, '...')
+        aprint(loglevel+10, '\tInlezen', _k, '...')
         _bdict[_k] = pd.read_csv(_f, 
                                  dtype=bag_type_d,
                                  keep_default_na=False)
@@ -465,3 +477,8 @@ def diff_idx_df(df1, df2):
     _df2not1 = _df[~_df.index.duplicated(keep=False)]
     return (_dfboth, _df1not2, _df2not1)
 '''
+
+def find_double_vk(df, bobid, bobvkid):
+    '''Find the double voorkomen (vk) in df, identified by bobid, bobvkid.'''
+    return df.groupby([bobid, bobvkid]).size().to_frame('aantal').sort_values(by='aantal', ascending=False)
+

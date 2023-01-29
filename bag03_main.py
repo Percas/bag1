@@ -22,7 +22,8 @@ import bag01_unzip
 import bag12_xml2csv
 import bag12_wplgem2csv
 import bag23a_fix_vk
-import bag23b_hoofdpnd
+import bag33_hoofdpnd
+import bag33b_levcycl
 import bag34_vbostatus
 
 # import bag23a_vbovk_wplvk
@@ -48,7 +49,7 @@ DIR02 = DATADIR_OUT + '02-csv/'
 DIR03 = DATADIR_OUT + '03-bewerktedata/'
 DIR04 = DATADIR_OUT + '04-aggr/'
 current_month = baglib.get_arg1(sys.argv, DIR00)
-ll = 0
+ll = 20
 
 print('\thuidige maand (verslagmaand + 1):', current_month, '\n')
 baglib.print_legenda()
@@ -70,21 +71,22 @@ bag12_xml2csv.bag_xml2csv(current_month=current_month,
                           koppelvlak2=DIR02,
                           loglevel=ll)
 
-print('Main: hernoem bestand wpl.csv naar wpl_naam.csv')
+print('\n*** bag03_main: hernoem bestand wpl.csv naar wpl_naam.csv\n')
 os.rename(DIR02+current_month+'/wpl.csv', DIR02+current_month+'/wpl_naam.csv')
+
 
 bag12_wplgem2csv.bag_wplgem2csv(current_month=current_month,
                                 koppelvlak1=DIR01,
                                 koppelvlak2=DIR02,
                                 loglevel=ll)
 
-baglib.aprint(ll+40, 'XML bestanden uit koppelvlak 1 verwijderen...')
+baglib.aprint(ll+40, '\n*** bag03_main: XML bestanden uit koppelvlak 1 verwijderen...\n')
 shutil.rmtree(DIR01 + current_month)
 
-
+# tussen rp0 en rp2 hebben we testdata02
+# vanaf rp2 hebben we testdata23
 if current_month == 'testdata02':
     current_month = 'testdata23'
-
 
 bag23a_fix_vk.bag_fix_vk(current_month=current_month,
                                koppelvlak3=DIR03,
@@ -92,10 +94,13 @@ bag23a_fix_vk.bag_fix_vk(current_month=current_month,
                                loglevel=ll)
 # leidt voor elk vbo voorkomen (vbovk) een precies 1 pndvk af. Het hoofdpndvk
 
-bag23b_hoofdpnd.bag_hoofdpnd(current_month=current_month,
-                             koppelvlak2=DIR02,
-                             koppelvlak3=DIR03,
-                             loglevel=ll)
+bag33_hoofdpnd.bag_hoofdpnd(current_month=current_month,
+                            koppelvlak3=DIR03,
+                            loglevel=ll)
+
+bag33b_levcycl.bag_levcycl(current_month=current_month,
+                           koppelvlak3=DIR03,
+                           loglevel=ll)
 
 bag34_vbostatus.bag_vbostatus(current_month=current_month,
                               koppelvlak4=DIR04,

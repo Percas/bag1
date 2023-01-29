@@ -40,18 +40,19 @@ from config import LOCATION
 def bag_wplgem2csv(current_month='testdata',
                    koppelvlak1='../data/01-xml/',
                    koppelvlak2='../data/02-csv/',
-                   loglevel=True):
+                   loglevel=20):
 
     tic = time.perf_counter()
-    print('-------------------------------------------')
-    print('------------- Start bag_wplgem2csv ---------- ')
-    print('-------------------------------------------')
+    ll = loglevel
+    baglib.aprint(ll+40, '-------------------------------------------')
+    baglib.aprint(ll+40, '------------- Start bag_wplgem2csv ---------- ')
+    baglib.aprint(ll+40, '-------------------------------------------')
 
     INPUTDIR = koppelvlak1 + current_month + '/'
     OUTPUTDIR = koppelvlak2 + current_month + '/'
     baglib.make_dir(OUTPUTDIR)
     
-    print('Huidige maand (verslagmaand + 1):', current_month)
+    baglib.aprint(ll+30, 'Huidige maand (verslagmaand + 1):', current_month)
 
     # namespace stuff we have to deal with
     ns = {'gwr-bestand': "www.kadaster.nl/schemas/lvbag/gem-wpl-rel/gwr-deelbestand-lvc/v20200601",
@@ -75,7 +76,7 @@ def bag_wplgem2csv(current_month='testdata',
     subdir = 'wplgem/'
     ddir = INPUTDIR + subdir
     bag_files = os.listdir(ddir)
-    print('\n\tGemeente-woonplaats map bevat', len(bag_files), 'bestand')
+    baglib.aprint(ll+20, '\n\tGemeente-woonplaats map bevat', len(bag_files), 'bestand')
     output_dict = []           # list of dict containing output records
     input_bagobject_count = 0
     output_bagobject_count = 0
@@ -92,7 +93,7 @@ def bag_wplgem2csv(current_month='testdata',
         output_bagobject_filecount = 0
         file_count += 1
         report_count += 1
-        # print(inputfile)
+        baglib.aprint(ll, inputfile)
         # ######### Loop over bagobjects in one bag file       #####
         for level0 in root.iter(tag):   # level0 is the bagobject-tree
             input_bagobject_filecount += 1
@@ -124,31 +125,35 @@ def bag_wplgem2csv(current_month='testdata',
     
         input_bagobject_count += input_bagobject_filecount
         output_bagobject_count += output_bagobject_filecount
-        print(".", end='')
+        if ll+20 >= 40:
+            print(".", end='')
         if report_count == 100:
-            print(file_count, 'of', len(bag_files))
+            baglib.aprint(ll, file_count, 'of', len(bag_files))
             report_count = 0
     df = pd.DataFrame.from_dict(output_dict)
     df.index.name = 'idx'
 
-    # print(df.info()) 
+    # baglib.aprint(ll-10, df.info()) 
     
-    print('\n\tVoeg wplvkid toe')
-    print('\n\tDeze actie hoort thuis tussen koppelvlak 2 en 3, maar wordt\n',
+    baglib.aprint(ll+20, '\n\tVoeg wplvkid toe')
+    baglib.aprint(ll+20, '\n\tDeze actie hoort thuis tussen koppelvlak 2 en 3, maar wordt\n',
           '\thier uitgevoerd zodat ook dit bestand een vkid heeft, net als alle andere.')
     df = df.sort_values(['wplid', 'wplvkbg'])
-    # print(df.head(20))
+    # baglib.aprint(ll+40, df.head(20))
     df = baglib.make_counter(20, df, 'wplid', 'wplvkid', ['wplid', 'wplvkbg'])
-    # print(df[df['wplvkid']==2].head(20))
-    # print(df.head(50))
+    # baglib.aprint(ll+40, df[df['wplvkid']==2].head(20))
+    # baglib.aprint(ll+40, df.head(50))
     
     outputfile = OUTPUTDIR + bagobject + '.csv'
-    print('\nOutputfile:', bagobject + '.csv',
+    baglib.aprint(ll+20, '\n\toutputfile:', bagobject + '.csv',
           ', records in:', input_bagobject_count,
           ', records aangemaakt:', output_bagobject_count,
           bagobject, '\n')
     
     df.to_csv(outputfile, index=False)
+
+    toc = time.perf_counter()
+    baglib.aprint(ll+40, '\n------------- Einde bag_wplgem2csv in', (toc - tic)/60, 'min')
 
 # --------------------------------------------------------------------------
 # ################ Main program ###########################
@@ -156,9 +161,11 @@ def bag_wplgem2csv(current_month='testdata',
 
 if __name__ == '__main__':
     
-    print('-------------------------------------------')
-    print('-------------', LOCATION['OMGEVING'], '-----------')
-    print('-------------------------------------------\n')
+    ll = 0
+    
+    baglib.aprint(ll+40, '-------------------------------------------')
+    baglib.aprint(ll+40, '-------------', LOCATION['OMGEVING'], '-----------')
+    baglib.aprint(ll+40, '-------------------------------------------\n')
 
     DATADIR_IN = LOCATION['DATADIR_IN']
     DATADIR_OUT = LOCATION['DATADIR_OUT']
@@ -168,11 +175,10 @@ if __name__ == '__main__':
     DIR03 = DATADIR_OUT + '03-bewerktedata/'
     current_month = baglib.get_arg1(sys.argv, DIR01)
 
-    printit=True
-
+    
     bag_wplgem2csv(current_month=current_month,
                 koppelvlak1=DIR01,
                 koppelvlak2=DIR02,
-                loglevel=printit)
+                loglevel=ll)
 
 

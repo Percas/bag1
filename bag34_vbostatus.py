@@ -82,9 +82,9 @@ def bag_vbostatus(current_month='testdata',
     baglib.aprint(ll+40, '---- Analyseer de status overgangen bij vbos en hun bijbehorende hoofpand')
     baglib.aprint(ll+40, '-----------------------------------------------------------')
     
-    baglib.aprint(ll+40, '\n-----------------------------------------------------------')
-    baglib.aprint(ll+40, '----0. inlezen vbo.csv uit koppelvlak 3. Hier zit pnd vk en status al bij----')
-    baglib.aprint(ll+40, '-----------------------------------------------------------')
+    baglib.aprint(ll+30, '\n-----------------------------------------------------------')
+    baglib.aprint(ll+30, '----0. inlezen vbo.csv uit koppelvlak 3. Hier zit pnd vk en status al bij----')
+    baglib.aprint(ll+30, '-----------------------------------------------------------')
     
     stat_df = pd.read_csv(vbovk_pndvk_file, 
                           dtype = {'vboid': 'string',
@@ -97,16 +97,14 @@ def bag_vbostatus(current_month='testdata',
                                    'vbostatus': 'string',
                                    'pndstatus': 'string'})
     
-    baglib.aprint(ll+30, '\n\t0a. we sorteren op vboid, vbovkid')
+    baglib.aprint(ll+10, '\n\t0a. we sorteren op vboid, vbovkid')
     cols = ['vboid', 'vbovkid',  'vbovkbg', 'vbovkeg', 'vbostatus', 'pndstatus']
     stat_df = stat_df[cols].sort_values(by=['vboid', 'vbovkid'])
 
-    (nrec, nkey) = baglib.df_comp(ll+20, stat_df, key_lst=vbovk)
+    (nrec, nkey) = baglib.df_comp(ll+10, stat_df, key_lst=vbovk)
 
     # stat_df['vbostat'] = stat_df['vbostatus']
-    baglib.aprint(ll+30, '\n-----------------------------------------------------------')
-    baglib.aprint(ll+30, '\t0a. indikken: status in gebruik (niet ingemeten) => in gebruik')
-    baglib.aprint(ll+30, '-----------------------------------------------------------')
+    baglib.aprint(ll+10, '\t0b. indikken: status in gebruik (niet ingemeten) => in gebruik')
     stat_df['vbostatus'] = stat_df['vbostatus'].replace(to_replace={'v3' : 'v4'})
     stat_df['pndstatus'] = stat_df['pndstatus'].replace(to_replace={'p4' : 'p5'})
     
@@ -115,9 +113,9 @@ def bag_vbostatus(current_month='testdata',
 
 
 
-    baglib.aprint(ll+40, '\n-----------------------------------------------------------')
-    baglib.aprint(ll+40, '----1. verwijder opeenvolgende records bij gelijkblijvende statussen (vbo + pnd)...')
-    baglib.aprint(ll+40, '-----------------------------------------------------------')
+    baglib.aprint(ll+30, '\n-----------------------------------------------------------')
+    baglib.aprint(ll+30, '----1. verwijder opeenvolgende records bij gelijkblijvende statussen (vbo + pnd)...')
+    baglib.aprint(ll+30, '-----------------------------------------------------------')
 
     # drop consecutive duplicates:
     # https://stackoverflow.com/questions/19463985/pandas-drop-consecutive-duplicates
@@ -125,18 +123,18 @@ def bag_vbostatus(current_month='testdata',
     cols = ['vboid', 'vbostatus', 'pndstatus']
     stat_df = stat_df.loc[(stat_df[cols].shift(-1) != stat_df[cols]).any(axis=1)] 
     
-    (nrec, nkey) = baglib.df_comp(ll+20, stat_df, key_lst=vbovk, nrec=nrec, nkey=nkey, u_may_change=True)
+    (nrec, nkey) = baglib.df_comp(ll+10, stat_df, key_lst=vbovk, nrec=nrec, nkey=nkey, u_may_change=True)
     baglib.aprint(ll, stat_df.head(10))
     
 
 
 
 
-    baglib.aprint(ll+40, '\n-----------------------------------------------------------')
-    baglib.aprint(ll+40, '----2. maak de statusovergangen (shift -1 in pandas) ...')
-    baglib.aprint(ll+40, '-----------------------------------------------------------')
+    baglib.aprint(ll+30, '\n-----------------------------------------------------------')
+    baglib.aprint(ll+30, '----2. maak de statusovergangen (shift -1 in pandas) ...')
+    baglib.aprint(ll+30, '-----------------------------------------------------------')
     status_ovg = stat_df.copy()
-    baglib.aprint(ll+30, '\n\t2a. met pd.shift(-1 )haal je een veld van het volgende record naar het huidige')
+    baglib.aprint(ll+20, '\n\t2a. met pd.shift(-1 )haal je een veld van het volgende record naar het huidige')
     status_ovg['vbostatus_nieuw'] = status_ovg['vbostatus'].shift(periods=-1)
     status_ovg['pndstatus_nieuw'] = status_ovg['pndstatus'].shift(periods=-1)
     status_ovg['vbovkeg'] = status_ovg['vbovkbg'].shift(periods=-1)
@@ -160,7 +158,7 @@ def bag_vbostatus(current_month='testdata',
         'pndstatus_nieuw': 'p5'}
     '''
     
-    print(status_ovg.loc[(status_ovg['vbostatus'] == 'v1') &
+    baglib.aprint(ll, status_ovg.loc[(status_ovg['vbostatus'] == 'v1') &
                          (status_ovg['pndstatus'] == 'p3') &
                          (status_ovg['vbostatus_nieuw'] == 'v4') &
                          (status_ovg['pndstatus_nieuw'] == 'p5')].head())
@@ -179,9 +177,9 @@ def bag_vbostatus(current_month='testdata',
     baglib.aprint(ll, status_ovg.head(10))
 
 
-    baglib.aprint(ll+40, '\n-----------------------------------------------------------')
-    baglib.aprint(ll+40, '----3. tel ze en bereken min, max en gemiddelde doorlooptijd van de overgang')
-    baglib.aprint(ll+40, '-----------------------------------------------------------')
+    baglib.aprint(ll+30, '\n-----------------------------------------------------------')
+    baglib.aprint(ll+30, '----3. tel ze en bereken min, max en gemiddelde doorlooptijd van de overgang')
+    baglib.aprint(ll+30, '-----------------------------------------------------------')
 
     cols = ['vbostatus', 'vbostatus_nieuw', 'pndstatus', 'pndstatus_nieuw']
     status_ovg = status_ovg.groupby(cols).agg(aantal=('dlt', 'size'),
@@ -205,9 +203,9 @@ def bag_vbostatus(current_month='testdata',
     baglib.aprint(ll, status_ovg.head(10))
     # baglib.aprint(ll, status_ovg.info())
 
-    baglib.aprint(ll+40, '\n-----------------------------------------------------------')
-    baglib.aprint(ll+40, '----4. bewaar ze in koppelvlak 4: statusovergang.csv-----')
-    baglib.aprint(ll+40, '-----------------------------------------------------------')
+    baglib.aprint(ll+30, '\n-----------------------------------------------------------')
+    baglib.aprint(ll+30, '----4. bewaar ze in koppelvlak 4: statusovergang.csv-----')
+    baglib.aprint(ll+30, '-----------------------------------------------------------')
 
     outputfile = k4dir + 'statusovergang.csv'
     status_ovg.to_csv(outputfile, index=False)
@@ -253,15 +251,14 @@ def bag_vbostatus(current_month='testdata',
     '''  
 
     toc = time.perf_counter()
-    baglib.aprint(ll+40, '\nvbo_status duurde', (toc - tic)/60, 'min')
+    baglib.aprint(ll+40, '\n------ Einde vbo_status in', (toc - tic)/60, 'min\n')
     
 
 # ########################################################################
-print('------------- Start vbo status lokaal ------------- \n')
 # ########################################################################
 
 if __name__ == '__main__':
-    ll=0
+    ll=30
 
     baglib.aprint(ll+40, '-------------------------------------------')
     baglib.aprint(ll+40, '-------------', LOCATION['OMGEVING'], '-----------')
@@ -277,6 +274,7 @@ if __name__ == '__main__':
     current_month = baglib.get_arg1(sys.argv, DIR02)
 
 
+    print('------------- Start bag_vbostatus lokaal ------------- \n')
     bag_vbostatus(current_month=current_month,
                    koppelvlak3=DIR03,
                    koppelvlak4=DIR04,
