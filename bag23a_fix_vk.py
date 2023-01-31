@@ -352,7 +352,7 @@ def bag_fix_vk(loglevel = 10,
  
     for bob, vk in KEY_DICT.items():
         baglib.aprint(ll+20, '\tBewaren koppelbaar gemaakte', bob+'.csv')
-        outputfile = OUTPUTDIR + bob+'.csv'
+        outputfile = os.path.join(OUTPUTDIR, bob+'.csv')
     
         # cols = ['vbovkid', 'vbovkbg', 'vbovkeg', 'vbostatus', 'pndid', 'pndvkid', 'numid', 'numvkid']
         bd[bob].sort_values(by=[bob+'id', bob+'vkid']).to_csv(outputfile, index=False)
@@ -363,7 +363,7 @@ def bag_fix_vk(loglevel = 10,
     df = pd.DataFrame(nkey_listdict)
     df = df.div(df.iloc[0]).round(2)
     baglib.aprint(ll+30, df)
-    outputfile = OUTPUTDIR + 'log_'+str(current_month)+'.csv'
+    outputfile = os.path.join(OUTPUTDIR, 'log_'+str(current_month)+'.csv')
     df.to_csv(outputfile)
 
     toc = time.perf_counter()

@@ -179,7 +179,7 @@ def bag_levcycl(current_month='testdata23',
     baglib.aprint(ll+30, '------3. Wegschrijven naar levcycl.csv ----------------')
     baglib.aprint(ll+20, '-------------------------------------------------------\n')
 
-    outputfile = K3DIR + 'levcycl.csv'
+    outputfile = os.path.join(K3DIR, 'levcycl.csv')
     levcycl.to_csv(outputfile, index=False)
     
     toc = time.perf_counter()

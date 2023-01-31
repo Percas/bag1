@@ -142,7 +142,7 @@ def bag_wplgem2csv(current_month='testdata02',
     # baglib.aprint(ll+40, df[df['wplvkid']==2].head(20))
     # baglib.aprint(ll+40, df.head(50))
     
-    outputfile = OUTPUTDIR + bagobject + '.csv'
+    outputfile = os.path.join(OUTPUTDIR, bagobject+'.csv')
     baglib.aprint(ll+20, '\n\toutputfile:', bagobject + '.csv',
           ', records in:', input_bagobject_count,
           ', records aangemaakt:', output_bagobject_count,

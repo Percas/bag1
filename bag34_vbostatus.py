@@ -204,7 +204,7 @@ def bag_vbostatus(current_month='testdata',
     baglib.aprint(ll+30, '----4. bewaar ze in koppelvlak 4: statusovergang.csv-----')
     baglib.aprint(ll+30, '-----------------------------------------------------------')
 
-    outputfile = k4dir + 'statusovergang.csv'
+    outputfile = os.path.join(k4dir, 'statusovergang.csv')
     status_ovg.to_csv(outputfile, index=False)
 
     
@@ -227,7 +227,7 @@ def bag_vbostatus(current_month='testdata',
     # baglib.aprint(ll+40, stat_df.head(30))
     
     baglib.aprint(ll+40, '\tBewaren van', stat_df.shape[0], 'vbo met statusrij...')
-    outputfile = k3dir + 'vbo_metstatusrij.csv'
+    outputfile = os.path.join(k3dir, 'vbo_metstatusrij.csv')
     stat_df.to_csv(outputfile, index=False)
     
     baglib.aprint(ll+40, '\n-----------------------------------------------------------')
@@ -243,7 +243,7 @@ def bag_vbostatus(current_month='testdata',
     # baglib.aprint(ll+40, ggbyp.head(30))
 
     baglib.aprint(ll+40, '\tBewaren van', stat_df.shape[0], 'statusrijen met hun aantal...')
-    outputfile = k3dir + 'statusrij_aantal.csv'
+    outputfile = os.path.join(k3dir, 'statusrij_aantal.csv')
     stat_df.to_csv(outputfile, index=True)
     '''  
 

@@ -200,7 +200,7 @@ def bag_hoofdpnd(current_month='testdata23',
     if doel2_vbovk_u > 20000000:
         baglib.aprint(ll+30, 'Dit gaat even duren...')
          
-    outputfile = K3DIR + 'vbovk_hoofdpndvk.csv'
+    outputfile = os.path.join(K3DIR, 'vbovk_hoofdpndvk.csv')
      
     cols = ['vbovkbg', 'vbovkeg', 'vbostatus', 'pndid', 'pndvkid', 'pndstatus']
     bd['vbo'][cols].sort_index().to_csv(outputfile, index=True)
@@ -325,9 +325,9 @@ def bag_hoofdpnd(current_month='testdata23',
     baglib.aprint(ll+30, '\n-------------------------------------------------------')
     baglib.aprint(ll+30, '------ 6. bewaren in pndvk_nvbo.csv vbovk_nvbo.csv -----')
     baglib.aprint(ll+30, '--------------------------------------------------------\n')
-    outputfile = K3DIR + 'pndvk_nvbo.csv'
+    outputfile = os.path.join(K3DIR, 'pndvk_nvbo.csv')
     pndvk2_df.to_csv(outputfile, index=False)
-    outputfile = K3DIR + 'vbovk_nvbo.csv'
+    outputfile = os.path.join(K3DIR, 'vbovk_nvbo.csv')
     vbo_df.to_csv(outputfile, index=False)
      
     toc = time.perf_counter()
