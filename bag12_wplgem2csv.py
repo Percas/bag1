@@ -34,25 +34,23 @@ import pandas as pd
 import sys
 import baglib
 import time
-from config import LOCATION
+from config import *
 
 # ############### Define functions #################################
-def bag_wplgem2csv(current_month='testdata',
-                   koppelvlak1='../data/01-xml/',
-                   koppelvlak2='../data/02-csv/',
+def bag_wplgem2csv(current_month='testdata02',
+                   koppelvlak1=DIR01,
+                   koppelvlak2=DIR02,
                    loglevel=20):
 
     tic = time.perf_counter()
     ll = loglevel
-    baglib.aprint(ll+40, '-------------------------------------------')
-    baglib.aprint(ll+40, '------------- Start bag_wplgem2csv ---------- ')
-    baglib.aprint(ll+40, '-------------------------------------------')
+    baglib.printkop(ll+40, 'Start bag_wplgem2csv')
 
-    INPUTDIR = koppelvlak1 + current_month + '/'
-    OUTPUTDIR = koppelvlak2 + current_month + '/'
+    INPUTDIR = os.path.join(koppelvlak1, current_month)
+    OUTPUTDIR = os.path.join(koppelvlak2, current_month)
     baglib.make_dir(OUTPUTDIR)
-    
     baglib.aprint(ll+30, 'Huidige maand (verslagmaand + 1):', current_month)
+
 
     # namespace stuff we have to deal with
     ns = {'gwr-bestand': "www.kadaster.nl/schemas/lvbag/gem-wpl-rel/gwr-deelbestand-lvc/v20200601",
@@ -68,13 +66,13 @@ def bag_wplgem2csv(current_month='testdata',
         'definitief':                                   'defi',
         'voorlopig':                                    'vrlg'} 
     
-    futureday_str = '20321231'
+    # futureday_str = '20321231'
 
     # ######### works just for wplgem                ###########
 
     bagobject = 'wpl'
     subdir = 'wplgem/'
-    ddir = INPUTDIR + subdir
+    ddir = os.path.join(INPUTDIR, subdir)
     bag_files = os.listdir(ddir)
     baglib.aprint(ll+20, '\n\tGemeente-woonplaats map bevat', len(bag_files), 'bestand')
     output_dict = []           # list of dict containing output records
@@ -85,7 +83,7 @@ def bag_wplgem2csv(current_month='testdata',
 
     # ######### Loop over files in a directory with same bag objects #####
     for inputfile in bag_files:
-        bagtree = ET.parse(ddir + inputfile)
+        bagtree = ET.parse(os.path.join(ddir, inputfile))
         root = bagtree.getroot()
         # tag = '{' + ns['gwr-product'] + '}' + short[bagobject]
         tag = '{' + ns['gwr-product'] + '}' + 'GemeenteWoonplaatsRelatie'
@@ -111,7 +109,7 @@ def bag_wplgem2csv(current_month='testdata',
             vkbg = baglib.date2int(date_str)
             date_str = baglib.assigniffound(level0, ['gwr-product:tijdvakgeldigheid',
                                                      'bagtypes:einddatumTijdvakGeldigheid'],
-                                            ns, futureday_str)
+                                            ns, str(FUTURE_DATE))
             vkeg = baglib.date2int(date_str)
     
             output_record = {'wplid':   wpl,
@@ -153,26 +151,15 @@ def bag_wplgem2csv(current_month='testdata',
     df.to_csv(outputfile, index=False)
 
     toc = time.perf_counter()
-    baglib.aprint(ll+40, '\n------------- Einde bag_wplgem2csv in', (toc - tic)/60, 'min')
-
+    baglib.aprint(ll+40, '\n*** Einde bag_wplgem2csv in', (toc - tic)/60, 'min ***\n')
 # --------------------------------------------------------------------------
 # ################ Main program ###########################
 # --------------------------------------------------------------------------
 
 if __name__ == '__main__':
     
-    ll = 0
-    
-    baglib.aprint(ll+40, '-------------------------------------------')
-    baglib.aprint(ll+40, '-------------', LOCATION['OMGEVING'], '-----------')
-    baglib.aprint(ll+40, '-------------------------------------------\n')
-
-    DATADIR_IN = LOCATION['DATADIR_IN']
-    DATADIR_OUT = LOCATION['DATADIR_OUT']
-    DIR00 = DATADIR_IN + '00-zip/'
-    DIR01 = DATADIR_OUT + '01-xml/'
-    DIR02 = DATADIR_OUT + '02-csv/'
-    DIR03 = DATADIR_OUT + '03-bewerktedata/'
+    ll = 20
+    baglib.printkop(ll+40, OMGEVING)    
     current_month = baglib.get_arg1(sys.argv, DIR01)
 
     

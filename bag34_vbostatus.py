@@ -17,36 +17,33 @@ stappen:
 import pandas as pd
 import numpy as np
 import sys
-# import os
+import os
 import time
 import baglib
 # from baglib import BAG_TYPE_DICT
-from config import LOCATION
-from config import status_dict
+from config import *
 
 # ############### Define functions ################################
 
 def bag_vbostatus(current_month='testdata',
-                  koppelvlak3='../data/03-bewerkte-data',
-                  koppelvlak4='../data/04-aggr',
+                  koppelvlak3=os.path.join('..', 'data', '03-bewerkte-data'),
+                  koppelvlak4=os.path.join('..', 'data', '04-aggr'),
                   loglevel=10):
 
     tic = time.perf_counter()
     ll = loglevel
     
-    baglib.aprint(ll+40, '-------------------------------------------')
-    baglib.aprint(ll+40, '--- Start bag_vbostatus;', current_month, '-------')
-    baglib.aprint(ll+40, '-------------------------------------------')
+    baglib.printkop(ll+40, 'Start bag_vbostatus' + current_month)
 
     # #############################################################################
     # baglib.aprint(ll+40, '00.............Initializing variables...............................')
     # #############################################################################
-    k3dir = koppelvlak3 + current_month + '/'
-    k4dir = koppelvlak4 + current_month + '/'
+    k3dir = os.path.join(koppelvlak3, current_month)
+    k4dir = os.path.join(koppelvlak4, current_month)
     baglib.make_dir(k4dir)
 
 
-    vbovk_pndvk_file = k3dir + 'vbovk_hoofdpndvk.csv'
+    vbovk_pndvk_file = os.path.join(k3dir, 'vbovk_hoofdpndvk.csv')
     vbovk = ['vboid', 'vbovkid']
     pd.set_option('display.max_columns', 20)
     ll = loglevel
@@ -251,26 +248,17 @@ def bag_vbostatus(current_month='testdata',
     '''  
 
     toc = time.perf_counter()
-    baglib.aprint(ll+40, '\n------ Einde vbo_status in', (toc - tic)/60, 'min\n')
+    baglib.aprint(ll+40, '\n-*** Einde vbo_status in', (toc - tic)/60, 'min ***\n')
     
 
 # ########################################################################
 # ########################################################################
 
 if __name__ == '__main__':
-    ll=30
 
-    baglib.aprint(ll+40, '-------------------------------------------')
-    baglib.aprint(ll+40, '-------------', LOCATION['OMGEVING'], '-----------')
-    baglib.aprint(ll+40, '-------------------------------------------\n')
 
-    DATADIR_IN = LOCATION['DATADIR_IN']
-    DATADIR_OUT = LOCATION['DATADIR_OUT']
-    DIR00 = DATADIR_IN + '00-zip/'
-    DIR01 = DATADIR_OUT + '01-xml/'
-    DIR02 = DATADIR_OUT + '02-csv/'
-    DIR03 = DATADIR_OUT + '03-bewerktedata/'
-    DIR04 = DATADIR_OUT + '04-aggr/'
+    ll = 20
+    baglib.printkop(ll+40, OMGEVING + 'Lokale aanroep')
     current_month = baglib.get_arg1(sys.argv, DIR02)
 
 

@@ -30,27 +30,24 @@ Stappen:
 import pandas as pd
 import numpy as np
 import sys
-# import os
+import os
 import time
 import baglib
 from baglib import BAG_TYPE_DICT
-from config import LOCATION
-from config import FUTURE_DATE
+from config import *
 
 
 # ############### Define functions ################################
 
 def bag_hoofdpnd(current_month='testdata23',
-                 koppelvlak3='../data/03-bewerkte-data',
+                 koppelvlak3=os.path.join('..', 'data', '03-bewerkte-data'),
                  loglevel=10,
                  future_date=FUTURE_DATE):
 
     tic = time.perf_counter()
     ll = loglevel
     
-    baglib.aprint(ll+30, '-------------------------------------------')
-    baglib.aprint(ll+40, '--- Start bag_hoofdpnd;', current_month, ' -----')
-    baglib.aprint(ll+30, '-------------------------------------------')
+    baglib.printkop(ll+40, 'Start bag_hoofdpnd;' + str(current_month))
 
     # #############################################################################
     # print('00.............Initializing variables...............................')
@@ -58,7 +55,7 @@ def bag_hoofdpnd(current_month='testdata23',
     # month and dirs
 
     # K2DIR = koppelvlak2 + current_month + '/'
-    K3DIR = koppelvlak3 + current_month + '/'
+    K3DIR = os.path.join(koppelvlak3, current_month)
     
     if current_month == 'testdata23':
         current_year = 2000
@@ -68,8 +65,8 @@ def bag_hoofdpnd(current_month='testdata23',
     
     pd.set_option('display.max_columns', 20)
     
-    INPUT_FILS_DICT = {'vbo': K3DIR + 'vbo.csv',
-                       'pnd': K3DIR + 'pnd.csv'}
+    INPUT_FILS_DICT = {'vbo': os.path.join(K3DIR, 'vbo.csv'),
+                       'pnd': os.path.join(K3DIR, 'pnd.csv')}
     
     
     vbovk = ['vboid', 'vbovkid']
@@ -209,7 +206,7 @@ def bag_hoofdpnd(current_month='testdata23',
     bd['vbo'][cols].sort_index().to_csv(outputfile, index=True)
      
     toc = time.perf_counter()
-    baglib.aprint(ll+40, '\n*** bepalen hoofdpnd in', (toc - tic)/60, 'min\n\n')
+    baglib.aprint(ll+40, '\n*** bepalen hoofdpnd in', (toc - tic)/60, 'min **\n\n')
     mid = time.perf_counter()
 
 
@@ -334,8 +331,8 @@ def bag_hoofdpnd(current_month='testdata23',
     vbo_df.to_csv(outputfile, index=False)
      
     toc = time.perf_counter()
-    baglib.aprint(ll+40, '\n*** bepalen inliggend in', (toc - mid)/60, 'min')
-    baglib.aprint(ll+40, '\n*** Einde bag_hoofdpnd in', (toc - tic)/60, 'min\n')
+    baglib.aprint(ll+40, '\n*** bepalen inliggend in', (toc - mid)/60, 'min ***')
+    baglib.aprint(ll+40, '\n*** Einde bag_hoofdpnd in', (toc - tic)/60, 'min ***\n')
 
 
 

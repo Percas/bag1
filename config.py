@@ -8,7 +8,7 @@ Config file
 # import pandas as pd
 # import time
 # import logging
-# import os
+import os
 # import sys
 # import datetime
 # import logging
@@ -19,12 +19,18 @@ Config file
 
 
 # ################ define datastructures ###############################
-LOCATION = {
-    'OMGEVING': 'Ontwikkelomgeving',
-    'DATADIR_IN': '../data/',
-    'DATADIR_OUT': '../data/'}
+
+OMGEVING = 'Ontwikkelomgeving'
 FUTURE_DATE = 20321231
-    
+
+DATADIR_IN = os.path.join('..', 'data')
+DATADIR_OUT = os.path.join('..', 'data')
+DIR00 = os.path.join(DATADIR_IN, '00-zip')
+DIR01 = os.path.join(DATADIR_OUT, '01-xml')
+DIR02 = os.path.join(DATADIR_OUT, '02-csv')
+DIR03 = os.path.join(DATADIR_OUT, '03-bewerktedata')
+DIR04 = os.path.join(DATADIR_OUT, '04-aggr')
+
 status_dict = {
     'Plaats ingetrokken':                           's2',
     'Plaats aangewezen':                            's1',
@@ -51,3 +57,6 @@ status_dict = {
     'Verbouwing pand':                              'p0',
     'Woonplaats aangewezen':                        'w1',
     'Woonplaats ingetrokken':                       'w2'}
+
+
+

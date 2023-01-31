@@ -33,10 +33,10 @@ Notes:
 import pandas as pd
 import baglib
 from baglib import BAG_TYPE_DICT
-# import os
+import os
 import sys
 import time
-from config import LOCATION
+from config import *
 
 
 # import numpy as np
@@ -45,7 +45,7 @@ from config import LOCATION
 # ############### Define functions ################################
 
 def bag_levcycl(current_month='testdata23',
-                koppelvlak3='../data/03-bewerkte-data',
+                koppelvlak3=os.path.join('..', 'data', '03-bewerkte-data'),
                 loglevel=20):
     '''Maak het levenscyclus bestand met VBO voorkomens, waarin het bouwjaar,
     inliggend, voorraad en alle mogelijke woonfuncties van dit vbovk zijn
@@ -53,14 +53,8 @@ def bag_levcycl(current_month='testdata23',
 
     tic = time.perf_counter()
     ll= loglevel
-    
-    baglib.aprint(ll+30, '-------------------------------------------')
-    baglib.aprint(ll+40, '------------- Start bag_levcycl -----------')
-    baglib.aprint(ll+30, '-------------------------------------------')
-
-    # INPUTDIR = koppelvlak3 + current_month + '/'
-    # K2DIR = INPUTDIR
-    K3DIR = koppelvlak3 + current_month + '/'
+    baglib.printkop(ll+40, 'Start bag_levcycl')
+    K3DIR = os.path.join(koppelvlak3, current_month)
     # OUTPUTDIR = koppelvlak3 + current_month + '/'
     # IN_VOORRAAD = ['inge', 'inni', 'verb', 'buig']
     
@@ -73,11 +67,11 @@ def bag_levcycl(current_month='testdata23',
                 'vbovk-nvbo': vbovk,
                 'pnd': pndvk}    
     
-    INPUT_FILES_DICT = {'vbo': K3DIR + 'vbo.csv',
-                       'pnd': K3DIR + 'pnd.csv',
-                       'vbovk-pndvk': K3DIR + 'vbovk_hoofdpndvk.csv',
+    INPUT_FILES_DICT = {'vbo': os.path.join(K3DIR, 'vbo.csv'),
+                       'pnd': os.path.join(K3DIR, 'pnd.csv'),
+                       'vbovk-pndvk': os.path.join(K3DIR, 'vbovk_hoofdpndvk.csv'),
                        # 'vbovk-gemvk': K3DIR + 'vbovk_gemvk.csv',
-                       'vbovk-nvbo':  K3DIR + 'vbovk_nvbo.csv'}
+                       'vbovk-nvbo':  os.path.join(K3DIR, 'vbovk_nvbo.csv')}
     
     # bagobj_d = {} # dict to store the bagobject df's
     # peildatum = baglib.last_day_of_month(current_month)
@@ -189,28 +183,15 @@ def bag_levcycl(current_month='testdata23',
     levcycl.to_csv(outputfile, index=False)
     
     toc = time.perf_counter()
-    baglib.aprint(ll+40, '\n*** Einde bag_levcycl in', (toc - tic)/60, 'min')
+    baglib.aprint(ll+40, '\n*** Einde bag_levcycl in', (toc - tic)/60, 'min ***\n')
 
 
 if __name__ == '__main__':
 
-    ll = 40
-    
-    # ########################################################################
-    baglib.aprint(ll+40, '------------- Start bag_levcycl lokaal ------------- \n')
-    # ########################################################################
-    baglib.aprint(ll+40, '-------------------------------------------')
-    baglib.aprint(ll+40, '-------------', LOCATION['OMGEVING'], '-----------')
-    baglib.aprint(ll+40, '-------------------------------------------\n')
-
-    DATADIR_IN = LOCATION['DATADIR_IN']
-    DATADIR_OUT = LOCATION['DATADIR_OUT']
-    DIR00 = DATADIR_IN + '00-zip/'
-    DIR01 = DATADIR_OUT + '01-xml/'
-    DIR02 = DATADIR_OUT + '02-csv/'
-    DIR03 = DATADIR_OUT + '03-bewerktedata/'
-    current_month = baglib.get_arg1(sys.argv, DIR02)
-    
+    ll = 20
+    baglib.printkop(ll+40, OMGEVING)
+    current_month = baglib.get_arg1(sys.argv, DIR03)
+    baglib.printkop(ll+30, 'Lokale aanroep')
     bag_levcycl(current_month=current_month,
                 koppelvlak3=DIR03,
                 loglevel=ll)

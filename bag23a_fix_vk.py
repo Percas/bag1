@@ -96,9 +96,7 @@ import sys
 import time
 import baglib
 from baglib import BAG_TYPE_DICT
-from config import LOCATION
-from config import FUTURE_DATE
-
+from config import * 
 
 
 
@@ -106,24 +104,21 @@ from config import FUTURE_DATE
 
 def bag_fix_vk(loglevel = 10,
                current_month='testdata23',
-               koppelvlak2='../data/02-csv',
-               koppelvlak3='../data/03-bewerkte-data',
+               koppelvlak2=os.path.join('..', 'data', '02-csv'),
+               koppelvlak3=os.path.join('..', 'data', '03-bewerktedata'),
                future_date=FUTURE_DATE):
 
     tic = time.perf_counter()
     ll = loglevel
-    
-    baglib.aprint(ll+30, '-------------------------------------------')
-    baglib.aprint(ll+40, '--- Start bag_fix_vk', current_month, ' -----')
-    baglib.aprint(ll+30, '-------------------------------------------')
+    baglib.printkop(ll+40, 'Start bag_fix_vk' + str(current_month))
 
     # #############################################################################
     # print('00.............Initializing variables...............................')
     # #############################################################################
     # month and dirs
-    INPUTDIR = koppelvlak2 + current_month + '/'
+    INPUTDIR = os.path.join(koppelvlak2, current_month)
     K2DIR = INPUTDIR
-    OUTPUTDIR = koppelvlak3 + current_month + '/'
+    OUTPUTDIR = os.path.join(koppelvlak3, current_month)
     baglib.make_dir(OUTPUTDIR)
 
 
@@ -135,11 +130,11 @@ def bag_fix_vk(loglevel = 10,
     
     pd.set_option('display.max_columns', 20)
     
-    INPUT_FILES_DICT = {'vbo': K2DIR + 'vbo.csv',
-                        'pnd': K2DIR + 'pnd.csv',
-                        'num': K2DIR + 'num.csv',
-                        'opr': K2DIR + 'opr.csv',
-                        'wpl': K2DIR + 'wpl.csv'}
+    INPUT_FILES_DICT = {'vbo': os.path.join(K2DIR, 'vbo.csv'),
+                        'pnd': os.path.join(K2DIR, 'pnd.csv'),
+                        'num': os.path.join(K2DIR, 'num.csv'),
+                        'opr': os.path.join(K2DIR, 'opr.csv'),
+                        'wpl': os.path.join(K2DIR, 'wpl.csv')}
                         # 'gem': K2DIR + 'gem.csv'}
         
                        # 'wplgem': K2DIR + 'wplgem.csv'}
@@ -372,7 +367,7 @@ def bag_fix_vk(loglevel = 10,
     df.to_csv(outputfile)
 
     toc = time.perf_counter()
-    baglib.aprint(ll+40, '\n--------- Einde bag_fix_vk in', (toc - tic)/60, 'min\n')
+    baglib.aprint(ll+40, '\n*** Einde bag_fix_vk in', (toc - tic)/60, 'min ***\n')
 
     
     
@@ -882,24 +877,14 @@ def merge_vk(loglevel, df, bob, future_date, cols):
 # ll = 30 # tellingen
 # ll = 40 # data voorbeelden 
 
-ll = 10
+ll = 20
 
 if __name__ == '__main__':
 
-    baglib.aprint(ll+30, '-------------------------------------------')
-    baglib.aprint(ll+40, '-------------', LOCATION['OMGEVING'], '-----------')
-    baglib.aprint(ll+30, '-------------------------------------------\n')
-
-
-    DATADIR_IN = LOCATION['DATADIR_IN']
-    DATADIR_OUT = LOCATION['DATADIR_OUT']
-    DIR00 = DATADIR_IN + '00-zip/'
-    DIR01 = DATADIR_OUT + '01-xml/'
-    DIR02 = DATADIR_OUT + '02-csv/'
-    DIR03 = DATADIR_OUT + '03-bewerktedata/'
+    baglib.printkop(ll+40, OMGEVING)
     current_month = baglib.get_arg1(sys.argv, DIR02)
 
-    baglib.aprint(ll+40, '------------- Start bag_fixvk lokaal ------------- \n')
+    baglib.printkop(ll+30, 'Lokale aanroep')
     bag_fix_vk(loglevel=ll,
                current_month=current_month,
                koppelvlak2=DIR02,
