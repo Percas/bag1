@@ -34,7 +34,7 @@ import pandas as pd
 import sys
 import baglib
 import time
-from config import *
+from config import OMGEVING, DIR00, DIR01, DIR02, DIR03, DIR04, FUTURE_DATE, status_dict
 
 # ############### Define functions #################################
 def bag_wplgem2csv(current_month='testdata02',

@@ -34,15 +34,14 @@ import os
 import time
 import baglib
 from baglib import BAG_TYPE_DICT
-from config import *
+from config import OMGEVING, DIR03
 
 
 # ############### Define functions ################################
 
 def bag_hoofdpnd(current_month='testdata23',
                  koppelvlak3=os.path.join('..', 'data', '03-bewerkte-data'),
-                 loglevel=10,
-                 future_date=FUTURE_DATE):
+                 loglevel=10):
 
     tic = time.perf_counter()
     ll = loglevel
@@ -411,17 +410,8 @@ if __name__ == '__main__':
 
     ll = 20
 
-    baglib.aprint(ll+30, '-------------------------------------------')
-    baglib.aprint(ll+40, '-------------', LOCATION['OMGEVING'], '-----------')
-    baglib.aprint(ll+30, '-------------------------------------------\n')
-
-    DATADIR_IN = LOCATION['DATADIR_IN']
-    DATADIR_OUT = LOCATION['DATADIR_OUT']
-    DIR00 = DATADIR_IN + '00-zip/'
-    DIR01 = DATADIR_OUT + '01-xml/'
-    DIR02 = DATADIR_OUT + '02-csv/'
-    DIR03 = DATADIR_OUT + '03-bewerktedata/'
-    current_month = baglib.get_arg1(sys.argv, DIR02)
+    baglib.printkop(ll+40, OMGEVING)
+    current_month = baglib.get_arg1(sys.argv, DIR03)
 
     
     baglib.aprint(ll+10, '------------- Start bag_hoofdpnd lokaal ------------- \n')

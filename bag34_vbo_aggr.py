@@ -11,6 +11,7 @@ Doel:
     
     Stappen:
         1. Lees vbo, num, opr, wpl in in koppelvlak 3
+            lees ook maar de wpl-naam uit koppelvlak 2
         vbo = verblijfsobjecten
         num = nummeraanduidingen
         opr = openbare ruimten
@@ -34,18 +35,18 @@ Doel:
 
 # ################ import libraries ###############################
 import pandas as pd
-import numpy as np
+# import numpy as np
 import sys
-# import os
+import os
 import time
 import baglib
 from baglib import BAG_TYPE_DICT
-from config import LOCATION
-
+from config import OMGEVING, DIR02, DIR03, DIR04
 
 # ############### Define functions ################################
 
 def bag_vbo_aggr(current_month='testdata',
+                 koppelvlak2='../data/02-csv',
                  koppelvlak3='../data/03-bewerkte-data',
                  koppelvlak4='../data/04-aggr',
                  loglevel=40):
@@ -60,10 +61,11 @@ def bag_vbo_aggr(current_month='testdata',
     # print('00.............Initializing variables...............................')
     # #############################################################################
     # month and dirs
-    INPUTDIR = koppelvlak3 + current_month + '/'
-    K3DIR = INPUTDIR
-    OUTPUTDIR = koppelvlak4 + current_month + '/'
-    baglib.make_dir(OUTPUTDIR)
+    # INPUTDIR = koppelvlak3 + current_month + '/'
+    K2DIR = os.path.join(koppelvlak2, current_month)
+    K3DIR = os.path.join(koppelvlak3, current_month)
+    K4DIR = os.path.join(koppelvlak4, current_month)
+    baglib.make_dir(K4DIR)
     
     if (current_month == 'testdata') or (current_month == 'backup_testdata'):
         current_year = 2000
@@ -76,35 +78,31 @@ def bag_vbo_aggr(current_month='testdata',
     
     IN_VOORRAAD = ['v3', 'v4', 'v6', 'v8']
     pd.set_option('display.max_columns', 20)
-    INPUT_FILES_DICT = {'vbo': K3DIR + 'vbo.csv',
-                        # 'pnd': K3DIR + 'pnd.csv',
-                        'num': K3DIR + 'num.csv',
-                        'opr': K3DIR + 'opr.csv',
-                        'wpl': K3DIR + 'wpl.csv'}
+
+    INPUT_FILES_DICT = {'vbo': os.path.join(K3DIR, 'vbo.csv'),
+                        'num': os.path.join(K3DIR, 'num.csv'),
+                        'opr': os.path.join(K3DIR, 'opr.csv'),
+                        'wpl': os.path.join(K3DIR, 'wpl.csv'),
+                        'wpl_naam': os.path.join(K2DIR, 'wpl_naam.csv')}
                         # 'wplgem': K3DIR + 'wplgem.csv'}
         
     vbovk = ['vboid', 'vbovkid']
-    # pndvk = ['pndid', 'pndvkid']
     numvk = ['numid', 'numvkid']
     oprvk = ['oprid', 'oprvkid']
     wplvk = ['wplid', 'wplvkid']
     # wplgemvk = ['wplid', 'wplgemvkid']        
     
     KEY_DICT = {'vbo': vbovk,
-                # 'pnd': pndvk,
                 'num': numvk,
                 'opr': oprvk,
                 'wpl': wplvk}
     
     bd = {}         # dict with df with bagobject (vbo en pnd in this case)
     
-    FUTURE_DATE = 20321231
    
-    '''    
     print('\n---------------DOELSTELLING--------------------------------')
     print('----Bepaal de vbo voorraad per gemeente per eerste vd maand')
     print('-----------------------------------------------------------')
-    '''
 
     # #############################################################################
     print('\n----1. Inlezen van de inputbestanden -----------------------\n')
@@ -118,7 +116,8 @@ def bag_vbo_aggr(current_month='testdata',
     print('\n----2. maak de koppeling vbo vk - gem vk -----------------------\n')
     # #############################################################################
     
-    bd['vbo'] = bd['vbo'].drop(columns=['vbovkid_org', 'pndid', 'pndvkid', 'vbostatus', 'oppervlakte', 'vbogmlx', 'vbogmly']).drop_duplicates()
+    # selecteer benodigde kolommen en verwijdere dubbele voorkomens
+    bd['vbo'] = bd['vbo'].drop(columns=['vbovkid_org', 'pndid', 'pndvkid', 'oppervlakte', 'vbogmlx', 'vbogmly']).drop_duplicates()
     bd['vbo'] = pd.merge(bd['vbo'], bd['num'], how='left', on=numvk)
     
     baglib.aprint(ll, bd['vbo'][bd['vbo'].isna()])
@@ -138,22 +137,14 @@ def bag_vbo_aggr(current_month='testdata',
 print('------------- Start bag_vbo_aggr lokaal ------------- \n')
 # ########################################################################
 
-
 if __name__ == '__main__':
 
-    print('-------------------------------------------')
-    print('-------------', LOCATION['OMGEVING'], '-----------')
-    print('-------------------------------------------\n')
-
-    DATADIR_IN = LOCATION['DATADIR_IN']
-    DATADIR_OUT = LOCATION['DATADIR_OUT']
-    DIR03 = DATADIR_IN + '03-bewerktedata/'
-    DIR04 = DATADIR_OUT + '04-aggr/'
-    current_month = baglib.get_arg1(sys.argv, DIR03)
-
     ll = 40
+    baglib.printkop(ll+40, OMGEVING)
+    current_month = baglib.get_arg1(sys.argv, DIR03)
     
     bag_vbo_aggr(current_month=current_month,
+                    koppelvlak2=DIR02,
                     koppelvlak3=DIR03,
                     koppelvlak4=DIR04,
                     loglevel=ll)

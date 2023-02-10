@@ -28,7 +28,7 @@ import bag34_vbostatus
 
 # import bag23a_vbovk_wplvk
 # import bag23b_levcycl
-from config import *
+from config import OMGEVING, DIR00, DIR01, DIR02, DIR03, DIR04
 
 # ############### Start bag_main ################################
 

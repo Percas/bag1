@@ -21,7 +21,7 @@ import os
 import time
 import baglib
 # from baglib import BAG_TYPE_DICT
-from config import *
+from config import DIR03, DIR04, OMGEVING, status_dict
 
 # ############### Define functions ################################
 
@@ -84,15 +84,15 @@ def bag_vbostatus(current_month='testdata',
     baglib.aprint(ll+30, '-----------------------------------------------------------')
     
     stat_df = pd.read_csv(vbovk_pndvk_file, 
-                          dtype = {'vboid': 'string',
-                                   'pndid': 'string',
+                          dtype = {'vboid': 'str',
+                                   'pndid': 'str',
                                    'vbovkid': np.short,
                                    'vbovkid2': np.short,
                                    'pndvkid': np.short,
                                    'vbovkbg': np.uintc, 
                                    'vbovkeg': np.uintc,
-                                   'vbostatus': 'string',
-                                   'pndstatus': 'string'})
+                                   'vbostatus': 'str',
+                                   'pndstatus': 'str'})
     
     baglib.aprint(ll+10, '\n\t0a. we sorteren op vboid, vbovkid')
     cols = ['vboid', 'vbovkid',  'vbovkbg', 'vbovkeg', 'vbostatus', 'pndstatus']
@@ -259,7 +259,7 @@ if __name__ == '__main__':
 
     ll = 20
     baglib.printkop(ll+40, OMGEVING + 'Lokale aanroep')
-    current_month = baglib.get_arg1(sys.argv, DIR02)
+    current_month = baglib.get_arg1(sys.argv, DIR03)
 
 
     print('------------- Start bag_vbostatus lokaal ------------- \n')

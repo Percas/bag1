@@ -129,7 +129,7 @@ import sys
 import pandas as pd
 import time
 import baglib                # general functions user defined
-from config import *
+from config import OMGEVING, DIR00, DIR01, DIR02, DIR03, DIR04, FUTURE_DATE, status_dict
 
 # --------------------------------------------------------------------------
 # ############### Define functions #################################
@@ -195,7 +195,6 @@ def bag_xml2csv(current_month='testdata',
              'opr': 'OpenbareRuimte',
              'wpl': 'Woonplaats'
              }
-    futureday_str = '20321231'
     
     cols_dict = {
         'vbo': ['vboid','vbovkid', 'vbovkbg', 'vbovkeg', 'vbostatus', 'numid',
@@ -217,7 +216,7 @@ def bag_xml2csv(current_month='testdata',
         }
     
     batch_size = 100
-    printit = True
+    
     
     # --------------------------------------------------------------------------
     baglib.aprint(ll+30, '\n----- Loop over de bag typen')
@@ -237,6 +236,8 @@ def bag_xml2csv(current_month='testdata',
         baglib.aprint(ll+30, '\n\t------ Bagobject', bagobject, '('+short[bagobject]+') ------')
         subdir = bagobject
         ddir = os.path.join(inputdir, subdir)
+        # baglib.aprint(ll-10, 'Debug:', ddir)
+        # baglib.make_dir(ddir, ll+50)
         bag_files = os.listdir(ddir)
         outp_lst_d = []  # list of dict containing output records
         outputfile = os.path.join(outputdir, bagobject + '.csv')
@@ -285,7 +286,7 @@ def bag_xml2csv(current_month='testdata',
                                                          'Historie:Voorkomen',
                                                          'Historie:eindGeldigheid'],
                                                 ns,
-                                                futureday_str)
+                                                str(FUTURE_DATE))
                 vkeg = baglib.date2int(date_str)
     
                 output_record = {bagobject + 'id':     id1,
@@ -551,7 +552,7 @@ def dict2df2file(dict1, file1, cols1, loglevel=20):
 
 if __name__ == '__main__':
     
-    ll = 20
+    ll = 40
     baglib.printkop(ll+40, OMGEVING)  
 
     current_month = baglib.get_arg1(sys.argv, DIR00)

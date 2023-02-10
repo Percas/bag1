@@ -92,11 +92,11 @@ van pnd2. Dit is nog niet geimplementeerd.
 import pandas as pd
 # import numpy as np
 import sys
-# import os
+import os
 import time
 import baglib
 from baglib import BAG_TYPE_DICT
-from config import * 
+from config import OMGEVING, DIR00, DIR01, DIR02, DIR03, DIR04, FUTURE_DATE, status_dict
 
 
 
