@@ -123,13 +123,13 @@ Objecten:heeftAlsHoofdadres
 # ################ Import libraries ###############################
 # --------------------------------------------------------------------------
 import xml.etree.ElementTree as ET
-# import lxml.etree as ET
 import os
 import sys
 import pandas as pd
 import time
 import baglib                # general functions user defined
-from config import OMGEVING, DIR00, DIR01, DIR02, DIR03, DIR04, FUTURE_DATE, status_dict
+from config import LOCATION
+from config import status_dict
 
 # --------------------------------------------------------------------------
 # ############### Define functions #################################
@@ -141,19 +141,74 @@ from config import OMGEVING, DIR00, DIR01, DIR02, DIR03, DIR04, FUTURE_DATE, sta
 def bag_xml2csv(current_month='testdata',
                 koppelvlak1='../data/01-xml/',
                 koppelvlak2='../data/02-csv/',
-                loglevel=20):
+                loglevel=True):
 
     tic = time.perf_counter()
-    ll = loglevel
+    print('-------------------------------------------')
+    print('------------- Start bag_xml2csv ---------- ')
+    print('-------------------------------------------')
 
-    baglib.printkop(ll+40, 'Start bag_xml2csv')
-
-
-    inputdir = os.path.join(koppelvlak1, current_month)
-    outputdir = os.path.join(koppelvlak2, current_month)
+    inputdir = koppelvlak1 + current_month + '/'
+    outputdir = koppelvlak2 + current_month + '/'
     baglib.make_dir(outputdir)
     
-    baglib.aprint(ll+30, 'Huidige maand (verslagmaand + 1):', current_month)
+    print('Huidige maand (verslagmaand + 1):', current_month)
+    '''    
+    status_dict = {
+        'Plaats ingetrokken':                           'splai',
+        'Plaats aangewezen':                            'splaa',
+        'Naamgeving ingetrokken':                       'snami',
+        'Naamgeving aangewezen':                        'snama',
+        'Naamgeving uitgegeven':                        'wnamu',
+        'Verblijfsobject gevormd':                      'vgevo',
+        'Verblijfsobject in gebruik':                   'vinge',
+        'Verblijfsobject in gebruik (niet ingemeten)':  'vinni',
+        'Verblijfsobject ingetrokken':                  'vintr',
+        'Verbouwing verblijfsobject':                   'vverb',
+        'Verblijfsobject ten onrechte opgevoerd':       'vonre',
+        'Niet gerealiseerd verblijfsobject':            'vnrea',
+        'Verblijfsobject buiten gebruik':               'vbuig',
+        'Bouwvergunning verleend':                      'pbver',
+        'Bouw gestart':                                 'pbstr',
+        'Pand in gebruik':                              'pinge',
+        'Pand in gebruik (niet ingemeten)':             'pinni',
+        'Verbouwing pand':                              'pverb',
+        'Pand gesloopt':                                'pslop',
+        'Niet gerealiseerd pand':                       'pnrea',
+        'Pand ten onrechte opgevoerd':                  'ponre',
+        'Pand buiten gebruik':                          'pbuig',
+        'Sloopvergunning verleend':                     'pslov',
+        'Woonplaats aangewezen':                        'wwoan',
+        'Woonplaats ingetrokken':                       'wwoin'}
+
+    status_dict = {
+        'Plaats ingetrokken':                           's2',
+        'Plaats aangewezen':                            's1',
+        'Naamgeving ingetrokken':                       's3',
+        'Naamgeving aangewezen':                        's4',
+        'Naamgeving uitgegeven':                        'w3',
+        'Verblijfsobject gevormd':                      'v1',
+        'Verblijfsobject in gebruik':                   'v4',
+        'Verblijfsobject in gebruik (niet ingemeten)':  'v3',
+        'Verblijfsobject ingetrokken':                  'v5',
+        'Verbouwing verblijfsobject':                   'v8',
+        'Verblijfsobject ten onrechte opgevoerd':       'v7',
+        'Niet gerealiseerd verblijfsobject':            'v2',
+        'Verblijfsobject buiten gebruik':               'v6',
+        'Bouwvergunning verleend':                      'p1',
+        'Bouw gestart':                                 'p2',
+        'Pand in gebruik (niet ingemeten)':             'p3',
+        'Pand in gebruik':                              'p4',
+        'Verbouwing pand':                              'p5',
+        'Pand gesloopt':                                'p6',
+        'Niet gerealiseerd pand':                       'p7',
+        'Pand ten onrechte opgevoerd':                  'p8',
+        'Pand buiten gebruik':                          'p9',
+        'Sloopvergunning verleend':                     'p0',
+        'Woonplaats aangewezen':                        'w1',
+        'Woonplaats ingetrokken':                       'w2'}
+    '''
+    
     ligtype_dict = {
             'Verblijfsobject':       0,
             'Standplaats':           1,
@@ -195,6 +250,7 @@ def bag_xml2csv(current_month='testdata',
              'opr': 'OpenbareRuimte',
              'wpl': 'Woonplaats'
              }
+    futureday_str = '20321231'
     
     cols_dict = {
         'vbo': ['vboid','vbovkid', 'vbovkbg', 'vbovkeg', 'vbostatus', 'numid',
@@ -216,10 +272,10 @@ def bag_xml2csv(current_month='testdata',
         }
     
     batch_size = 100
-    
+    printit = True
     
     # --------------------------------------------------------------------------
-    baglib.aprint(ll+30, '\n----- Loop over de bag typen')
+    print('\n----- Loop over de bag typen')
     # --------------------------------------------------------------------------
     # xml_dirs = ['sta', 'lig']
     # xml_dirs = ['pnd']
@@ -233,28 +289,25 @@ def bag_xml2csv(current_month='testdata',
     
     for bagobject in xml_dirs:
         # ########## general part for all 7 bagobjects
-        baglib.aprint(ll+30, '\n\t------ Bagobject', bagobject, '('+short[bagobject]+') ------')
-        subdir = bagobject
-        ddir = os.path.join(inputdir, subdir)
-        # baglib.aprint(ll-10, 'Debug:', ddir)
-        # baglib.make_dir(ddir, ll+50)
+        print('\n\t------ Bagobject', bagobject)
+        subdir = bagobject + '/'
+        ddir = inputdir + subdir
         bag_files = os.listdir(ddir)
         outp_lst_d = []  # list of dict containing output records
-        outputfile = os.path.join(outputdir, bagobject + '.csv')
+        outputfile = outputdir + bagobject + '.csv'
         if os.path.isfile(outputfile):
-            baglib.aprint(ll+10, '\tRemoving', outputfile)
+            print('\tRemoving', outputfile)
             os.remove(outputfile)
         input_bagobject_count = 0
         output_bagobject_count = 0
         file_count = 0
         batch_count = 0
         report_count = 0
-        baglib.aprint(ll+20, '\tAantal input xml bestanden:', str(len(bag_files)))
-        if ll+10 >= 40:
-            print('\t', end='')
+        print('\tAantal input xml bestanden:' + str(len(bag_files)))
+        print('\t', end='')
         
         for inputfile in bag_files:
-            bagtree = ET.parse(os.path.join(ddir, inputfile))
+            bagtree = ET.parse(ddir + inputfile)
             root = bagtree.getroot()
             tag = '{' + ns['Objecten'] + '}' + short[bagobject]
             input_bagobject_filecount = 0
@@ -262,7 +315,7 @@ def bag_xml2csv(current_month='testdata',
             file_count += 1
             batch_count += 1
             report_count += 1
-            baglib.aprint(ll-10, '\tInputfile:', inputfile)
+            # print(inputfile)
     
             # ######### Loop over bagobjects in one bag file       #####
     
@@ -286,7 +339,7 @@ def bag_xml2csv(current_month='testdata',
                                                          'Historie:Voorkomen',
                                                          'Historie:eindGeldigheid'],
                                                 ns,
-                                                str(FUTURE_DATE))
+                                                futureday_str)
                 vkeg = baglib.date2int(date_str)
     
                 output_record = {bagobject + 'id':     id1,
@@ -359,17 +412,17 @@ def bag_xml2csv(current_month='testdata',
                     
                     gebruiksdoelen = level0.findall('Objecten:gebruiksdoel', ns)
                     if len(gebruiksdoelen) > 1:
-                        baglib.aprint(ll-20, 'Meerdere gebruiksdoelen. vboid:', id1, 'met',
-                                      gebruiksdoelen)
+                        # print('Meerdere gebruiksdoelen. vboid:', id1, 'met',
+                        #       gebruiksdoelen)
                         dubbel_gebruiksdoel_count += 1
     
     
                     for gebruiksdoel in gebruiksdoelen:
-                        # baglib.aprint(ll+40, 'DEBUG: gebruiksdoelen', gebruiksdoelen)
+                        # print('DEBUG: gebruiksdoelen', gebruiksdoelen)
                         try:
                             output_record[gebruiksdoel_dict[gebruiksdoel.text]] = True
                         except KeyError:
-                            baglib.aprint(ll+40, 'gebruiksdoel', gebruiksdoel.text, 'niet gevonden')
+                            print('gebruiksdoel', gebruiksdoel.text, 'niet gevonden')
                                    
                     
                     output_record['oppervlakte'] = \
@@ -478,71 +531,68 @@ def bag_xml2csv(current_month='testdata',
     
             input_bagobject_count += input_bagobject_filecount
             output_bagobject_count += output_bagobject_filecount
-            if ll+20 >= 40:
-                print(".", end='')
+            print(".", end='')
     
             if report_count == 100:
-                baglib.aprint(ll, file_count, 'of', len(bag_files))
+                # print(file_count, 'of', len(bag_files))
                 report_count = 0
             
             if batch_count == batch_size:
-                baglib.aprint(ll+20, 'tussendoor bewaren:', file_count, 'van', len(bag_files))
+                print('tussendoor bewaren:', file_count, 'van', len(bag_files))
                 dict2df2file(outp_lst_d, outputfile, cols_dict[bagobject])
                 batch_count = 0
                 outp_lst_d = []
-                if ll+20 >= 40:
-                    print('\t', end='')
+                print('\t', end='')
     
                 
-        baglib.aprint(ll+10, '\tLoop ended for bagobject', bagobject)
+        print('\tLoop ended for bagobject', bagobject)
         
         if outp_lst_d != []:
-            dict2df2file(outp_lst_d, outputfile, cols_dict[bagobject], loglevel=ll)
+            dict2df2file(outp_lst_d, outputfile, cols_dict[bagobject])
      
-        baglib.aprint(ll+10, '\tOutputfile:', bagobject + '.csv ', '\n\t\trecords in:\t' +
+        print('\tOutputfile:', bagobject + '.csv ', '\n\t\trecords in:\t' +
                  str(input_bagobject_count) + '\n\t\trecords aangemaakt: ' +
                  str(output_bagobject_count) + ' ' + bagobject)
     
         if bagobject == 'vbo':
             if output_bagobject_count != 0:
-                baglib.aprint(ll+10, '\tGedeelte vbo met dubbel gebruiksdoel:',
+                print('\tGedeelte vbo met dubbel gebruiksdoel:',
                       dubbel_gebruiksdoel_count / output_bagobject_count)
     
     toc = time.perf_counter()
-    baglib.aprint(ll+40, '\n*** Einde bag_xml2csv in', (toc - tic)/60, 'min ***\n')
+    baglib.print_time(toc - tic, '\n------------- Einde bag_xml2csv in', printit)
 
 
 def middelpunt(float_lst):
     '''Return tuple that is the middle of a polygon float_lst. float_list
     contains a list coordinates [x1, y1, z1, x2, y2, z2, ...xn, yn, zn]'''
 
-    # baglib.aprint(ll+40, 'DEBUG1: entering middelpunt')
+    # print('DEBUG1: entering middelpunt')
 
     _x = [float(i) for i in float_lst[0::3]]
     _y = [float(j) for j in float_lst[1::3]]
     
-    # baglib.aprint(ll+40, 'DEBUG2: _x _y: ', _x, _y)
+    # print('DEBUG2: _x _y: ', _x, _y)
     return (sum(_x)/len(_x), sum(_y)/len(_y))
     
-def dict2df2file(dict1, file1, cols1, loglevel=20):
+def dict2df2file(dict1, file1, cols1):
     '''Convert dict1 to df. Write df to file1. Append if file1 exists.
     Use cols1 to define the order of the columns'''
     
-    # baglib.aprint(ll+40, 'Writing batch to file')
-    # baglib.aprint(ll+40, '\tConverting dict to dataframe:')
-    _ll = loglevel
+    # print('Writing batch to file')
+    # print('\tConverting dict to dataframe:')
     _df = pd.DataFrame.from_dict(dict1)
 
-    # baglib.aprint(ll+40, '\tChanging column order:')
+    # print('\tChanging column order:')
     # _cols = list(_df.columns.values)
     _df = _df.reindex(columns=cols1)
     _df.fillna(False, inplace=True)
     
     if not os.path.isfile(file1):
-        baglib.aprint(_ll, '\tWriting to file...')
+        # print('\tWriting to file...')
         _df.to_csv(file1, index=False)
     else:
-        baglib.aprint(_ll, '\tAppending to file...')
+        # print('\tAppending to file...')
         _df.to_csv(file1, mode='a', header=False, index=False)
 
 
@@ -552,14 +602,23 @@ def dict2df2file(dict1, file1, cols1, loglevel=20):
 
 if __name__ == '__main__':
     
-    ll = 40
-    baglib.printkop(ll+40, OMGEVING)  
+    print('-------------------------------------------')
+    print('-------------', LOCATION['OMGEVING'], '-----------')
+    print('-------------------------------------------\n')
 
-    current_month = baglib.get_arg1(sys.argv, DIR00)
+    DATADIR_IN = LOCATION['DATADIR_IN']
+    DATADIR_OUT = LOCATION['DATADIR_OUT']
+    DIR00 = DATADIR_IN + '00-zip/'
+    DIR01 = DATADIR_OUT + '01-xml/'
+    DIR02 = DATADIR_OUT + '02-csv/'
+    DIR03 = DATADIR_OUT + '03-bewerktedata/'
+    current_month = baglib.get_arg1(sys.argv, DIR01)
+
+    printit=True
 
     bag_xml2csv(current_month=current_month,
                 koppelvlak1=DIR01,
                 koppelvlak2=DIR02,
-                loglevel=ll)
+                loglevel=printit)
 
 
