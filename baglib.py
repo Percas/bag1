@@ -12,10 +12,10 @@ import sys
 # import datetime
 # import logging
 import numpy as np
-
+import requests
 
 # ################ define datastructures ###############################
-
+'''
 BAG_TYPE_DICT = {'vboid': 'string',
                  'pndid': 'string',
                  'numid': 'string',
@@ -74,6 +74,8 @@ BAG_TYPE_DICT = {'vboid': 'string',
                  'stagmly': float,
                  'inliggend': np.uintc                 
                  }
+'''
+
 
 
 
@@ -158,6 +160,18 @@ def get_arg1(arg_lst, ddir):
     return _current_month
 
 
+def diff_df(df1, df2):
+    '''Return tuple: (dfboth, df1not2, df2not1).'''
+    print('\tdiff_idx_df: in beide, in 1 niet 2, in 2 niet 1:')
+    _df = pd.concat([df1, df2])
+    _dfboth = _df[~_df.duplicated(keep='first')]
+    _df = pd.concat([df1, _dfboth])
+    _df1not2 = _df[~_df.duplicated(keep=False)]
+    _df = pd.concat([df2, _dfboth])
+    _df2not1 = _df[~_df.duplicated(keep=False)]
+    return (_dfboth, _df1not2, _df2not1)
+
+
 def diff_idx_df(df1, df2):
     '''Return tuple: (dfboth, df1not2, df2not1).'''
     print('\tdiff_idx_df: in beide, in 1 niet 2, in 2 niet 1:')
@@ -236,15 +250,15 @@ def last_day_of_month(month_str):
     return _last
 
 
-def make_dir(path):
+def make_dir(path, loglevel=10):
     if not os.path.exists(path):
-        print('\n\tAanmaken outputmap', path)
+        aprint(loglevel, '\n\tAanmaken outputmap', path)
         os.makedirs(path)
 
-def recast_df_floats(df, dict1):
+def recast_df_floats(df, dict1, loglevel=10):
     '''Recast the float64 types in df to types in dict1 afer df.fillna(0)'''
     _float_cols = df.select_dtypes(include=['float']).columns
-    print('\tDowncasting types of:', list(_float_cols))
+    aprint(loglevel, '\tDowncasting types of:', list(_float_cols))
     _type_dict = {k: dict1[k] for k in _float_cols}
     df[_float_cols] = df[_float_cols].fillna(0)
     # df[_float_cols] = df[_float_cols].astype(_type_dict)
@@ -311,25 +325,15 @@ def read_input_csv(loglevel=10, file_d={}, bag_type_d={}):
     df. Use the bag_type_d dict to get the (memory) minimal types.'''
     _bdict = {}
     for _k, _f in file_d.items():
-        aprint(loglevel+20, '\tInlezen', _k, '...')
+        aprint(loglevel+10, '\tInlezen', _k, '...')
         _bdict[_k] = pd.read_csv(_f, 
                                  dtype=bag_type_d,
                                  keep_default_na=False)
+        aprint(loglevel, '\t\t', _k, 'heeft', _bdict[_k].shape[0], 'records')
         # print('DEBUG:', _bdict[_k].info())
         # print('DEBUG:', _bdict[_k].head())
     return _bdict
         
-def print_legenda():
-    '''Print een paar veel voorkomende afkortingen.'''
-    print(f'{"Legenda":~^80}')
-    print(f'~\t{"vbo:  verblijfsobject":<38}', f'{"pnd:  pand":<38}')
-    print(f'~\t{"vk:   voorkomen":<38}', f'{"pndvk:  pand voorkomen":<38}')
-    print(f'~\t{"vkbg: voorkomen begindatum geldigheid":<38}',
-          f'{"vkeg: voorkomen einddatum geldigheid":<38}')
-    print(f'~\t{"n...:  aantal records in df":<38}',
-          f'{"bob: bagobject":<38}')
-    print(f'{"~":~>80}')
-
 
 def ontdubbel_maxcol(df, subset, lowest):
     ''' Ontdubbel op subset door de laagste waarde van lowest te nemen.'''
@@ -357,11 +361,6 @@ def peildatum(df, subset, bg, eg, peildatum):
     # print(_df.info())
     return ontdubbel_maxcol(_df, subset, eg)
 
-
-def aprint(*args):
-    # _f = args.pop(0)
-    if args[0] >= 40:
-        print(*args[1:])
 
 def debugprint(title='', df='vbo_df', colname='vboid',
                vals=[], sort_on=[], loglevel=10):
@@ -465,3 +464,48 @@ def diff_idx_df(df1, df2):
     _df2not1 = _df[~_df.index.duplicated(keep=False)]
     return (_dfboth, _df1not2, _df2not1)
 '''
+
+def find_double_vk(df, bobid, bobvkid):
+    '''Find the double voorkomen (vk) in df, identified by bobid, bobvkid.'''
+    return df.groupby([bobid, bobvkid]).size().to_frame('aantal').sort_values(by='aantal', ascending=False)
+
+
+def aprint(*args):
+    # _f = args.pop(0)
+    if args[0] >= 40:
+        print(*args[1:])
+
+
+def print_legenda():
+    '''Print een paar veel voorkomende afkortingen.'''
+    print(f'{"Legenda":~^80}')
+    print(f'~\t{"vbo:  verblijfsobject":<38}', f'{"pnd:  pand":<38}')
+    print(f'~\t{"vk:   voorkomen":<38}', f'{"pndvk:  pand voorkomen":<38}')
+    print(f'~\t{"vkbg: voorkomen begindatum geldigheid":<38}',
+          f'{"vkeg: voorkomen einddatum geldigheid":<38}')
+    print(f'~\t{"n...:  aantal records in df":<38}',
+          f'{"bob: bagobject":<38}')
+    print(f'{"~":~>80}')
+
+
+def printkop(loglevel=20, kop='Header 1'):
+    _ll = loglevel
+    # _fmt = '-------------', kop, '-----------'
+    aprint(_ll, '')
+    aprint(_ll-10, '-------------------------------------------')
+    aprint(_ll, '----', kop)
+    aprint(_ll-10,'-------------------------------------------\n')
+
+
+def download_file(url):
+    local_filename = url.split('/')[-1]
+    # NOTE the stream=True parameter below
+    with requests.get(url, stream=True) as r:
+        r.raise_for_status()
+        with open(local_filename, 'wb') as f:
+            for chunk in r.iter_content(chunk_size=8192): 
+                # If you have chunk encoded response uncomment if
+                # and set chunk_size parameter to None.
+                #if chunk: 
+                f.write(chunk)
+    return local_filename
