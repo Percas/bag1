@@ -90,7 +90,7 @@ van pnd2. Dit is nog niet geimplementeerd.
 
 # ################ import libraries ###############################
 import pandas as pd
-# import numpy as np
+import numpy as np
 import sys
 import os
 import time
@@ -168,7 +168,7 @@ def bag_fix_vk(loglevel = 10,
               # 'numid': ['1979200000000546', '0457200000521759', '0457200000521256'],
               # 'numid': ['0388200000212289'],
               'numid': ['0003200000136934'],
-              'vboid': ['1714010000784185'],
+              'vboid': ['0003010000133554'],
               # 'vboid': ['0007010000000192'],
               # 'pndid': ['0388100000202416', '0388100000231732', '0388100000232080', '0388100000232081']
               'pndid': ['0003100000117987']}
@@ -284,7 +284,7 @@ def bag_fix_vk(loglevel = 10,
     bd['vbo'] = vksplitter(df=bd['vbo'], gf=bd['num'],
                            fijntype='vbo', groftype='num',
                            future_date=FUTURE_DATE,
-                           test_d=TEST_D, loglevel=loglevel)
+                           test_d=TEST_D, loglevel=loglevel+40)
 
     # (nrec3a, nkey3a) = baglib.df_comp(ll+20, bd['vbo'], key_lst=vbovk) 
     # rename column _oud so it won't get confused when we invoke vksplitter 
@@ -602,7 +602,7 @@ def vksplitter(loglevel=10,
     # https://stackoverflow.com/questions/27012151/forward-fill-specific-columns-in-pandas-dataframe
 
 
-    baglib.aprint(ll, '\t\t4a. Werwijder', dfid, 'die buiten de range van de', relatie, 'vallen')
+    baglib.aprint(ll, '\t\t4a. Verwijder', dfid, 'die buiten de range van de', relatie, 'vallen')
     _df = pd.merge(_df, df_bgeg, how='inner', on=dfid)
     msk = _df[dfvkbg] >= _df[dfgf_bg]
     _df = _df[msk]
@@ -639,6 +639,13 @@ def vksplitter(loglevel=10,
 
 
     # ... namelijk de waarden waar tmp niet gelijk aan nan is
+
+    # BUGfix: alleen op 1 zetten als de waarde van dfvkid gelijk aan Nan is, 
+    # anders vernaggel je deze dfvkid!
+    # dit lossen we op door tmp op Nan te zetten als dfvkid gelijk is aan notna()
+    _df.loc[_df[dfvkid].notna(), 'tmp'] = np.nan
+
+
     _df.loc[_df['tmp'].notna(), dfvkid] = 1
     _df.drop(columns='tmp', inplace=True)
     
@@ -700,7 +707,10 @@ def vksplitter(loglevel=10,
                colname=dfid, vals=test_d[dfid], sort_on=cols, 
                loglevel=loglevel)
 
-
+    # dit gaat niet goed: je koppelt op vkid, echter, deze hoeft niet meer te 
+    # bestaan. Kan bijvoorbeeld weggegooid zijn bij eendagsvliegen opruimen,
+    # daarna geffilled met een lager voorkomen
+    # toch moet dat vbovkid goed zijn, 
     _df = pd.merge(_df, df[cols].drop_duplicates(), how='inner', on=[dfid, dfvkid])
     
 
