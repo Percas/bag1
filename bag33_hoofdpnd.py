@@ -18,10 +18,12 @@ vbovk altijd binnen de looptijd van een pndvk valt, nemen we dit als uitgangspun
 
 Stappen:
     0. Lees vbo.csv van koppelvlak 3 in (hierin zit de koppeling vbovk-pndvk) en
-    lees pnd.csv in uit koppelvlak 2
+    lees pnd.csv in uit koppelvlak 3
     1. Koppel deze en bepaal met de prioriteits functie het hoofdpand.
         De functie prio_pnd berekent voor elk pnd een prioriteit op basis
-        van bouwjaar (moet bestaan), pand status en afstand tot het vbo.
+        van bouwjaar (moet bestaan), pand status (pnd moet niet gesloopt zijn 
+                                                  e.d.)
+        en afstand tot het vbo.
         
 
 """
@@ -86,19 +88,17 @@ def bag_hoofdpnd(current_month='testdata23',
     YEAR_LOW = 1000
    
     TEST_D = {'vboid': ['0388010000212290'],
-              # 'pndid': ['0003100000117820', '0003100000117645'],
-              'pndid': ['0518100001754356']}
-
+              # 'pndid': ['0518100001754356', '0003100000117620']}
+              'pndid': ['0003100000117620']}
     baglib.aprint(ll+40, '\n---------------DOELSTELLING------------------------------')
     baglib.aprint(ll+40, '--- Aan elk vbovk precies 1 hoofdpnd vk koppelen (stap 0 t/m 4)')
     baglib.aprint(ll+40, '--- "Inliggend"  bepalen: aantal vbo in 1 pnd) (stap 5 t/m 6)')
     baglib.aprint(ll+30, '-----------------------------------------------------------')
 
-    baglib.aprint(ll+30, '\n--------------------------------------------------------')
-    baglib.aprint(ll+30, '----0. Inlezen van vbo.csv en pnd.csv uit K3------------')
-    baglib.aprint(ll+30, '--------------------------------------------------------')
-    
-    # print('huidige maand (verslagmaand + 1):', current_month)
+
+    # ######################################################################
+    baglib.printkop(ll+30, '0. Inlezen van vbo.csv en pnd.csv uit K3')
+    baglib.aprint(ll+20, 'huidige maand (verslagmaand + 1):', current_month)
     
     bd = baglib.read_input_csv(ll, INPUT_FILS_DICT, BAG_TYPE_DICT)
 
@@ -116,10 +116,13 @@ def bag_hoofdpnd(current_month='testdata23',
     # print('DEBUG:\n', bd['pnd'].head(50))
     
     baglib.debugprint(loglevel=ll, title='voorbeeld pnd na stap 0', df=bd['pnd'], colname='pndid', vals=TEST_D['pndid'])
+    baglib.debugprint(loglevel=ll, title='voorbeeld vbo na 0. inlezen', 
+                      df=bd['vbo'], colname='vboid', vals=TEST_D['vboid'], sort_on=vbovk)
     
-    baglib.aprint(ll+30, '\n-------------------------------------------------------')
-    baglib.aprint(ll+30, '----1. Verwijder eendagsvliegen -----------------------')
-    baglib.aprint(ll+30, '-------------------------------------------------------')
+
+
+    # ######################################################################
+    baglib.aprint(ll, '1. Verwijder eendagsvliegen')
     for bob, vk in KEY_DICT.items():
         baglib.aprint(ll+10,'\tVerwijder eendagsvliegen bij', bob)
         bd[bob] = baglib.fix_eendagsvlieg(bd[bob], bob+'vkbg', bob+'vkeg')
@@ -130,10 +133,13 @@ def bag_hoofdpnd(current_month='testdata23',
     doel_vbovk_u = nkey['vbo']
     baglib.debugprint(loglevel=ll, title='pnd eendagsvliegen verwijderd na stap 1', 
                       df=bd['pnd'], colname='pndid', vals=TEST_D['pndid'])
+    baglib.debugprint(loglevel=ll, title='voorbeeld vbo na 1. verwijder eendagsvliegen', 
+                      df=bd['vbo'], colname='vboid', vals=TEST_D['vboid'], sort_on=vbovk)
     
-    baglib.aprint(ll+30, '\n-----------------------------------------------------------')
-    baglib.aprint(ll+30, '----2. Voeg de informatie van de pndvk toe aan de vbovk----')
-    baglib.aprint(ll+30, '-----------------------------------------------------------')
+    
+
+    # ######################################################################
+    baglib.printkop(ll+30, '2. koppelen vbo df met pnd df op pndvk')
     baglib.aprint(ll+10, '\tDOEL reminder: aantal unieke vbovk:', doel_vbovk_u)
     baglib.aprint(ll+10, '\tStart met de', nrec['vbo'], 'vbovk. Elk vbovk heeft 1 of',
           '\n\tmeer pndid (dubbele bij de zelf aangemaakte vbovk).\n',
@@ -150,22 +156,25 @@ def bag_hoofdpnd(current_month='testdata23',
                          on=pndvk)
     del bd['pnd']
     
-    bd['vbo'].set_index(vbovk, inplace=True)
+    # bd['vbo'].set_index(vbovk, inplace=True)
     
     # zuinig met geheugen: Sommige types kunnen teruggecast worden.
     bd['vbo'] = baglib.recast_df_floats(bd['vbo'], BAG_TYPE_DICT, loglevel=ll)
     (nrec['vbo'], nkey['vbo']) = baglib.df_comp(ll, bd['vbo'], nrec=nrec['vbo'],
-                                                nkey=nkey['vbo'],
+                                                nkey=nkey['vbo'], key_lst=vbovk,
                                                 u_may_change=False)
     
     doel2_vbovk_u = nkey['vbo']
+    # print(bd['vbo'].info())
+    baglib.debugprint(loglevel=ll, title='voorbeeld vbo na stap 2: koppelen met pnd inf', 
+                      df=bd['vbo'], colname='vboid', vals=TEST_D['vboid'], sort_on=vbovk)
 
    
-    baglib.aprint(ll+30, '\n-------------------------------------------------------')
-    baglib.aprint(ll+30, '----3. Bepaal prio voor pndvk: welke is het best om te koppelen--')
-    baglib.aprint(ll+30, '-------------------------------------------------------')
-    
-    baglib.aprint(ll+10, '\tWe voegen een kolom prio toe')
+
+
+    # ######################################################################
+    baglib.printkop(ll+30, '3. Bepaal prio voor pndvk: welke is het best om te koppelen')
+    baglib.aprint(ll+10, '\t3a. We voegen een kolom prio toe')
     
     bd['vbo'] = prio_pnd(bd['vbo'],
                          IN_VOORRAAD_P, IN_VOORRAAD,
@@ -174,43 +183,46 @@ def bag_hoofdpnd(current_month='testdata23',
     #controle
     (nrec['vbo'], nkey['vbo']) = baglib.df_comp(ll, bd['vbo'], nrec=nrec['vbo'],
                                                 nkey=nkey['vbo'],
-                                                # key_lst=vbovk,
+                                                key_lst=vbovk,
                                                 u_may_change=False)
 
-    baglib.aprint(ll+10, '\tSelecteer nu het pand met de hoogste prio. Alle pndvk krijgen een\n',
+    baglib.aprint(ll+10, '\t3b. Selecteer nu het pand met de hoogste prio. Alle pndvk krijgen een\n',
           '\tprio, maar de prio is alleen belangrijk als er meer dan 1 pnd koppelt')
     
     # how to remove non unique vbovk:
     # https://stackoverflow.com/questions/13035764/remove-pandas-rows-with-duplicate-indices/13036848#13036848
     bd['vbo'] = bd['vbo'].sort_values('prio', ascending=False)
-    bd['vbo'] = bd['vbo'][~bd['vbo'].index.duplicated(keep='first')]
+    # bd['vbo'] = bd['vbo'][~bd['vbo'].index.duplicated(keep='first')]
+    bd['vbo'] = bd['vbo'][~bd['vbo'].duplicated(subset=vbovk, keep='first')]
     
     (nrec['vbo'], nkey['vbo']) = baglib.df_comp(ll, bd['vbo'], nrec=nrec['vbo'],
-                                                nkey=nkey['vbo'],
+                                                nkey=nkey['vbo'], key_lst=vbovk,
                                                 u_may_change=False)
+    baglib.debugprint(loglevel=ll, title='voorbeeld vbo na stap 3: pnd met hoogste prio bepaald', 
+                      df=bd['vbo'], colname='vboid', vals=TEST_D['vboid'], sort_on=vbovk)
     
-    baglib.aprint(ll+30, '\n-------------------------------------------------------')
-    baglib.aprint(ll+30, '----4. Bewaren in koppelvlak3: vbovk -> hoofdpndvk met',
-          doel2_vbovk_u, 'records...')
-    baglib.aprint(ll+30, '-------------------------------------------------------')
-     # tic = time.perf_counter()
-     
+
+
+
+    # ######################################################################
+    baglib.printkop(ll+30, '4. Bewaren in koppelvlak3: vbovk -> hoofdpndvk met '+str(doel2_vbovk_u)+' records')
     if doel2_vbovk_u > 20000000:
         baglib.aprint(ll+30, 'Dit gaat even duren...')
          
     outputfile = os.path.join(K3DIR, 'vbovk_hoofdpndvk.csv')
      
-    cols = ['vbovkbg', 'vbovkeg', 'vbostatus', 'pndid', 'pndvkid', 'pndstatus']
-    bd['vbo'][cols].sort_index().to_csv(outputfile, index=True)
-     
+    cols = ['vboid', 'vbovkid', 'vbovkbg', 'vbovkeg', 'vbostatus', 'pndid', 'pndvkid', 'pndstatus']
+    # bd['vbo'][cols].sort_index().to_csv(outputfile, index=True)
+    bd['vbo'][cols].sort_values(by=vbovk).to_csv(outputfile, index=False)
     toc = time.perf_counter()
     baglib.aprint(ll+40, '\n*** bepalen hoofdpnd in', (toc - tic)/60, 'min **\n\n')
     mid = time.perf_counter()
 
 
-    baglib.aprint(ll+30, '\n-------------------------------------------------------')
-    baglib.aprint(ll+30, '---5. Bepalen inliggend: aantal vbo in pnd -------------')
-    baglib.aprint(ll+30, '---------------------------------------------------------\n')
+
+
+    # ######################################################################
+    baglib.printkop(ll+30, '---5. Bepalen inliggend: aantal vbo in pnd -------------')
     baglib.aprint(ll+10, '\tHet aantal vbo-s dat in een pand ligt, n_vbo_in_pndvk is een\n',
           '\teigenschap van pndvk. We tellen dan het aantal\n',
           '\tunieke vbo bij een pndvk, waarbij geldt dat zo een vbo pas meetelt,\n',
@@ -230,15 +242,14 @@ def bag_hoofdpnd(current_month='testdata23',
     
     
 
-
-
     baglib.aprint(ll+10, '\n\t\t--- 5.1:  vbovk: leid de variabele voorraad af')
     bd['vbo']['voorraad'] = bd['vbo']['vbostatus'].isin(IN_VOORRAAD)
-    cols = ['pndid', 'pndvkid', 'voorraad']
-    vbo_df = bd['vbo'][cols].reset_index()
-
+    cols = ['vboid', 'vbovkid', 'pndid', 'pndvkid', 'voorraad']
+    # vbo_df = bd['vbo'][cols].reset_index()
+    vbo_df = bd['vbo'][cols]
+    # print(vbo_df.info())
     baglib.debugprint(loglevel=ll, title='variabele voorraad net afgeleid', 
-                      df=vbo_df, colname='pndid', vals=TEST_D['pndid'], sort_on=vbovk)
+                      df=vbo_df, colname='pndid', vals=TEST_D['pndid']) 
 
 
 
@@ -282,7 +293,7 @@ def bag_hoofdpnd(current_month='testdata23',
 
 
 
-    baglib.aprint(ll+10, '\n\t\t5.4 left_merge met pndvk')
+    baglib.aprint(ll+10, '\n\t\t5.5 left_merge met pndvk')
     pndvk2_df = bd['vbo'].reset_index()
     pndvk2_df = pndvk2_df[pndvk].drop_duplicates()
     pndvk2_df = pd.merge(pndvk2_df, pndvk_df, how='left', on=pndvk)
@@ -298,8 +309,6 @@ def bag_hoofdpnd(current_month='testdata23',
 
     # switch this on to find interesting data for debugprint
     # baglib.aprint(ll, pndvk2_df.sort_values(by='inliggend', ascending=False).head(50))
-
-
 
 
 
@@ -320,9 +329,8 @@ def bag_hoofdpnd(current_month='testdata23',
     baglib.aprint(ll+20, '\tGemiddeld inliggend per vbovk:', vbo_df['inliggend'].mean())
 
     
-    baglib.aprint(ll+30, '\n-------------------------------------------------------')
-    baglib.aprint(ll+30, '------ 6. bewaren in pndvk_nvbo.csv vbovk_nvbo.csv -----')
-    baglib.aprint(ll+30, '--------------------------------------------------------\n')
+    # ######################################################################
+    baglib.printkop(ll+30, '6. bewaren in pndvk_nvbo.csv vbovk_nvbo.csv')
     outputfile = os.path.join(K3DIR, 'pndvk_nvbo.csv')
     pndvk2_df.to_csv(outputfile, index=False)
     outputfile = os.path.join(K3DIR, 'vbovk_nvbo.csv')
@@ -407,7 +415,7 @@ def prio_pnd(pnd1_df,
 
 if __name__ == '__main__':
 
-    ll = 20
+    ll = 40
 
     baglib.printkop(ll+40, OMGEVING)
     current_month = baglib.get_arg1(sys.argv, DIR03)
