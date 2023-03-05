@@ -242,7 +242,7 @@ def bag_fix_vk(loglevel = 10,
         dfvkid = bob + 'vkid'
         dfvkid2 = bob + 'vkid2'
         dfvkid_oud = bob + 'vkid_oud'
-        bd[bob] = merge_vk(ll, bd[bob], bob, FUTURE_DATE, relevant_cols[bob])
+        bd[bob] = baglib.merge_vk(ll, bd[bob], bob, FUTURE_DATE, relevant_cols[bob])
         bd[bob].rename(columns={dfvkid: dfvkid_oud, 
                                 dfvkid2: dfvkid}, inplace=True)
 
@@ -678,7 +678,7 @@ def vksplitter(loglevel=10,
           'Voeg', dfvkeg, 'toe in twee stappen:\n')
     # #############################################################################
 
-    _df = make_vkeg(ll, _df, fijntype, FUTURE_DATE)
+    _df = baglib.make_vkeg(ll, _df, fijntype, FUTURE_DATE)
 
     # #############################################################################
     baglib.aprint(ll+10, '\n----', fijntype+'vk-splitter stap 6\n----',
@@ -786,95 +786,6 @@ def vksplitter(loglevel=10,
     return _df.rename(columns={dfvkid: dfvkid+'_oud', dfvkid2: dfvkid})
     
 
-def make_vkeg(loglevel, df, bob, future_date):
-    '''Maak de voorkomen einddatum geldigheid (vkeg), gegeven id en vkbg
-    (voorkomen begindatum geldigheid) van een bob (bagobject).
-    
-    Conventies:
-        bob + 'id' is een kolomnaam in df en identificeert het bob
-        bob + 'vkbg' is een kolomnaam in df
-        bob + 'vkeg' wordt aangemaakt als vervanger van de bestaande in df
-        
-    Stappen:
-        1. Sorteer op id en vkbg
-        2. doe een df.shift(periods = -1) om de begindatum van het volgende record te krijgen
-        3. corrigeer de laatste vkeg van het vk rijtje. Maak deze gelijk aan future_date. 
-        
-    '''
-
-    # init variabelen
-    _ll = loglevel
-    _dfid = bob + 'id'
-    _dfvkbg = bob + 'vkbg'
-    _dfvkeg = bob + 'vkeg'
-    (_nrec, _nkey) = baglib.df_comp(loglevel=_ll, df=df, key_lst=[_dfid, _dfvkbg])
-
-    baglib.aprint(_ll, '\t\t\tmake_vkeg input: aantal', bob, 'records:', _nrec, '; aantal', bob+'vk:', _nkey)
-    baglib.aprint(_ll, '\t\t\tmake_vkeg 1: sorteer', bob, 'op', _dfid, _dfvkbg)
-    _df = df.sort_values(by=[_dfid, _dfvkbg])
-    # print(_df.info())
-    
-    baglib.aprint(_ll, '\t\t\tmake_vkeg 2: neem voor', _dfvkeg, 'de', _dfvkbg, 'van het volgende record')
-    _df[_dfvkeg] = _df[_dfvkbg].shift(periods=-1)
-    # print(_df.head())
-
-    baglib.aprint(_ll, '\t\t\tmake_vkeg 3: corrigeer de vbovkeg van het meest recente', bob, 'voorkomen')
-    baglib.aprint(_ll, '\t\t\t\t\tdit krijgt een datum in de toekomst:', future_date)
-    _idx = _df.groupby([_dfid])[_dfvkbg].transform(max) == _df[_dfvkbg]
-    _df.loc[_idx, _dfvkeg] = future_date
-
-    baglib.aprint(_ll, '\t\t\tmake_vkeg 4: terugcasten van', _dfvkeg, 'naar int')
-    _df = _df.astype({_dfvkeg:int})
-
-    (_nrec, _nkey) = baglib.df_comp(loglevel=_ll, df=df, key_lst=[_dfid, _dfvkbg], nrec=_nrec, nkey=_nkey, u_may_change=False)
-    
-    return _df
-
-
-def merge_vk(loglevel, df, bob, future_date, cols):
-    ''' Neem de voorkomens van df samen als voor een dfid de waarden van de
-    relevante cols gelijk zijn. We noemen dit "gelijke opeenvolgende vk". Neem 
-    de minimale dfvkbg van elke set gelijke vk. Maak nieuwe vk id in dfvkid2.
-    
-    Conventies:
-        bob + 'id' is een kolomnaam in df en identificeert het bob
-        bob + 'vkbg' is een kolomnaam in df
-        bob + 'vkeg' wordt aangemaakt als vervanger van de bestaande in df
-        
-    Stappen:
-        1. verwijder dubbele records vwb df[dfid + cols], neem minimale dfvkbg
-        2. maak nieuwe dfvkeg
-        3. maak nieuwe tellers dfvkid2
-        4. return nieuwe ingekorte df
-    '''
- 
-    # init variabelen
-    _ll = loglevel
-    _dfid = bob + 'id'
-    _dfvkid2 = bob + 'vkid2'
-    _dfvkbg = bob + 'vkbg'
-    _dfvkeg = bob + 'vkeg'
-    _vk = [_dfid, _dfvkbg]
-    _cols = [_dfid] + cols
-    _cols2 = _cols + [_dfvkbg]
-    (_nrec, _nkey) = baglib.df_comp(_ll, df, _vk)
-    baglib.aprint(_ll, '\t\tmerge_vk input: aantal', bob, 'records:', _nrec, '; aantal', bob+'vk:', _nkey)
-
-    baglib.aprint(_ll, '\t\tmerge_vk 1: verwijder dubbele opeenvolgende vk')
-    _df = df[_cols2].sort_values(by=[_dfid, _dfvkbg]).drop_duplicates(subset=_cols, keep='first')
-   
-    baglib.aprint(_ll, '\t\tmerge_vk 2: voeg', _dfvkeg, 'toe')
-    _df = make_vkeg(_ll, _df, bob, future_date)
-    
-    baglib.aprint(_ll, '\t\tmerge_vk 3: maak een nieuwe vk teller', _dfvkid2)
-    _df = baglib.make_counter(_ll, _df, _dfid, _dfvkid2, [_dfid, _dfvkbg])
-
-    (_nrec1, _nkey1) = baglib.df_comp(_ll, _df, _vk, nrec=_nrec, nkey=_nkey, u_may_change=True)
-
-    baglib.aprint(_ll, '\t\tmerge_vk 4: ----------- perc vk:',
-                  round(100 * (_nkey1/_nkey - 1), 1), '%')
-
-    return _df
     
 # ########################################################################
 # ########################################################################
