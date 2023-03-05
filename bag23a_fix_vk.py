@@ -168,8 +168,8 @@ def bag_fix_vk(loglevel = 10,
               # 'numid': ['1979200000000546', '0457200000521759', '0457200000521256'],
               # 'numid': ['0388200000212289'],
               'numid': ['0003200000136934'],
-              'vboid': ['0003010000133554'],
-              # 'vboid': ['0007010000000192'],
+              # 'vboid': ['0003010000133554'],
+              'vboid': ['0007010000000192'],
               # 'pndid': ['0388100000202416', '0388100000231732', '0388100000232080', '0388100000232081']
               'pndid': ['0003100000117987']}
 
@@ -508,7 +508,7 @@ def vksplitter(loglevel=10,
           'hiermee nieuwe', fijntype, 'vk\n')
     # #############################################################################
 
-    baglib.aprint(ll, '\t\tStap 1: we beginnen de reguliere vk van', fijntype, 'gebaseerd op',
+    baglib.aprint(ll, '\t\tStap 1: we beginnen met de reguliere vk van', fijntype, 'gebaseerd op',
           dfvkbg, '\n\t\tHet bestaande', dfvkid, 'gaat straks een rol spelen bij het imputeren')
     
     (_nrec, _nkey) = baglib.df_comp(loglevel=ll, df=df, key_lst=[dfid, dfvkbg])
@@ -601,8 +601,9 @@ def vksplitter(loglevel=10,
     baglib.aprint(ll, '\n\t\tDe sortering luistert nauw:\n')
     # https://stackoverflow.com/questions/27012151/forward-fill-specific-columns-in-pandas-dataframe
 
-
+    '''
     baglib.aprint(ll, '\t\t4a. Verwijder', dfid, 'die buiten de range van de', relatie, 'vallen')
+    baglib.aprint(ll, 'Deze stap is uitgezet!!!! Bij nader inzien geen goed idee hier.')
     _df = pd.merge(_df, df_bgeg, how='inner', on=dfid)
     msk = _df[dfvkbg] >= _df[dfgf_bg]
     _df = _df[msk]
@@ -610,7 +611,7 @@ def vksplitter(loglevel=10,
     baglib.debugprint(title='bij stap 4a',
                df=_df, colname=dfid, vals=test_d[dfid], sort_on=cols, 
                loglevel=loglevel)
-
+    '''
     baglib.aprint(ll, '\t\t4b. Maak van het', dfvkid, 'met het laagste', dfvkbg, 'een 1',
           'om te voorkomen dat we met NaN gaan ffillen')
     
