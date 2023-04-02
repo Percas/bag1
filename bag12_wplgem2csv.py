@@ -41,6 +41,7 @@ from config import OMGEVING, DIR01, DIR02, FUTURE_DATE
 def bag_wplgem2csv(current_month='testdata02',
                    koppelvlak1=DIR01,
                    koppelvlak2=DIR02,
+                   file_ext='parquet',
                    loglevel=20):
 
     tic = time.perf_counter()
@@ -147,13 +148,15 @@ def bag_wplgem2csv(current_month='testdata02',
     
 
 
-    outputfile = os.path.join(OUTPUTDIR, bagobject+'.csv')
-    baglib.aprint(ll+20, '\n\toutputfile:', bagobject + '.csv',
+    outputfile = os.path.join(OUTPUTDIR, bagobject)
+    baglib.aprint(ll+20, '\n\toutputfile:', bagobject + '.' + file_ext,
           ', records in:', input_bagobject_count,
           ', records aangemaakt:', output_bagobject_count,
           bagobject, '\n')
     
-    df.to_csv(outputfile, index=False)
+    baglib.save_df2file(df=df, outputfile=outputfile, file_ext=file_ext,
+                        append=False, includeindex=False, loglevel=ll)
+    # df.to_csv(outputfile, index=False)
 
     toc = time.perf_counter()
     baglib.aprint(ll+40, '\n*** Einde bag_wplgem2csv in', (toc - tic)/60, 'min ***\n')
@@ -164,6 +167,9 @@ def bag_wplgem2csv(current_month='testdata02',
 if __name__ == '__main__':
     
     ll = 20
+    # file_ext = 'csv'
+    file_ext = 'parquet'
+    
     baglib.printkop(ll+40, OMGEVING)    
     current_month = baglib.get_arg1(sys.argv, DIR01)
 
@@ -171,6 +177,8 @@ if __name__ == '__main__':
     bag_wplgem2csv(current_month=current_month,
                 koppelvlak1=DIR01,
                 koppelvlak2=DIR02,
+                file_ext=file_ext,
                 loglevel=ll)
+    
 
 

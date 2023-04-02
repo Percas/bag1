@@ -105,6 +105,7 @@ def bag_fix_vk(loglevel = 10,
                current_month='testdata23',
                koppelvlak2=os.path.join('..', 'data', '02-csv'),
                koppelvlak3=os.path.join('..', 'data', '03-bewerktedata'),
+               file_ext='parquet',
                future_date=FUTURE_DATE):
 
     tic = time.perf_counter()
@@ -121,7 +122,7 @@ def bag_fix_vk(loglevel = 10,
     baglib.make_dir(OUTPUTDIR)
 
 
-    if current_month == 'testdata23':
+    if current_month.startswith('testdata'):
         current_year = 2000
     else:
         current_month = int(current_month)
@@ -129,14 +130,14 @@ def bag_fix_vk(loglevel = 10,
     
     pd.set_option('display.max_columns', 20)
     
-    INPUT_FILES_DICT = {'vbo': os.path.join(K2DIR, 'vbo.csv'),
-                        'pnd': os.path.join(K2DIR, 'pnd.csv'),
-                        'num': os.path.join(K2DIR, 'num.csv'),
-                        'opr': os.path.join(K2DIR, 'opr.csv'),
-                        'wpl': os.path.join(K2DIR, 'wpl.csv')}
-                        # 'gem': K2DIR + 'gem.csv'}
+    INPUT_FILES_DICT = {'vbo': os.path.join(K2DIR, 'vbo'),
+                        'pnd': os.path.join(K2DIR, 'pnd'),
+                        'num': os.path.join(K2DIR, 'num'),
+                        'opr': os.path.join(K2DIR, 'opr'),
+                        'wpl': os.path.join(K2DIR, 'wpl')}
+                        # 'gem': K2DIR + 'gem'}
         
-                       # 'wplgem': K2DIR + 'wplgem.csv'}
+                       # 'wplgem': K2DIR + 'wplgem'}
         
     vbovk = ['vboid', 'vbovkid']
     pndvk = ['pndid', 'pndvkid']
@@ -169,7 +170,7 @@ def bag_fix_vk(loglevel = 10,
               # 'numid': ['0388200000212289'],
               'numid': ['0003200000136934'],
               # 'vboid': ['0003010000133554'],
-              'vboid': ['0007010000000192'],
+              'vboid': ['0160010000062544'],
               # 'pndid': ['0388100000202416', '0388100000231732', '0388100000232080', '0388100000232081']
               'pndid': ['0003100000117987']}
 
@@ -178,7 +179,7 @@ def bag_fix_vk(loglevel = 10,
                   'verandering van het object ook daadwerkelijk een nieuw voorkomen van dat\n',
                   'object gemaakt wordt. Hierdoor kun je voorkomens aan voorkomens koppelen in\n',
                   'plaats van voorkomens aan een (compleet) BAG object.')
-    baglib.aprint(ll+30, 'Voer daarnaast enkele andere reparatie werkzaamheden aan vk s van bag objecten (bob)')
+    baglib.aprint(ll+30, '\tVoer daarnaast enkele andere reparatie werkzaamheden aan vk s van bag objecten (bob)')
     baglib.aprint(ll+40, '-----------------------------------------------------------')
 
     # #########################################################################
@@ -187,7 +188,9 @@ def bag_fix_vk(loglevel = 10,
     
     # print('huidige maand (verslagmaand + 1):', current_month)
     
-    bd = baglib.read_input_csv(ll, INPUT_FILES_DICT, BAG_TYPE_DICT)
+    bd = baglib.read_input(loglevel=ll, 
+                           file_d=INPUT_FILES_DICT,
+                           bag_type_d=BAG_TYPE_DICT)
 
     for bob, vk in KEY_DICT.items():
         (nrec[bob], nkey[bob]) = baglib.df_comp(ll+20, bd[bob], key_lst=vk)
@@ -196,6 +199,12 @@ def bag_fix_vk(loglevel = 10,
     nkey_listdict.append(nkey.copy())
     stappenteller +=1
     
+    baglib.debugprint(title='vbo na inlezen',
+                      df=bd['vbo'],
+                      colname='vboid',
+                      vals=TEST_D['vboid'],
+                      loglevel=ll-10)
+
     # #############################################################################
     baglib.aprint(ll+30, '\n----', stappenteller, 'Verwijder eendagsvliegen -----------------------\n')
     # #############################################################################
@@ -216,13 +225,13 @@ def bag_fix_vk(loglevel = 10,
         dfid = bob + 'id'
         baglib.debugprint(title='\t\tNa het verwijderen van de eendagsvliegen:',
                           df=bd[bob], colname=dfid,
-                          vals=TEST_D[dfid], loglevel=loglevel)
+                          vals=TEST_D[dfid], loglevel=loglevel-10)
 
     nrec_listdict.append(nrec.copy())
     nkey_listdict.append(nkey.copy())
     stappenteller +=1
 
-    baglib.debugprint(loglevel=ll+10, title='pnd eendagsvliegen verwijderd na stap '+str(stappenteller), 
+    baglib.debugprint(loglevel=ll-10, title='pnd eendagsvliegen verwijderd na stap '+str(stappenteller), 
                       df=bd['pnd'], colname='pndid', vals=TEST_D['pndid'])
     
 
@@ -248,13 +257,19 @@ def bag_fix_vk(loglevel = 10,
 
         baglib.debugprint(title='\t\tResult merge_vk example:',
                           df=bd[bob], colname=dfid,
-                          vals=TEST_D[dfid], loglevel=loglevel)
+                          vals=TEST_D[dfid], loglevel=ll-10)
 
     for bob, vk in KEY_DICT.items():
         (nrec[bob], nkey[bob]) = baglib.df_comp(ll+20, bd[bob], key_lst=vk)
     nrec_listdict.append(nrec.copy())
     nkey_listdict.append(nkey.copy())
     stappenteller +=1
+
+    baglib.debugprint(title='vbo na gelijke voorkomens samen nemen',
+                      df=bd['vbo'],
+                      colname='vboid',
+                      vals=TEST_D['vboid'],
+                      loglevel=ll-10)
 
 
     # #############################################################################
@@ -270,7 +285,7 @@ def bag_fix_vk(loglevel = 10,
     cols = ['oprid', 'oprvkid']
     baglib.debugprint(title='Testje na vksplitter',
                       df=bd['opr'], colname='oprid', vals=TEST_D['oprid'], sort_on=cols, 
-                      loglevel=loglevel)
+                      loglevel=loglevel-10)
     
     bd['num'] = vksplitter(df=bd['num'], gf=bd['opr'],
                            fijntype='num', groftype='opr',
@@ -279,12 +294,12 @@ def bag_fix_vk(loglevel = 10,
    
     baglib.debugprint(title='input voor vksplitter vbo-num relatie',
                       df=bd['vbo'], colname='vboid',
-                      vals=TEST_D['vboid'], loglevel=ll)
+                      vals=TEST_D['vboid'], loglevel=ll-10)
 
     bd['vbo'] = vksplitter(df=bd['vbo'], gf=bd['num'],
                            fijntype='vbo', groftype='num',
                            future_date=FUTURE_DATE,
-                           test_d=TEST_D, loglevel=loglevel+40)
+                           test_d=TEST_D, loglevel=loglevel)
 
     # (nrec3a, nkey3a) = baglib.df_comp(ll+20, bd['vbo'], key_lst=vbovk) 
     # rename column _oud so it won't get confused when we invoke vksplitter 
@@ -306,7 +321,7 @@ def bag_fix_vk(loglevel = 10,
     cols = ['vboid', 'vbovkid', 'vbovkid_org', 'vbovkbg', 'vbovkeg', 'numid', 'numvkid', 'pndid']
     baglib.debugprint(title='input voor vksplitter vbo-pnd relatie',
                       df=bd['vbo'][cols], colname='vboid',
-                      vals=TEST_D['vboid'], loglevel=ll)
+                      vals=TEST_D['vboid'], loglevel=ll-10)
 
 
 
@@ -318,12 +333,12 @@ def bag_fix_vk(loglevel = 10,
     cols = ['vboid', 'vbovkid', 'vbovkid_org', 'vbovkbg', 'vbovkeg', 'numid', 'numvkid', 'pndid', 'pndvkid']
     baglib.debugprint(title='output vksplitter na de vbo-pnd relatie',
                       df=bd['vbo'][cols], colname='vboid',
-                      vals=TEST_D['vboid'], loglevel=ll)
+                      vals=TEST_D['vboid'], loglevel=ll-10)
 
 
     bd['vbo'].drop(columns='vbovkid_oud', inplace=True)    
     # print(bd['vbo'].info())
-    baglib.debugprint(loglevel=ll+10, title='vbovk gekoppeld aan pndvk na stap '+str(stappenteller), 
+    baglib.debugprint(loglevel=ll-10, title='vbovk gekoppeld aan pndvk na stap '+str(stappenteller), 
                       df=bd['vbo'], colname='pndid', vals=TEST_D['pndid'])
     
     
@@ -336,7 +351,7 @@ def bag_fix_vk(loglevel = 10,
     
     baglib.debugprint(title='Resultaat voor voorbeeld vbo:',
                df=bd['vbo'], colname='vboid', vals=TEST_D['vboid'], sort_on=['vboid', 'vbovkid'], 
-               loglevel=20)
+               loglevel=ll-10)
     
     
     # zuinig met geheugen: Sommige types kunnen teruggecast worden.
@@ -350,21 +365,28 @@ def bag_fix_vk(loglevel = 10,
     # tic = time.perf_counter()
  
     for bob, vk in KEY_DICT.items():
-        baglib.aprint(ll+20, '\tBewaren koppelbaar gemaakte', bob+'.csv')
-        outputfile = os.path.join(OUTPUTDIR, bob+'.csv')
+        baglib.aprint(ll+20, '\tBewaren koppelbaar gemaakte', bob+'.' + file_ext)
+        outputfile = os.path.join(OUTPUTDIR, bob)
     
+    
+        baglib.save_df2file(df=bd[bob], outputfile=outputfile,
+                            file_ext=file_ext, includeindex=False, loglevel=ll)
+
         # cols = ['vbovkid', 'vbovkbg', 'vbovkeg', 'vbostatus', 'pndid', 'pndvkid', 'numid', 'numvkid']
-        bd[bob].sort_values(by=[bob+'id', bob+'vkid']).to_csv(outputfile, index=False)
-    
+        # bd[bob].sort_values(by=[bob+'id', bob+'vkid']).to_csv(outputfile, index=False)
+        # baglib.aprint(ll+30, '\tWriting to parquet...')
+        # outputfile = os.path.join(OUTPUTDIR, bob+'.parquet')
+        # bd[bob].sort_values(by=[bob+'id', bob+'vkid']).to_parquet(outputfile, index=False)
+        
 
     baglib.aprint(ll+30, '\n------ Aantallen voorkomens na de stappen:')
 
     df = pd.DataFrame(nkey_listdict)
     df = df.div(df.iloc[0]).round(2)
     baglib.aprint(ll+30, df)
-    outputfile = os.path.join(OUTPUTDIR, 'log_'+str(current_month)+'.csv')
+    outputfile = os.path.join(OUTPUTDIR, 'log_'+str(current_month)+'.' + file_ext)
     df.to_csv(outputfile)
-
+    
     toc = time.perf_counter()
     baglib.aprint(ll+40, '\n*** Einde bag_fix_vk in', (toc - tic)/60, 'min ***\n')
 
@@ -436,7 +458,7 @@ def vksplitter(loglevel=10,
 
     baglib.debugprint(title='bij stap 0a-pre',
                       df=df, colname=dfid,
-                      vals=test_d[dfid], sort_on=dfid, loglevel=loglevel)
+                      vals=test_d[dfid], sort_on=dfid, loglevel=loglevel-10)
 
 
     cols = [dfid, gfid, dfvkbg]
@@ -444,7 +466,7 @@ def vksplitter(loglevel=10,
 
     baglib.debugprint(title='bij stap 0a',
                       df=dfgf_bgeg.reset_index(), colname=dfid,
-                      vals=test_d[dfid], sort_on=dfid, loglevel=loglevel)
+                      vals=test_d[dfid], sort_on=dfid, loglevel=loglevel-10)
 
     baglib.aprint(ll, '\t0b. Voeg hier de grootste', dfvkeg, 'aan toe')
 
@@ -453,7 +475,7 @@ def vksplitter(loglevel=10,
     
     baglib.debugprint(title='bij stap 0b',
                       df=dfgf_bgeg, colname=dfid,
-                      vals=test_d[dfid], sort_on=dfid, loglevel=loglevel)
+                      vals=test_d[dfid], sort_on=dfid, loglevel=loglevel-10)
 
 
     baglib.aprint(ll, '\t0c. Voeg hieraan toe de kleinste', gfvkbg)
@@ -464,7 +486,7 @@ def vksplitter(loglevel=10,
     
     baglib.debugprint(title='bij stap 0c',
                       df=dfgf_bgeg, colname=dfid,
-                      vals=test_d[dfid], sort_on=dfid, loglevel=loglevel)
+                      vals=test_d[dfid], sort_on=dfid, loglevel=loglevel-10)
     
     
     baglib.aprint(ll, '\t0d. Voeg hieraan toe de grootste', gfvkeg)
@@ -473,7 +495,7 @@ def vksplitter(loglevel=10,
     
     baglib.debugprint(title='bij stap 0d',
                       df=dfgf_bgeg, colname=dfid,
-                      vals=test_d[dfid], sort_on=dfid, loglevel=loglevel)
+                      vals=test_d[dfid], sort_on=dfid, loglevel=loglevel-10)
     
     baglib.aprint(ll, '\t0e. Bepaal', dfgf_bg, 'als maximum van', dfvkbg, 'en', gfvkbg)
     dfgf_bgeg[dfgf_bg] = dfgf_bgeg[[dfvkbg, gfvkbg]].max(axis=1)
@@ -481,7 +503,7 @@ def vksplitter(loglevel=10,
 
     baglib.debugprint(title='bij stap 0e',
                       df=dfgf_bgeg, colname=dfid,
-                      vals=test_d[dfid], sort_on=dfid, loglevel=loglevel)
+                      vals=test_d[dfid], sort_on=dfid, loglevel=loglevel-10)
     
     baglib.aprint(ll, '\t0f. Bepaal', dfgf_eg, 'als minimum van', dfvkeg, 'en', gfvkeg)
     dfgf_bgeg[dfgf_eg] = dfgf_bgeg[[dfvkeg, gfvkeg]].min(axis=1)
@@ -489,7 +511,7 @@ def vksplitter(loglevel=10,
 
     baglib.debugprint(title='bij stap 0e',
                       df=dfgf_bgeg, colname=dfid,
-                      vals=test_d[dfid], sort_on=dfid, loglevel=loglevel)
+                      vals=test_d[dfid], sort_on=dfid, loglevel=loglevel-10)
     
     baglib.aprint(ll, '\t0g. Bepaal beide data ook voor', dfid, 'alleen')
     cols = [dfid, dfgf_bg, dfgf_eg]
@@ -498,7 +520,7 @@ def vksplitter(loglevel=10,
 
     baglib.debugprint(title='bij stap 0f',
                       df=df_bgeg, colname=dfid,
-                      vals=test_d[dfid], sort_on=dfid, loglevel=loglevel+5)
+                      vals=test_d[dfid], sort_on=dfid, loglevel=loglevel-10)
     
     # print(df_bgeg.head())
     
@@ -518,7 +540,7 @@ def vksplitter(loglevel=10,
     
     baglib.debugprint(title='bij stap 1',
                       df=_df, colname=dfid,
-                      vals=test_d[dfid], sort_on=cols, loglevel=loglevel)
+                      vals=test_d[dfid], sort_on=cols, loglevel=loglevel-10)
 
 
    # #############################################################################
@@ -542,7 +564,7 @@ def vksplitter(loglevel=10,
     
     baglib.debugprint(title='bij stap 2b. '+dfid+' met de unieke '+gfvkbg+' hernoemd naar '+dfvkbg,
                df=_gf, colname=dfid, vals=test_d[dfid], sort_on=cols, 
-               loglevel=loglevel)
+               loglevel=loglevel-10)
     
     
     _df = pd.concat([_df, _gf]).drop_duplicates(subset=[dfid, dfvkbg], keep='first')
@@ -551,7 +573,7 @@ def vksplitter(loglevel=10,
     baglib.debugprint(title='bij 2c. '+dfid+' met nu ook de unieke '+dfvkbg+' erbij. De NaNs treden op\n\
                \t\t als de '+dfvkbg+' eerst een '+gfvkbg+' van de '+gfid+' was.',
                df=_df, colname=dfid, vals=test_d[dfid], sort_on=cols, 
-               loglevel=loglevel)
+               loglevel=loglevel-10)
 
         
     # #############################################################################
@@ -572,7 +594,7 @@ def vksplitter(loglevel=10,
                df=_gf, 
                colname='oprid',
                vals=['0457300000000259', '0457300000000260', '0003300000116985'], 
-               sort_on=['oprid', 'wplvkeg'], loglevel=loglevel)
+               sort_on=['oprid', 'wplvkeg'], loglevel=loglevel-10)
     
     
     _gf = _gf[[dfid, gfvkeg]].drop_duplicates().rename({gfvkeg: dfvkbg}, axis='columns')
@@ -580,7 +602,7 @@ def vksplitter(loglevel=10,
                df=_gf,, 
                colname='oprid',
                vals=['0457300000000259', '0457300000000260', '0003300000116985'], 
-               sort_on=['oprid', 'oprvkbg'], loglevel=loglevel)
+               sort_on=['oprid', 'oprvkbg'], loglevel=loglevel-10)
     
     _gf = _gf[_gf[dfvkbg] != future_date]
     
@@ -591,7 +613,7 @@ def vksplitter(loglevel=10,
                df=_df, 
                colname='oprid',
                vals=['0457300000000259', '0457300000000260', '0003300000116985'], 
-               sort_on=['oprid', 'oprvkbg'], loglevel=loglevel)
+               sort_on=['oprid', 'oprvkbg'], loglevel=loglevel-10)
     '''
     
     # #############################################################################
@@ -610,7 +632,7 @@ def vksplitter(loglevel=10,
 
     baglib.debugprint(title='bij stap 4a',
                df=_df, colname=dfid, vals=test_d[dfid], sort_on=cols, 
-               loglevel=loglevel)
+               loglevel=loglevel-10)
     '''
     baglib.aprint(ll, '\t\t4b. Maak van het', dfvkid, 'met het laagste', dfvkbg, 'een 1',
           'om te voorkomen dat we met NaN gaan ffillen')
@@ -628,7 +650,7 @@ def vksplitter(loglevel=10,
 
     baglib.debugprint(title='4b1. Eerst de minimale ' +dfvkbg+ ' per '+dfid+' bepalen. Hiervoor zetten we tmp op True:',
                df=tmp_df, colname=dfid, vals=test_d[dfid], sort_on=cols, 
-               loglevel=loglevel)
+               loglevel=loglevel-10)
     
     # doe een leftmerge met _df en je weet in _df welke records het betreft...
     colsid = [dfid, dfvkbg, dfvkid]
@@ -636,7 +658,7 @@ def vksplitter(loglevel=10,
 
     baglib.debugprint(title='4b2: dit koppelen we aan het lopende dataframe van ' +fijntype,
                df=_df, colname=dfid, vals=test_d[dfid], sort_on=cols, 
-               loglevel=loglevel)
+               loglevel=loglevel-10)
 
 
     # ... namelijk de waarden waar tmp niet gelijk aan nan is
@@ -652,7 +674,7 @@ def vksplitter(loglevel=10,
     
     baglib.debugprint(title='4b3 en daarmee kunnen we het begin op 1 zetten',
                df=_df, colname=dfid, vals=test_d[dfid], sort_on=cols, 
-               loglevel=loglevel)
+               loglevel=loglevel-10)
 
     # sys.exit('buggy end: tmp_df does not select min of vbovkbg!?')
 
@@ -670,7 +692,20 @@ def vksplitter(loglevel=10,
     # baglib.aprint(ll, _df.head(30))
     baglib.debugprint(title='4a. NaNs staan nog verkeerd bij die '+dfid+' waar de vk rij begint met een NaN',
                df=_df, colname=dfid, vals=test_d[dfid], sort_on=cols, 
-               loglevel=loglevel)
+               loglevel=loglevel-10)
+
+
+
+    baglib.aprint(ll, '\t\t4a. Verwijder', dfid, 'die buiten de range van de', relatie, 'vallen')
+    baglib.aprint(ll, 'Deze stap hier naar toe verplaatst. Eens kijken of dat werkt.')
+    _df = pd.merge(_df, df_bgeg, how='inner', on=dfid)
+    msk = _df[dfvkbg] >= _df[dfgf_bg]
+    _df = _df[msk]
+
+    baglib.debugprint(title='bij stap 4a',
+               df=_df, colname=dfid, vals=test_d[dfid], sort_on=cols, 
+               loglevel=loglevel-10)
+
 
 
     # #############################################################################
@@ -690,7 +725,7 @@ def vksplitter(loglevel=10,
     
     baglib.debugprint(title='bij stap 6. '+dfid+' met hun nieuwe vk tellers '+dfvkid2,
                df=_df, colname=dfid, vals=test_d[dfid], sort_on=cols, 
-               loglevel=loglevel)
+               loglevel=loglevel-10)
 
     (_nrec, _nkey) = baglib.df_comp(loglevel=ll+20, df=_df, key_lst=[dfid, dfvkid2], nrec=_nrec, 
                              nkey=_nkey, u_may_change=True)
@@ -706,7 +741,7 @@ def vksplitter(loglevel=10,
     baglib.debugprint(title='input voor stap 7a. '+dfid+' met '+gfid+' uit het input df',
                df=df[cols].drop_duplicates(),
                colname=dfid, vals=test_d[dfid], sort_on=cols, 
-               loglevel=loglevel)
+               loglevel=loglevel-10)
 
     # dit gaat niet goed: je koppelt op vkid, echter, deze hoeft niet meer te 
     # bestaan. Kan bijvoorbeeld weggegooid zijn bij eendagsvliegen opruimen,
@@ -718,7 +753,7 @@ def vksplitter(loglevel=10,
 
     baglib.debugprint(title='resultaat van stap 7a. '+dfid+' met hun '+gfid,
                df=_df, colname=dfid, vals=test_d[dfid], sort_on=[dfid, dfvkid2], 
-               loglevel=loglevel)
+               loglevel=loglevel-10)
     
     (_nrec, _nkey) = baglib.df_comp(loglevel=ll+20, df=_df, key_lst=[dfid, dfvkbg],
                            nrec=_nrec, nkey=_nkey,
@@ -731,11 +766,11 @@ def vksplitter(loglevel=10,
     _df = pd.merge(_df, gf[cols], how='inner', on=gfid)
     baglib.debugprint(title='input voor stap 7b. '+gfid,
                df=gf[cols], colname=gfid, vals=test_d[gfid], sort_on=cols, 
-               loglevel=loglevel)
+               loglevel=loglevel-10)
 
     baglib.debugprint(title='bij stap 7b. '+dfid+' met hun '+gfid+', '+gfvkid,
                df=_df, colname=dfid, vals=test_d[dfid], sort_on=cols, 
-               loglevel=loglevel-20)
+               loglevel=loglevel-10)
 
         
     baglib.aprint(ll, '\n\t\t\t7c. Filter zodat het midden van een', fijntype, 'vk binnen een',
@@ -748,7 +783,7 @@ def vksplitter(loglevel=10,
 
     baglib.debugprint(title='bij stap 7c. '+dfid+' met hun '+dfvkid+' gekoppeld met '+gfid+' en '+gfvkid,
                df=_df, colname=dfid, vals=test_d[dfid], sort_on=cols, 
-               loglevel=loglevel)
+               loglevel=loglevel-10)
 
     (_nrec, _nkey) = baglib.df_comp(loglevel=ll, df=_df, key_lst=[dfid, dfvkbg],
                            nrec=_nrec, nkey=_nkey,
@@ -767,7 +802,7 @@ def vksplitter(loglevel=10,
 
     baglib.debugprint(title='bij stap 8: '+dfid+' met nieuwe geimputeerde vks',
                df=_df, colname=dfid, vals=test_d[dfid], sort_on=cols, 
-               loglevel=loglevel-20)
+               loglevel=loglevel-10)
 
 
     (_nrec, _nkey) = baglib.df_comp(loglevel=ll, df=_df, key_lst=[dfid, dfvkid2],
@@ -798,7 +833,7 @@ def vksplitter(loglevel=10,
 # ll = 30 # tellingen
 # ll = 40 # data voorbeelden 
 
-ll = 20
+ll = 10
 
 if __name__ == '__main__':
 

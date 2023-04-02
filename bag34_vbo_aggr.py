@@ -4,13 +4,13 @@
 Created on Zaterdag 17 Dec 2022
 
 Doel:
-    Maak de tabel voorraad woningen niet woningen
-    https://opendata.cbs.nl/statline/#/CBS/nl/dataset/81955NED/table?fromstatweb
-    
-    Beginnend met de voorraad uitgesplitst naar gemeente op de 1e van de maand.
+    Bepaal de voorraad per gemeente op de eerste van de maand met 5 opeenvolgende extracten
     
     Stappen:
-        1. Lees vbo, num, opr, wpl in in koppelvlak 3
+        0. maak een loop over de laatste 5 extract maanden; 
+        verslagmaand, ..., verslagmaand - 4 
+
+        1. Lees voor maand vbo, num, opr, wpl in in koppelvlak 3
             lees ook maar de wpl-naam uit koppelvlak 2
         vbo = verblijfsobjecten
         num = nummeraanduidingen
@@ -30,9 +30,21 @@ Doel:
         4. selecteer de vbo vk die op de eerste van de maand geldig zijn
         
         5. aggregeer naar gemeente en tel de vbo vk
-                  
+        
+        6. sla op in een dataframe met kolommen extractmaand, rijen gemeentecode
+        en cellen voorraad
+        
+        
     noot: kennelijk telt een wonging die ook andere functies heeft niet mee
     bij deze laatste, maar alleen als woning.
+
+    Oud doel:
+        Maak de tabel voorraad woningen niet woningen
+        https://opendata.cbs.nl/statline/#/CBS/nl/dataset/81955NED/table?fromstatweb
+        
+        Beginnend met de voorraad uitgesplitst naar gemeente op de 1e van de maand.
+        
+
     
 """
 

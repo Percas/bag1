@@ -37,11 +37,14 @@ from config import OMGEVING, DIR00, DIR01, DIR02, DIR03, DIR04
 # ############### Start bag_main ################################
 
 tic = time.perf_counter()
-ll = 10
+ll = 40
+file_ext = 'parquet'
+# file_ext = 'csv'
+
 baglib.print_legenda()
 baglib.printkop(ll+40, OMGEVING + '; Start bag_main')
 current_month = baglib.get_arg1(sys.argv, DIR00)
-
+# current_month = baglib.get_arg1(sys.argv, DIR02)
 baglib.aprint(ll+40, '\thuidige maand (verslagmaand + 1):', current_month, '\n')
 
 # we hebben testdata van koppelvlak 0 t/m 2 en van 2 t/m 3. Deze zijn verschillend
@@ -54,20 +57,26 @@ bag01_unzip.bag_unzip(current_month=current_month,
                       koppelvlak1=DIR01,
                       loglevel=ll)
 
-# zet de vijfduizend xml bestanden om in 7 csv bestanden, te weten:
-# vbo.csv, pnd.csv, num.csv, opr.csv, wpl.csv, sta.csv, lig.csv
+# zet de vijfduizend xml bestanden om in 7 csv/parquet bestanden, te weten:
+# vbo, pnd, num, opr, wpl, sta, lig
 bag12_xml2csv.bag_xml2csv(current_month=current_month,
                           koppelvlak1=DIR01,
                           koppelvlak2=DIR02,
+                          file_ext=file_ext,
                           loglevel=ll)
 
-baglib.aprint(ll+40, '\n*** bag03_main: hernoem bestand wpl.csv naar wpl_naam.csv\n')
+baglib.aprint(ll+40, '\n*** bag03_main: hernoem bestand wpl.' + file_ext, 'naar wpl_naam.'+ file_ext, '\n')
 # os.rename(DIR02+current_month+'/wpl.csv', DIR02+current_month+'/wpl_naam.csv')
-os.rename(os.path.join(DIR02, current_month, 'wpl.csv'), os.path.join(DIR02, current_month, 'wpl_naam.csv'))
+wpl_naam = os.path.join(DIR02, current_month, 'wpl_naam.'+file_ext)
+if os.path.exists(wpl_naam):
+    os.remove(wpl_naam)
+os.rename(os.path.join(DIR02, current_month, 'wpl.'+file_ext),
+          os.path.join(DIR02, current_month, 'wpl_naam.'+file_ext))
 
 bag12_wplgem2csv.bag_wplgem2csv(current_month=current_month,
                                 koppelvlak1=DIR01,
                                 koppelvlak2=DIR02,
+                                file_ext=file_ext,
                                 loglevel=ll)
 
 
@@ -84,14 +93,16 @@ if current_month == 'testdata02':
 bag23a_fix_vk.bag_fix_vk(current_month=current_month,
                          koppelvlak3=DIR03,
                          koppelvlak2=DIR02,
+                         file_ext=file_ext,
                          loglevel=ll)
 # leidt voor elk vbo voorkomen (vbovk) een precies 1 pndvk af. Het hoofdpndvk
 
 
 bag33_hoofdpnd.bag_hoofdpnd(current_month=current_month,
-                            koppelvlak3=DIR03,
+                            koppelvlak3=DIR03, file_ext=file_ext,
                             loglevel=ll)
 
+'''
 bag33b_levcycl.bag_levcycl(current_month=current_month,
                            koppelvlak3=DIR03,
                            loglevel=ll)
@@ -100,6 +111,6 @@ bag34_vbostatus.bag_vbostatus(current_month=current_month,
                               koppelvlak4=DIR04,
                               koppelvlak3=DIR03,
                               loglevel=ll)
-
+'''
 toc = time.perf_counter()
 baglib.aprint(ll+40, '\n------------- Einde bag_main in', (toc - tic)/60, 'min')

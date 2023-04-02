@@ -152,7 +152,7 @@ def get_arg1(arg_lst, ddir):
     if len(arg_lst) <= 1:
         # sys.exit('Usage: ' + arg_lst[0] + '  <month>, where <month> in '
         #         + str(_lst))
-        return "testdata"
+        return "testdata23"
     _current_month = arg_lst[1]
     if _current_month not in _lst:
         sys.exit('Usage: ' + arg_lst[0] + '  <month>, where <month> in '
@@ -162,7 +162,7 @@ def get_arg1(arg_lst, ddir):
 
 def diff_df(df1, df2):
     '''Return tuple: (dfboth, df1not2, df2not1).'''
-    print('\tdiff_idx_df: in beide, in 1 niet 2, in 2 niet 1:')
+    # print('\tdiff_idx_df: in beide, in 1 niet 2, in 2 niet 1:')
     _df = pd.concat([df1, df2])
     _dfboth = _df[~_df.duplicated(keep='first')]
     _df = pd.concat([df1, _dfboth])
@@ -334,6 +334,50 @@ def read_input_csv(loglevel=10, file_d={}, bag_type_d={}):
         # print('DEBUG:', _bdict[_k].head())
     return _bdict
         
+def read_input(loglevel=10, file_d={}, bag_type_d={}):
+    '''Read the files in the dictionary file_d and return them in a dict of
+    dataframes. if present read .parquet otherwise try csv. 
+    '''
+    
+    _bdict = {}
+    _ll = loglevel
+    for _k, _f in file_d.items():
+        aprint(_ll, '\tInlezen', _k, '...')
+        _filepath = _f + '.parquet'
+        if os.path.exists(_filepath):
+            aprint(_ll+20, '\tparquet file gevonden')
+            _bdict[_k] = pd.read_parquet(_filepath)
+            # take only the cols in dataframe _bdict[_k]:
+            _astype_cols = {_i: bag_type_d[_i] for _i in list(_bdict[_k].columns)}
+            _bdict[_k] = _bdict[_k].astype(dtype=_astype_cols)
+        else:
+            aprint(_ll+20, '\tparquet file niet gevonden, probeer csv')
+            _filepath = _f + '.csv'
+            if os.path.exists(_filepath):
+                _bdict[_k] = pd.read_csv(_filepath,
+                                         dtype=bag_type_d,
+                                         keep_default_na=False)
+            else:
+                sys.exit('Input panic: cant find' + _filepath)
+        aprint(_ll+20, '\tBestand', _filepath, 'gelezen')
+        aprint(_ll, '\t\t', _k, 'heeft', _bdict[_k].shape[0], 'records')
+        # print('DEBUG:', _bdict[_k].info())
+        # print('DEBUG:', _bdict[_k].head())
+    return _bdict
+
+def save_df2file(df='vbo_df', outputfile='', file_ext='parquet', 
+                 includeindex=True, append=False, loglevel=20):
+    '''Bewaar dataframe df in outputfile in ext=parquet of csv formaat'''
+    if file_ext == 'parquet':
+        aprint(loglevel, '\tBewaren in parquet formaat van', outputfile)
+        df.to_parquet(outputfile + '.parquet', index=includeindex, engine='fastparquet', append=append)
+    else:
+        aprint(loglevel, '\tBewaren in csv formaat van', outputfile)
+        if append:
+            _mode = 'a'
+        else:
+            _mode = 'w'
+        df.to_csv(outputfile + '.csv', index=includeindex, mode=_mode)
 
 def ontdubbel_maxcol(df, subset, lowest):
     ''' Ontdubbel op subset door de laagste waarde van lowest te nemen.'''
@@ -598,3 +642,13 @@ def download_file(url):
                 #if chunk: 
                 f.write(chunk)
     return local_filename
+
+def make_month_lst(current_month, n):
+    _current = str(current_month)
+    _month_lst = [_current]
+    
+    for i in range(n-1):
+        _previous = prev_month(_current)
+        _month_lst.append(_previous)
+        _current = _previous
+    return _month_lst

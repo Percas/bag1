@@ -26,6 +26,7 @@ IN_VOORRAAD = ['v3', 'v4', 'v8', 'v6']
     
 DATADIR_IN = os.path.join('..', 'data')
 DATADIR_OUT = os.path.join('..', 'data')
+DATADIR = os.path.join('..', 'data')
 DIR00 = os.path.join(DATADIR_IN, '00-zip')
 DIR01 = os.path.join(DATADIR_OUT, '01-xml')
 DIR02 = os.path.join(DATADIR_OUT, '02-csv')
@@ -39,6 +40,7 @@ BAG_TYPE_DICT = {'vboid': 'string',
                  'wplid': 'string',
                  'gemid': 'string',
                  'vbovkid': np.short,
+                 'vbovkid_org': np.short,
                  'pndvkid': np.short,
                  'numvkid': np.short,
                  'oprvkid': np.short,

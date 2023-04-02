@@ -125,6 +125,7 @@ Objecten:heeftAlsHoofdadres
 import xml.etree.ElementTree as ET
 # import lxml.etree as ET
 import os
+from os.path import exists
 import sys
 import pandas as pd
 import time
@@ -143,6 +144,7 @@ from config import OMGEVING, DIR00, DIR01, DIR02, FUTURE_DATE, status_dict
 def bag_xml2csv(current_month='testdata02',
                 koppelvlak1='../data/01-xml/',
                 koppelvlak2='../data/02-csv/',
+                file_ext='parquet',
                 loglevel=20):
 
     tic = time.perf_counter()
@@ -217,7 +219,7 @@ def bag_xml2csv(current_month='testdata02',
         'wpl': ['wplid', 'wplvkid', 'wplvkbg', 'wplvkeg', 'wplstatus', 'wplnaam']
         }
     
-    batch_size = 100
+    batch_size = 2
     
     
     # --------------------------------------------------------------------------
@@ -227,11 +229,11 @@ def bag_xml2csv(current_month='testdata02',
     # xml_dirs = ['pnd']
     # xml_dirs = ['num']
     # xml_dirs = ['vbo', 'pnd', 'num']
-    xml_dirs = ['lig', 'sta', 'opr', 'wpl', 'vbo', 'pnd', 'num']
     # xml_dirs = ['lig', 'sta', 'vbo', 'pnd']
     # xml_dirs = ['pnd', 'num']
     # xml_dirs = ['opr', 'wpl']
-    # xml_dirs = ['vbo', 'pnd']
+    xml_dirs = ['vbo']
+    # xml_dirs = ['lig', 'sta', 'opr', 'wpl', 'vbo', 'pnd', 'num']
     
 
     for bagobject in xml_dirs:
@@ -243,10 +245,12 @@ def bag_xml2csv(current_month='testdata02',
         # baglib.make_dir(ddir, ll+50)
         bag_files = os.listdir(ddir)
         outp_lst_d = []  # list of dict containing output records
-        outputfile = os.path.join(outputdir, bagobject + '.csv')
-        if os.path.isfile(outputfile):
-            baglib.aprint(ll+10, '\tRemoving', outputfile)
-            os.remove(outputfile)
+        outputfile = os.path.join(outputdir, bagobject)
+        outputfile_ext = outputfile + '.' + file_ext
+        
+        if os.path.isfile(outputfile_ext):
+            baglib.aprint(ll+10, '\tRemoving', outputfile_ext)
+            os.remove(outputfile_ext)
         input_bagobject_count = 0
         output_bagobject_count = 0
         file_count = 0
@@ -490,19 +494,23 @@ def bag_xml2csv(current_month='testdata02',
             
             if batch_count == batch_size:
                 baglib.aprint(ll+20, 'tussendoor bewaren:', file_count, 'van', len(bag_files))
-                dict2df2file(outp_lst_d, outputfile, cols_dict[bagobject])
+                dict2df2file(output_dict=outp_lst_d, outputfile=outputfile,
+                             cols=cols_dict[bagobject], file_ext=file_ext,
+                             loglevel=ll)
                 batch_count = 0
                 outp_lst_d = []
                 if ll+20 >= 40:
                     print('\t', end='')
     
                 
-        baglib.aprint(ll+10, '\tLoop ended for bagobject', bagobject)
         
         if outp_lst_d != []:
-            dict2df2file(outp_lst_d, outputfile, cols_dict[bagobject], loglevel=ll)
+            baglib.aprint(ll+20, 'laatste stukje bewaren:', file_count, 'van', len(bag_files))
+            dict2df2file(output_dict=outp_lst_d, outputfile=outputfile, 
+                         cols=cols_dict[bagobject], file_ext=file_ext, loglevel=ll)
      
-        baglib.aprint(ll+10, '\tOutputfile:', bagobject + '.csv ', '\n\t\trecords in:\t' +
+        baglib.aprint(ll+10, '\n\tOutputfile:', bagobject + '.' + file_ext,
+                      '\n\t\trecords in:\t' +
                  str(input_bagobject_count) + '\n\t\trecords aangemaakt: ' +
                  str(output_bagobject_count) + ' ' + bagobject)
     
@@ -511,6 +519,11 @@ def bag_xml2csv(current_month='testdata02',
                 baglib.aprint(ll+10, '\tGedeelte vbo met dubbel gebruiksdoel:',
                       dubbel_gebruiksdoel_count / output_bagobject_count)
     
+        baglib.aprint(ll+10, '\n\t---- Loop gereed voor bagobject', bagobject, '\n')
+        # ############################################################
+
+    baglib.aprint(ll+10, '\n---- Loop gereed over bagtypen\n')
+        
     toc = time.perf_counter()
     baglib.aprint(ll+40, '\n*** Einde bag_xml2csv in', (toc - tic)/60, 'min ***\n')
 
@@ -527,27 +540,31 @@ def middelpunt(float_lst):
     # baglib.aprint(ll+40, 'DEBUG2: _x _y: ', _x, _y)
     return (sum(_x)/len(_x), sum(_y)/len(_y))
     
-def dict2df2file(dict1, file1, cols1, loglevel=20):
-    '''Convert dict1 to df. Write df to file1. Append if file1 exists.
+def dict2df2file(output_dict={}, outputfile='', cols=[], file_ext='parquet', loglevel=20):
+    '''Convert dict1 to df. Write df to outputfile. Append if outputfile exists.
     Use cols1 to define the order of the columns'''
     
     # baglib.aprint(ll+40, 'Writing batch to file')
     # baglib.aprint(ll+40, '\tConverting dict to dataframe:')
     _ll = loglevel
-    _df = pd.DataFrame.from_dict(dict1)
-
+    _df = pd.DataFrame.from_dict(output_dict)
+    # baglib.aprint(loglevel-10, _df.info())
     # baglib.aprint(ll+40, '\tChanging column order:')
     # _cols = list(_df.columns.values)
-    _df = _df.reindex(columns=cols1)
-    _df.fillna(False, inplace=True)
+    _df = _df.reindex(columns=cols)
+    # this gives some issues with parquet
+    # _df.fillna(False, inplace=True)
     
-    if not os.path.isfile(file1):
-        baglib.aprint(_ll, '\tWriting to file...')
-        _df.to_csv(file1, index=False)
+    # if not os.path.isfile(outputfile):
+    if not exists(outputfile + '.' + file_ext):
+        _append = False
+        baglib.aprint(ll+40, '\tOutputfile', outputfile, 'bestaat nog niet. Aanmaken')
     else:
-        baglib.aprint(_ll, '\tAppending to file...')
-        _df.to_csv(file1, mode='a', header=False, index=False)
+        _append = True
+        baglib.aprint(ll+40, '\tAppending to', outputfile)
 
+    baglib.save_df2file(df=_df, outputfile=outputfile, file_ext=file_ext,
+                        includeindex=False, append=_append, loglevel=_ll)    
 
 # --------------------------------------------------------------------------
 # ################ Main program ###########################
@@ -555,7 +572,10 @@ def dict2df2file(dict1, file1, cols1, loglevel=20):
 
 if __name__ == '__main__':
     
-    ll = 40
+    ll = 30
+    file_ext = 'parquet'
+    file_ext = 'csv'    
+
     baglib.printkop(ll+40, OMGEVING)  
 
     current_month = baglib.get_arg1(sys.argv, DIR00)
@@ -563,6 +583,7 @@ if __name__ == '__main__':
     bag_xml2csv(current_month=current_month,
                 koppelvlak1=DIR01,
                 koppelvlak2=DIR02,
+                file_ext=file_ext,
                 loglevel=ll)
 
 
