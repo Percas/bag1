@@ -104,7 +104,7 @@ def bag_hoofdpnd(current_month='testdata23',
     baglib.printkop(ll+30, '0. Inlezen van vbo.' +file_ext+ ' en pnd.' +file_ext+ ' uit K3')
     baglib.aprint(ll+20, 'huidige maand (verslagmaand + 1):', current_month)
     
-    bd = baglib.read_input(ll, INPUT_FILS_DICT, BAG_TYPE_DICT, file_ext)
+    bd = baglib.read_input(loglevel=ll, file_d=INPUT_FILS_DICT, bag_type_d=BAG_TYPE_DICT)
 
     cols = ['pndid', 'pndvkid', 'pndvkbg', 'pndvkeg', 'bouwjaar', 'pndstatus', 'pndgmlx', 'pndgmly']
     bd['pnd'] = bd['pnd'][cols] # .astype(dtype=BAG_TYPE_DICT)

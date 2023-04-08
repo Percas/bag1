@@ -375,9 +375,11 @@ def save_df2file(df='vbo_df', outputfile='', file_ext='parquet',
         aprint(loglevel, '\tBewaren in csv formaat van', outputfile)
         if append:
             _mode = 'a'
+            _header = not append # don't need a header in append mode
         else:
             _mode = 'w'
-        df.to_csv(outputfile + '.csv', index=includeindex, mode=_mode)
+            _header = append 
+        df.to_csv(outputfile + '.csv', index=includeindex, mode=_mode, header=_header)
 
 def ontdubbel_maxcol(df, subset, lowest):
     ''' Ontdubbel op subset door de laagste waarde van lowest te nemen.'''

@@ -43,6 +43,7 @@ file_ext = 'parquet'
 
 baglib.print_legenda()
 baglib.printkop(ll+40, OMGEVING + '; Start bag_main')
+
 current_month = baglib.get_arg1(sys.argv, DIR00)
 # current_month = baglib.get_arg1(sys.argv, DIR02)
 baglib.aprint(ll+40, '\thuidige maand (verslagmaand + 1):', current_month, '\n')
@@ -62,16 +63,15 @@ bag01_unzip.bag_unzip(current_month=current_month,
 bag12_xml2csv.bag_xml2csv(current_month=current_month,
                           koppelvlak1=DIR01,
                           koppelvlak2=DIR02,
-                          file_ext=file_ext,
+                          file_ext='csv', # append does not work in parquet yet
                           loglevel=ll)
 
 baglib.aprint(ll+40, '\n*** bag03_main: hernoem bestand wpl.' + file_ext, 'naar wpl_naam.'+ file_ext, '\n')
-# os.rename(DIR02+current_month+'/wpl.csv', DIR02+current_month+'/wpl_naam.csv')
 wpl_naam = os.path.join(DIR02, current_month, 'wpl_naam.'+file_ext)
 if os.path.exists(wpl_naam):
     os.remove(wpl_naam)
-os.rename(os.path.join(DIR02, current_month, 'wpl.'+file_ext),
-          os.path.join(DIR02, current_month, 'wpl_naam.'+file_ext))
+os.rename(os.path.join(DIR02, current_month, 'wpl.csv'), # temp hack. should be+file_ext),
+          os.path.join(DIR02, current_month, 'wpl_naam.csv')) # +file_ext))
 
 bag12_wplgem2csv.bag_wplgem2csv(current_month=current_month,
                                 koppelvlak1=DIR01,

@@ -203,8 +203,8 @@ def bag_xml2csv(current_month='testdata02',
     cols_dict = {
         'vbo': ['vboid','vbovkid', 'vbovkbg', 'vbovkeg', 'vbostatus', 'numid',
                 'oppervlakte', 'pndid', 
-                'woon', 'gezo', 'indu', 'over', 'ondr' ,'logi', 'kant', 'wink',
-                'bij1', 'celf', 'sprt',
+                # 'woon', 'gezo', 'indu', 'over', 'ondr' ,'logi', 'kant', 'wink',
+                # 'bij1', 'celf', 'sprt',
                 'vbogmlx', 'vbogmly'],
         'pnd': ['pndid', 'pndvkid', 'pndvkbg', 'pndvkeg',
                 'pndstatus', 'bouwjaar', 'docnr', 'docdd', 'pndgmlx', 'pndgmly'],
@@ -219,7 +219,7 @@ def bag_xml2csv(current_month='testdata02',
         'wpl': ['wplid', 'wplvkid', 'wplvkbg', 'wplvkeg', 'wplstatus', 'wplnaam']
         }
     
-    batch_size = 2
+    batch_size = 400
     
     
     # --------------------------------------------------------------------------
@@ -232,8 +232,8 @@ def bag_xml2csv(current_month='testdata02',
     # xml_dirs = ['lig', 'sta', 'vbo', 'pnd']
     # xml_dirs = ['pnd', 'num']
     # xml_dirs = ['opr', 'wpl']
-    xml_dirs = ['vbo']
-    # xml_dirs = ['lig', 'sta', 'opr', 'wpl', 'vbo', 'pnd', 'num']
+    # xml_dirs = ['vbo']
+    xml_dirs = ['lig', 'sta', 'opr', 'wpl', 'vbo', 'pnd', 'num']
     
 
     for bagobject in xml_dirs:
@@ -494,9 +494,18 @@ def bag_xml2csv(current_month='testdata02',
             
             if batch_count == batch_size:
                 baglib.aprint(ll+20, 'tussendoor bewaren:', file_count, 'van', len(bag_files))
-                dict2df2file(output_dict=outp_lst_d, outputfile=outputfile,
-                             cols=cols_dict[bagobject], file_ext=file_ext,
-                             loglevel=ll)
+
+                bob_df = pd.DataFrame.from_dict(outp_lst_d)
+                bob_df = bob_df.reindex(columns=cols_dict[bagobject])
+
+                baglib.save_df2file(df=bob_df[cols_dict[bagobject]],
+                                    outputfile=outputfile,
+                                    file_ext=file_ext, includeindex=False,
+                                    append=True, loglevel=ll)
+
+                # dict2df2file(output_dict=outp_lst_d, outputfile=outputfile,
+                #              cols=cols_dict[bagobject], file_ext=file_ext,
+                #              loglevel=ll)
                 batch_count = 0
                 outp_lst_d = []
                 if ll+20 >= 40:
@@ -506,8 +515,16 @@ def bag_xml2csv(current_month='testdata02',
         
         if outp_lst_d != []:
             baglib.aprint(ll+20, 'laatste stukje bewaren:', file_count, 'van', len(bag_files))
-            dict2df2file(output_dict=outp_lst_d, outputfile=outputfile, 
-                         cols=cols_dict[bagobject], file_ext=file_ext, loglevel=ll)
+            bob_df = pd.DataFrame.from_dict(outp_lst_d)
+            bob_df = bob_df.reindex(columns=cols_dict[bagobject])
+            baglib.save_df2file(df=bob_df[cols_dict[bagobject]],
+                                outputfile=outputfile,
+                                file_ext=file_ext, includeindex=False,
+                                append=True, loglevel=ll)
+            
+            
+            # dict2df2file(output_dict=outp_lst_d, outputfile=outputfile, 
+            #              cols=cols_dict[bagobject], file_ext=file_ext, loglevel=ll)
      
         baglib.aprint(ll+10, '\n\tOutputfile:', bagobject + '.' + file_ext,
                       '\n\t\trecords in:\t' +
@@ -539,10 +556,15 @@ def middelpunt(float_lst):
     
     # baglib.aprint(ll+40, 'DEBUG2: _x _y: ', _x, _y)
     return (sum(_x)/len(_x), sum(_y)/len(_y))
-    
+
+'''    
 def dict2df2file(output_dict={}, outputfile='', cols=[], file_ext='parquet', loglevel=20):
-    '''Convert dict1 to df. Write df to outputfile. Append if outputfile exists.
-    Use cols1 to define the order of the columns'''
+    Convert dict1 to df. Write df to outputfile. Append if outputfile exists.
+    Use cols1 to define the order of the columns
+
+    # selecting integer valued columns
+    # df.select_dtypes(include=['int64'])
+
     
     # baglib.aprint(ll+40, 'Writing batch to file')
     # baglib.aprint(ll+40, '\tConverting dict to dataframe:')
@@ -558,14 +580,14 @@ def dict2df2file(output_dict={}, outputfile='', cols=[], file_ext='parquet', log
     # if not os.path.isfile(outputfile):
     if not exists(outputfile + '.' + file_ext):
         _append = False
-        baglib.aprint(ll+40, '\tOutputfile', outputfile, 'bestaat nog niet. Aanmaken')
+        baglib.aprint(_ll+40, '\tOutputfile', outputfile, 'bestaat nog niet. Aanmaken')
     else:
         _append = True
-        baglib.aprint(ll+40, '\tAppending to', outputfile)
+        baglib.aprint(_ll+40, '\tAppending to', outputfile)
 
     baglib.save_df2file(df=_df, outputfile=outputfile, file_ext=file_ext,
                         includeindex=False, append=_append, loglevel=_ll)    
-
+'''
 # --------------------------------------------------------------------------
 # ################ Main program ###########################
 # --------------------------------------------------------------------------
