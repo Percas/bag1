@@ -33,6 +33,28 @@ DIR02 = os.path.join(DATADIR_OUT, '02-csv')
 DIR03 = os.path.join(DATADIR_OUT, '03-bewerktedata')
 DIR04 = os.path.join(DATADIR_OUT, '04-aggr')
 
+
+BAG_OBJECTEN = ['vbo', 'pnd', 'num', 'lig', 'sta', 'opr', 'wpl']
+
+COLS_DICT = {
+    'vbo': ['vboid','vbovkid', 'vbovkbg', 'vbovkeg', 'vbostatus', 'numid',
+            'oppervlakte', 'pndid', 
+            # 'woon', 'gezo', 'indu', 'over', 'ondr' ,'logi', 'kant', 'wink',
+            # 'bij1', 'celf', 'sprt',
+            'vbogmlx', 'vbogmly'],
+    'pnd': ['pndid', 'pndvkid', 'pndvkbg', 'pndvkeg',
+            'pndstatus', 'bouwjaar', 'docnr', 'docdd', 'pndgmlx', 'pndgmly'],
+    'lig': ['ligid', 'ligvkid', 'ligvkbg', 'ligvkeg', 'ligstatus', 
+            'numid', 'docnr', 'docdd', 'liggmlx', 'liggmly'],
+    'num': ['numid', 'numvkid', 'numvkbg', 'numvkeg', 'numstatus',
+            'huisnr', 'postcode', 'typeao', 'oprid'],
+    'opr': ['oprid', 'oprvkid', 'oprvkbg', 'oprvkeg', 'oprstatus', 
+            'oprnaam', 'oprtype', 'wplid'],
+    'sta': ['staid', 'stavkid', 'stavkbg', 'stavkeg', 'stastatus',
+            'numid', 'docnr', 'docdd', 'stagmlx', 'stagmly'],
+    'wpl': ['wplid', 'wplvkid', 'wplvkbg', 'wplvkeg', 'wplstatus', 'wplnaam']
+    }
+
 BAG_TYPE_DICT = {'vboid': 'string',
                  'pndid': 'string',
                  'numid': 'string',
@@ -120,5 +142,37 @@ status_dict = {
     'Woonplaats aangewezen':                        'w1',
     'Woonplaats ingetrokken':                       'w2'}
 
+# shorthands to translate directory names to tags and so
+SHORT = {'vbo': 'Verblijfsobject',
+         'lig': 'Ligplaats',
+         'sta': 'Standplaats',
+         'pnd': 'Pand',
+         'num': 'Nummeraanduiding',
+         'opr': 'OpenbareRuimte',
+         'wpl': 'Woonplaats'
+         }
+
+GEBRUIKSDOEL_DICT = {
+    'woonfunctie':              'woon',
+    'overige gebruiksfunctie':  'over',
+    'kantoorfunctie':           'kant',
+    'gezondheidszorgfunctie':   'gezo',
+    'bijeenkomstfunctie':       'bij1',
+    'onderwijsfunctie':         'ondr',
+    'winkelfunctie':            'wink',
+    'sportfunctie':             'sprt',
+    'logiesfunctie':            'logi',
+    'industriefunctie':         'indu',
+    'celfunctie':               'celf'
+}
 
 
+LIGTYPE_DICT = {
+        'Verblijfsobject':       0,
+        'Standplaats':           1,
+        'Ligplaats':             2,
+        'Pand':                  3,
+        'Nummeraanduiding':      4,
+        'Openbareruimte':        5,
+        'Woonplaats':            6
+}

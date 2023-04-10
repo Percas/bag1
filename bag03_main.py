@@ -23,7 +23,8 @@ import time
 
 import baglib
 import bag01_unzip
-import bag12_xml2csv
+# import bag12_xml2csv
+import bag12_xml
 import bag12_wplgem2csv
 import bag23a_fix_vk
 import bag33_hoofdpnd
@@ -60,18 +61,19 @@ bag01_unzip.bag_unzip(current_month=current_month,
 
 # zet de vijfduizend xml bestanden om in 7 csv/parquet bestanden, te weten:
 # vbo, pnd, num, opr, wpl, sta, lig
-bag12_xml2csv.bag_xml2csv(current_month=current_month,
-                          koppelvlak1=DIR01,
-                          koppelvlak2=DIR02,
-                          file_ext='csv', # append does not work in parquet yet
-                          loglevel=ll)
+bag12_xml.bag_xml(current_month=current_month,
+                  koppelvlak1=DIR01,
+                  koppelvlak2=DIR02,
+                  # file_ext='csv', # force cv
+                  file_ext=file_ext,
+                  loglevel=0)
 
 baglib.aprint(ll+40, '\n*** bag03_main: hernoem bestand wpl.' + file_ext, 'naar wpl_naam.'+ file_ext, '\n')
 wpl_naam = os.path.join(DIR02, current_month, 'wpl_naam.'+file_ext)
 if os.path.exists(wpl_naam):
     os.remove(wpl_naam)
-os.rename(os.path.join(DIR02, current_month, 'wpl.csv'), # temp hack. should be+file_ext),
-          os.path.join(DIR02, current_month, 'wpl_naam.csv')) # +file_ext))
+os.rename(os.path.join(DIR02, current_month, 'wpl.'+file_ext),
+          os.path.join(DIR02, current_month, 'wpl_naam.'+file_ext))
 
 bag12_wplgem2csv.bag_wplgem2csv(current_month=current_month,
                                 koppelvlak1=DIR01,

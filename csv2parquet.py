@@ -12,7 +12,7 @@ import os
 import baglib
 import pandas as pd
 import time
-from config import OMGEVING
+from config import OMGEVING, BAG_TYPE_DICT
 
 # ############### Define functions ################################
 
@@ -31,7 +31,7 @@ def csv2parquet(inputfiles = '', loglevel=20):
             if not os.path.exists(inputfile): 
                 sys.exit('Fout: bestand of map ' + str(inputfile) + ' bestaat niet')
         baglib.aprint(ll+40, 'Te converteren bestand:', inputfile)
-        df = pd.read_csv(inputfile)
+        df = pd.read_csv(inputfile, dtype=BAG_TYPE_DICT)
         outputfile = os.path.splitext(inputfile)[0] + '.parquet'
         baglib.aprint(ll+20, 'Opslaan als', outputfile)
         df.to_parquet(outputfile, index=False)

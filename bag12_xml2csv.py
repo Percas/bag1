@@ -129,6 +129,7 @@ from os.path import exists
 import sys
 import pandas as pd
 import time
+import bag01_unzip
 
 
 import baglib                # general functions user defined
@@ -142,22 +143,24 @@ from config import OMGEVING, DIR00, DIR01, DIR02, FUTURE_DATE, status_dict
 
     
 def bag_xml2csv(current_month='testdata02',
-                koppelvlak1='../data/01-xml/',
-                koppelvlak2='../data/02-csv/',
+                koppelvlak1=os.path.join('..', 'data', '01-xml'),
+                koppelvlak2=os.path.join('..', 'data', '02-csv'),
                 file_ext='parquet',
                 loglevel=20):
 
     tic = time.perf_counter()
     ll = loglevel
+    batch_size = 2
 
     baglib.printkop(ll+40, 'Start bag_xml2csv')
+    baglib.aprint(ll+30, 'Extractmaand (verslagmaand + 1):', current_month,
+                  '\nloglevel:', ll, '\tbatch_size:', batch_size)
 
 
     inputdir = os.path.join(koppelvlak1, current_month)
     outputdir = os.path.join(koppelvlak2, current_month)
     baglib.make_dir(outputdir)
     
-    baglib.aprint(ll+30, 'Huidige maand (verslagmaand + 1):', current_month)
     ligtype_dict = {
             'Verblijfsobject':       0,
             'Standplaats':           1,
@@ -219,19 +222,11 @@ def bag_xml2csv(current_month='testdata02',
         'wpl': ['wplid', 'wplvkid', 'wplvkbg', 'wplvkeg', 'wplstatus', 'wplnaam']
         }
     
-    batch_size = 400
     
     
     # --------------------------------------------------------------------------
     baglib.aprint(ll+30, '\n----- Loop over de bag typen')
     # --------------------------------------------------------------------------
-    # xml_dirs = ['sta', 'lig']
-    # xml_dirs = ['pnd']
-    # xml_dirs = ['num']
-    # xml_dirs = ['vbo', 'pnd', 'num']
-    # xml_dirs = ['lig', 'sta', 'vbo', 'pnd']
-    # xml_dirs = ['pnd', 'num']
-    # xml_dirs = ['opr', 'wpl']
     # xml_dirs = ['vbo']
     xml_dirs = ['lig', 'sta', 'opr', 'wpl', 'vbo', 'pnd', 'num']
     
@@ -243,7 +238,14 @@ def bag_xml2csv(current_month='testdata02',
         ddir = os.path.join(inputdir, subdir)
         # baglib.aprint(ll-10, 'Debug:', ddir)
         # baglib.make_dir(ddir, ll+50)
+        if not os.path.exists(ddir):
+            baglib.aprint(ll, '\t', ddir, 'koppelvlak 1 niet gevonden. Genereer vanuit zip:')                        
+            bag01_unzip.bag_unzip(current_month=current_month,
+                                  koppelvlak0=DIR00,
+                                  koppelvlak1=DIR01,
+                                  loglevel=ll)
         bag_files = os.listdir(ddir)
+        
         outp_lst_d = []  # list of dict containing output records
         outputfile = os.path.join(outputdir, bagobject)
         outputfile_ext = outputfile + '.' + file_ext
@@ -497,11 +499,13 @@ def bag_xml2csv(current_month='testdata02',
 
                 bob_df = pd.DataFrame.from_dict(outp_lst_d)
                 bob_df = bob_df.reindex(columns=cols_dict[bagobject])
+                append = os.path.exists(outputfile_ext)
+                baglib.aprint(ll, '\tappend mode:', append)
 
                 baglib.save_df2file(df=bob_df[cols_dict[bagobject]],
                                     outputfile=outputfile,
                                     file_ext=file_ext, includeindex=False,
-                                    append=True, loglevel=ll)
+                                    append=append, loglevel=ll)
 
                 # dict2df2file(output_dict=outp_lst_d, outputfile=outputfile,
                 #              cols=cols_dict[bagobject], file_ext=file_ext,
@@ -517,10 +521,12 @@ def bag_xml2csv(current_month='testdata02',
             baglib.aprint(ll+20, 'laatste stukje bewaren:', file_count, 'van', len(bag_files))
             bob_df = pd.DataFrame.from_dict(outp_lst_d)
             bob_df = bob_df.reindex(columns=cols_dict[bagobject])
+            append = os.path.exists(outputfile_ext)
+            baglib.aprint(ll, '\tappend mode:', append)
             baglib.save_df2file(df=bob_df[cols_dict[bagobject]],
                                 outputfile=outputfile,
                                 file_ext=file_ext, includeindex=False,
-                                append=True, loglevel=ll)
+                                append=append, loglevel=ll)
             
             
             # dict2df2file(output_dict=outp_lst_d, outputfile=outputfile, 
@@ -594,9 +600,9 @@ def dict2df2file(output_dict={}, outputfile='', cols=[], file_ext='parquet', log
 
 if __name__ == '__main__':
     
-    ll = 30
+    ll = 40
     file_ext = 'parquet'
-    file_ext = 'csv'    
+    # file_ext = 'csv'    
 
     baglib.printkop(ll+40, OMGEVING)  
 
