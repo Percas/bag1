@@ -13,87 +13,89 @@ import os
 import baglib
 import zipfile
 import time
-from config import OMGEVING, KOPPELVLAK0, KOPPELVLAK1, BAG_OBJECTEN
+from config import KOPPELVLAK0, KOPPELVLAK1, BAG_OBJECTEN, LOGFILE
+# from k1_xml import k1_xml 
+import logging
 
 # ############### Define functions ################################
 
 # Main function for this package:
 
-def k0_unzip(maand, bagobject):
-    '''Schil om bag_unzip t.b.v. multiprocessing.'''
-    print('unzipping', bagobject, 'in maand', str(maand))    
-
-    tic = time.perf_counter()
-    baglib.printkop(40,'Start bag_unzip')
-    
+def k0_download_and_unzip(url, maand, logit):
+    '''Download zipped file from url.'''    
     dir_k0_maand = os.path.join(KOPPELVLAK0, str(maand))
-    dir_k1_maand = os.path.join(KOPPELVLAK1, str(maand))
-    unzip_files = os.listdir(dir_k0_maand)
-    
-    
-    
-    
-    baglib.printkop(40, 'Stap 0. Check of er al zip files staan in koppelvlak 0')
-    
-    aantal_unzip = len(unzip_files)
-    
-    '''
-    if aantal_unzip == 0:
-        baglib.aprint(20, '\tInput dir leeg; probeer te downloaden van kadaster...')
-        bagurl = 'https://service.pdok.nl/kadaster/adressen/atom/v1_0/downloads/lvbag-extract-nl.zip'
-        bagfile = baglib.download_file(bagurl)
-        # bagfile = 'lvbag-extract-nl.zip' if it's allready there
-        baglib.aprint(20, '\tDownloaden van', bagfile, 'gereed. Nu unzippen naar inputmap')
-        with zipfile.ZipFile(bagfile, 'r') as zip_ref:
-            zip_ref.extractall(dir_k0_maand)
-            baglib.aprint(20, '\tZojuist uitgepakt BAG bestand verwijderen')
-            os.remove(bagfile)
-            baglib.aprint(20, '\tUnzippen stap 0 gereed. Verder met unzippen in stap 1')
-            # dir_k0_maand opnieuw lezen want nu staat er wel wat in de dir_k0_maand!
-            unzip_files = os.listdir(dir_k0_maand)
-    '''
+    logit.info(f'downloaden bestand van {url}...')
+    # url = 'https://service.pdok.nl/kadaster/adressen/atom/v1_0/downloads/lvbag-extract-nl.zip'
+    downloaded_file = baglib.download_file(url)
+    # bagfile = 'lvbag-extract-nl.zip' if it's allready there
+    logit.info(f'downloaden van {downloaded_file} gereed. Nu unzippen')
+    with zipfile.ZipFile(downloaded_file, 'r') as zip_ref:
+        zip_ref.extractall(dir_k0_maand)
+        logit.info('zojuist uitgepakt BAG bestand verwijderen')
+        os.remove(downloaded_file)
+        logit.info('unzippen gedownloaded bestand gereed')
+        # dir_k0_maand opnieuw lezen want nu staat er wel wat in de dir_k0_maand!
 
-    baglib.printkop(40, '\tStap 1. Unzippen van gezipt '+bagobject+' bestand naar xml')
+
+def k0_unzip(bagobject, maand, logit):
+    '''Unzip bagobject bestand van kadaster voor gegeven maand.'''
+    tic = time.perf_counter()
+    logit.debug(f'start functie k0_unzip met {bagobject} en {maand}')
+
+    # input
+    dir_k0_maand = os.path.join(KOPPELVLAK0, str(maand))
+    unzip_files = os.listdir(dir_k0_maand)
+
+    #output
+    dir_k1_maand = os.path.join(KOPPELVLAK1, str(maand))
+    unzip_dir = os.path.join(dir_k1_maand, bagobject)
+    baglib.make_dirs(unzip_dir, logit)
     
-    bagobj_starts_with = {'vbo': '9999VBO',
-                          'lig': '9999LIG',
-                          'sta': '9999STA',
-                          'pnd': '9999PND',
-                          'num': '9999NUM',
-                          'opr': '9999OPR',
-                          'wpl': '9999WPL',
-                          'wplgem': 'GEM-WPL-RELATIE'}
 
     for unzip_file_name in unzip_files:
+        unzip_file = os.path.join(dir_k0_maand, unzip_file_name)
+        bagobj_starts_with = {'vbo': '9999VBO',
+                              'lig': '9999LIG',
+                              'sta': '9999STA',
+                              'pnd': '9999PND',
+                              'num': '9999NUM',
+                              'opr': '9999OPR',
+                              'wpl': '9999WPL',
+                              'wplgem': 'GEM-WPL-RELATIE'}
         if unzip_file_name.startswith(bagobj_starts_with[bagobject]):
-            unzip_dir = os.path.join(dir_k1_maand, bagobject)
-            unzip_file = os.path.join(dir_k0_maand, unzip_file_name)
-            baglib.make_dir(unzip_dir, loglevel=10)
-            baglib.aprint(10, '\n\tUitpakken van bestand', unzip_file_name,
-                          '\n\tin directory', dir_k0_maand,
-                          '\n\tnaar directory', unzip_dir, '...')
-            _ti = time.perf_counter()
             with zipfile.ZipFile(unzip_file, 'r') as zip_ref:
                 zip_ref.extractall(unzip_dir)
-            _to = time.perf_counter()
-            baglib.aprint(40,'\tfile', unzip_file_name, 'unzipped in', (_to - _ti)/60, 'min')
-                                  
+            logit.debug(f'bestand {unzip_file} bewaard in {unzip_dir}')
     toc = time.perf_counter()
-
-    baglib.aprint(40, '\n*** Einde bag_unzip in', (toc - tic)/60, 'min ***\n')
-
-
+    logit.info(f'einde k0_unzip {bagobject}, {maand} in {(toc - tic)/60} min')
 
 # ########################################################################
 # ########################################################################
 
 if __name__ == '__main__':
 
-    ll = 20
-    baglib.printkop(ll+40, OMGEVING)
-    maand = baglib.get_arg1(sys.argv, KOPPELVLAK0)
+    logging.basicConfig(
+        level=logging.DEBUG,
+        format="%(asctime)s [%(levelname)s] %(message)s",
+        handlers=[
+            logging.FileHandler(LOGFILE),
+            logging.StreamHandler()])    
+
+    logit = logging.getLogger()
+    logit.debug('start k0_unzip vanuit main')
+    maand_lst = baglib.get_args(sys.argv, KOPPELVLAK0)
+    url = 'https://service.pdok.nl/kadaster/adressen/atom/v1_0/downloads/lvbag-extract-nl.zip'
 
 
-    baglib.printkop(ll+30, 'Lokale aanroep')
-    for bagobject in BAG_OBJECTEN:
-        k0_unzip(maand, bagobject)
+    bag_objecten_wplgem = BAG_OBJECTEN + ['wplgem']
+    for maand in maand_lst:
+
+        dir_k0_maand = os.path.join(KOPPELVLAK0, str(maand))
+        unzip_files = os.listdir(dir_k0_maand)
+        aantal_unzip = len(unzip_files)
+    
+        if aantal_unzip == 0:
+            k0_download_and_unzip(url, maand, logit)
+
+        for bagobject in bag_objecten_wplgem:
+            k0_unzip(bagobject, maand, logit)

@@ -5,14 +5,27 @@ Functions used in different python scripts
 """
 # ################ import libraries ###############################
 import pandas as pd
+import polars as pl
 import time
-# import logging
 import os
 import sys
+import shutil
 # import datetime
-# import logging
+import logging
 import numpy as np
 import requests
+from config import FUTURE_DATE, KOPPELVLAK2, FILE_EXT, LOGFILE
+
+################## Init logger #########################################
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(message)s",
+    handlers=[
+        logging.FileHandler(LOGFILE),
+        logging.StreamHandler()])    
+logit = logging.getLogger()
+logit.setLevel(logging.DEBUG)
+
 
 # ################ define datastructures ###############################
 '''
@@ -146,18 +159,21 @@ def date2int(_date_str):
     return int(_str)
 
 
-def get_arg1(arg_lst, ddir):
-    '''Lees het eerste argument van de aanroep. Dit moet een mapnaam zijn.'''
-    _lst = os.listdir(ddir)
+def get_args(arg_lst=[], ddir=''):
+    '''Lees de argumenten van de aanroep. Dit moeten mappen zijn in ddir.'''
+        
     if len(arg_lst) <= 1:
         # sys.exit('Usage: ' + arg_lst[0] + '  <month>, where <month> in '
         #         + str(_lst))
         return "testdata23"
-    _current_month = arg_lst[1]
-    if _current_month not in _lst:
-        sys.exit('Usage: ' + arg_lst[0] + '  <month>, where <month> in '
-                 + str(_lst))
-    return _current_month
+
+    if ddir:
+        _dir_lst = os.listdir(ddir)
+        for _arg in arg_lst[1:]:
+            if _arg not in _dir_lst:
+                sys.exit('Usage: ' + arg_lst[0] + '  <month_lst>, where <month_lst> in '
+                         + str(_dir_lst))
+    return arg_lst[1:]
 
 
 def diff_df(df1, df2):
@@ -189,10 +205,15 @@ def get_perc(df_in, df_out):
     print('\t\tPercentage:', _perc, '%')
     return _perc
 
-def fix_eendagsvlieg(df, b_str, e_str):
+def fix_eendagsvlieg(df, b_str, e_str, logit, df_type='pandas'):
     """Return df with voorkomens removed that start and end on same day."""
-    # print('\tVerwijderden van eendagsvliegen:')
-    return df[df[b_str] < df[e_str]]
+    logit.info(f'start functie fix_eendagsvlieg voor {b_str[:3]}')
+    if df_type == 'pandas':
+        return df[df[b_str] < df[e_str]]
+    else:
+        return df.filter(pl.col(b_str) < pl.col(e_str))
+
+
 '''
 def print_omgeving(adir):
     if adir[-4:-1] == 'ont':
@@ -230,9 +251,9 @@ def select_active_vk(df, bagobj, idate):
     _mask = (df[bagobj + 'vkbg'] <= idate) & (idate < df[bagobj + 'vkeg'])
     _df_active = df[_mask].copy()
 
-    _nkey = df.shape[0]
+    _nvk = df.shape[0]
     _navk = _df_active.shape[0]
-    _davk = _navk / _nkey
+    _davk = _navk / _nvk
     print('\t\tActieve voorkomens:   ', _navk)
     print('\t\tGedeelte actieve vk:', _davk)
     return _df_active
@@ -250,15 +271,15 @@ def last_day_of_month(month_str):
     return _last
 
 
-def make_dir(path, loglevel=10):
+def make_dirs(path, logit=logit):
     if not os.path.exists(path):
-        aprint(loglevel, '\n\tAanmaken outputmap', path)
+        logit.info(f'aanmaken outputmap {path}')
         os.makedirs(path)
 
-def recast_df_floats(df, dict1, loglevel=10):
+def recast_df_floats(df, dict1, logit=logit):
     '''Recast the float64 types in df to types in dict1 afer df.fillna(0)'''
     _float_cols = df.select_dtypes(include=['float']).columns
-    aprint(loglevel, '\tDowncasting types of:', list(_float_cols))
+    logit.debug(f'downcasting types of: {list(_float_cols)}')
     _type_dict = {k: dict1[k] for k in _float_cols}
     df[_float_cols] = df[_float_cols].fillna(0)
     # df[_float_cols] = df[_float_cols].astype(_type_dict)
@@ -271,8 +292,10 @@ def print_time(seconds, info, printit):
         print(info, seconds / 60, 'min\n')
         # print(info, time.strftime('%H:%M:%S', time.gmtime(int(seconds))))
 
-def df_comp(loglevel,
-            df, key_lst=[], nrec=0, nkey=0, u_may_change=True):
+
+def df_comp(df, key_lst=[], nrec=0, nvk=0, 
+            u_may_change=True, toegestane_marge=1,
+            logit=logit):
     '''
     Check if df has n_rec records and n_rec_u unique records.
     Use key_lst to determine the unique keys. If empty use df.index.
@@ -280,37 +303,138 @@ def df_comp(loglevel,
     '''
     _nrec = df.shape[0]
     _key_lst = key_lst
-    _ll = loglevel
     
     if key_lst == []:
-        _nkey = df.index.drop_duplicates().shape[0]
+        _nvk = df.index.drop_duplicates().shape[0]
         _key_lst = df.index.names
     else:
-        _nkey = df[key_lst].drop_duplicates().shape[0]
+        _nvk = df[key_lst].drop_duplicates().shape[0]
         # print('DEBUG df_comp')
         # print(df[key_lst].drop_duplicates())
         # print(df[key_lst].drop_duplicates().shape[0])
     
     if nrec ==  0:
-        return (_nrec, _nkey)
+        return (_nrec, _nvk)
     
     if nrec != _nrec:
-        aprint(_ll, '\t\tAantal records in:', nrec, 'aantal uit:', _nrec)
+        logit.debug(f'aantal records in: {nrec} aantal uit: {_nrec}')
     else:
-        aprint(_ll, '\t\tAantal input records ongewijzigd: records in = uit =',
-              nrec)
-    if nkey != _nkey:
-        aprint(_ll, '\t\tAantal eenheden in:', nkey,
-              'aantal', _key_lst, 'uit:', _nkey)
+        pass
+        # logit.debug(f'aantal input records ongewijzigd: records in = uit = {nrec}')
+    if nvk != _nvk:
+        marge = round(_nvk/nvk - 1, 2)
+        if abs(marge) > toegestane_marge:
+            logit.warning(f'percentuele wijziging in voorkomens : {marge}')
+            logit.warning(f'aantal unieke eenheden gewijzigd; in: {nvk}, uit: {_nvk}')
+            logit.warning(f'aantal records in: {nrec}, uit: {_nrec}')
+        else:
+            logit.debug(f'wijziging aantal vk binnen toegestane marge. Marge: {marge}')
         if not u_may_change:
-            aprint(_ll+40, 'FOUT: aantal unieke eenheden gewijzigd!')
+            logit.warning(f'aantal unieke eenheden gewijzigd; in: {nvk}, uit: {_nvk}')
     else:
-        aprint(_ll, '\t\tAantal', _key_lst, 'ongewijzigd: vk in = uit =',
-              nkey)
+        logit.debug(f'aantal {_key_lst} ongewijzigd: vk in = uit = {nvk}')
     # in_equals_out = (_n_rec == n_rec) and (_n_rec_u == n_rec_u) 
     # print('\tNr of records in equals out:', in_equals_out)
-    return (_nrec, _nkey)
+    return (_nrec, _nvk)
 
+
+
+
+
+
+def df_compare(df, vk_lst=[], nrec=0, nvk=0, 
+               u_may_change=True,
+               nvk_marge=0,
+               nrec_nvk_ratio_is_1=2,
+               logit=logit):
+    '''
+    df_compare controleert een aantal zaken voor het dataframe df.
+    vk_lst moet de twee kolommen bevatten die de voorkomens identificeren.
+    nrec en nvk tellen records en voorkomens.
+    als nrec en nvk leeg zijn dan returned df_compare nrec en nvk.
+    als nrec en nvk gevuld zijn, dan vergelijkt df_compare ze met de nrec en nvk
+    van df:
+        
+    1. als u_may_change == False geeft df_comp een warning als nvk is gewijzigd.
+    2. de nvk_marge is de maat hoeveel het aantal voorkomens mag wijzigen:
+        0 betekent geen wijziging
+    3. nrec_nvk_ratio geeft aan hoeveel de verhouding tussen nrec en nvk mag wijzigen:
+        1 betekent dat deze niet wijzigt
+    '''
+    _nrec = df.shape[0]
+    _vk_lst = vk_lst
+    
+    if vk_lst == []:
+        sys.exit('vk_lst moet de twee kolommen bevatten die de voorkomens identificeren')
+    else:
+        _nvk = df[vk_lst].drop_duplicates().shape[0]
+
+
+    # eerst de verhouding van het aantal records met aantal voorkomens vergelijken. 
+    # moet dit 1 zijn of juist niet
+    _ratio = _nrec/_nvk
+    logit.debug(f'bij {vk_lst[0]} is de verhouding records en vk {_ratio}')
+    if nrec_nvk_ratio_is_1 != 2:
+        if _ratio != 1 and nrec_nvk_ratio_is_1 == 1:
+            logit.warning(f'verwacht was dat de nrec/nvk 1 zou zijn. Is echter {_ratio}')
+        if _ratio == 1 and nrec_nvk_ratio_is_1 == 0:
+            logit.warning(f'verwacht was dat de nrec/nvk niet 1 zou zijn. Is echter {_ratio}')
+
+
+    if nrec ==  0 or nvk == 0:
+        return (_nrec, _nvk)
+    
+    # input nrec en nvk hebben een waarde. vergelijk input nrec, nvk met output _nrec, _nvk
+    if nrec != _nrec:
+        logit.debug(f'aantal records in: {nrec} aantal uit: {_nrec}')
+    else:
+        pass
+        # logit.debug(f'aantal input records ongewijzigd: records in = uit = {nrec}')
+    if nvk != _nvk:
+        _marge = _nvk/nvk - 1
+        perc_wijziging = round(100 * _marge, 1)
+        logit.info(f'percentuele wijziging voorkomens: {perc_wijziging}%')
+        if abs(_marge) > abs(nvk_marge):
+            logit.info(f'aantal unieke eenheden gewijzigd; in: {nvk}, uit: {_nvk}')
+            logit.info(f'aantal records in: {nrec}, uit: {_nrec}')
+        if not u_may_change:
+            logit.warning(f'aantal unieke eenheden gewijzigd; in: {nvk}, uit: {_nvk}')
+    else:
+        logit.debug(f'aantal {_vk_lst} ongewijzigd: vk in = uit = {nvk}')
+    # in_equals_out = (_n_rec == n_rec) and (_n_rec_u == n_rec_u) 
+    # print('\tNr of records in equals out:', in_equals_out)
+    return (_nrec, _nvk)
+
+
+def dl_comp(dl, vk_lst=[], nrec=0, nvk=0, u_may_change=True,
+            logit=logit):
+    '''
+    Check if polars dl has n_rec records and n_rec_u unique records.
+    Use vk_lst to determine the unique keys.
+    Return the tuple (number of records, unique nr of rec).
+    '''
+    _nrec = dl.shape[0]
+    _nvk = dl[vk_lst].unique().shape[0]
+    # print('DEBUG df_compare')
+    # print(dl[vk_lst].unique())
+    # print(dl[vk_lst].unique().shape[0])
+    
+    if nrec ==  0:
+        return (_nrec, _nvk)
+    
+    if nrec != _nrec:
+        logit.debug(f'aantal records in: {nrec} aantal uit: {_nrec}')
+    else:
+        logit.debug('aantal input records ongewijzigd: records in = uit = {nrec}')
+    if nvk != _nvk:
+        logit.debug(f'aantal eenheden in: {nvk}; aantal {vk_lst} uit: {_nvk}')
+        if not u_may_change:
+            logit.warning('aantal unieke eenheden gewijzigd!')
+    else:
+        logit.debug(f'aantal {vk_lst} ongewijzigd: vk in = uit = {_nvk}')
+    # in_equals_out = (_n_rec == n_rec) and (_n_rec_u == n_rec_u) 
+    # print('\tNr of records in equals out:', in_equals_out)
+    return (_nrec, _nvk)
 
     
 def ontdubbel_idx_maxcol(df, max_cols):
@@ -320,38 +444,22 @@ def ontdubbel_idx_maxcol(df, max_cols):
     return _df[~_df.index.duplicated(keep='first')] 
 
 
-def read_input_csv(loglevel=10, file_d={}, bag_type_d={}):
-    '''Read the input csv files in file_d dict and return them in a dict of
-    df. Use the bag_type_d dict to get the (memory) minimal types.'''
-    _bdict = {}
-    for _k, _f in file_d.items():
-        aprint(loglevel+10, '\tInlezen', _k, '...')
-        _bdict[_k] = pd.read_csv(_f, 
-                                 dtype=bag_type_d,
-                                 keep_default_na=False)
-        aprint(loglevel, '\t\t', _k, 'heeft', _bdict[_k].shape[0], 'records')
-        # print('DEBUG:', _bdict[_k].info())
-        # print('DEBUG:', _bdict[_k].head())
-    return _bdict
-        
-def read_input(loglevel=10, file_d={}, bag_type_d={}):
+def read_dict_of_df(file_d={}, bag_type_d={}, logit=logit):
     '''Read the files in the dictionary file_d and return them in a dict of
-    dataframes. if present read .parquet otherwise try csv. 
-    '''
+    dataframes. if present read .parquet otherwise try csv.'''
     
     _bdict = {}
-    _ll = loglevel
     for _k, _f in file_d.items():
-        aprint(_ll, '\tInlezen', _k, '...')
+        logit.debug(f'inlezen {_k}...')
         _filepath = _f + '.parquet'
         if os.path.exists(_filepath):
-            aprint(_ll+20, '\tparquet file gevonden')
+            logit.debug('parquet file gevonden')
             _bdict[_k] = pd.read_parquet(_filepath)
             # take only the cols in dataframe _bdict[_k]:
             _astype_cols = {_i: bag_type_d[_i] for _i in list(_bdict[_k].columns)}
             _bdict[_k] = _bdict[_k].astype(dtype=_astype_cols)
         else:
-            aprint(_ll+20, '\tparquet file niet gevonden, probeer csv')
+            logit.debug('parquet file niet gevonden, probeer csv')
             _filepath = _f + '.csv'
             if os.path.exists(_filepath):
                 _bdict[_k] = pd.read_csv(_filepath,
@@ -359,20 +467,60 @@ def read_input(loglevel=10, file_d={}, bag_type_d={}):
                                          keep_default_na=False)
             else:
                 sys.exit('Input panic: cant find' + _filepath)
-        aprint(_ll+20, '\tBestand', _filepath, 'gelezen')
-        aprint(_ll, '\t\t', _k, 'heeft', _bdict[_k].shape[0], 'records')
+        logit.debug(f'bestand {_filepath} gelezen')
+        logit.debug(f'{_k} heeft {_bdict[_k].shape[0]} records')
         # print('DEBUG:', _bdict[_k].info())
         # print('DEBUG:', _bdict[_k].head())
     return _bdict
 
+
+def read_parquet(input_file='', bag_type_d={}, output_file_type='pandas',
+                 logit=logit):
+    '''Read a parquet or csv file  and return a pandas or polars df. 
+    If present read .parquet otherwise try csv. Default output is pandas.
+    '''
+    
+    logit.debug(f'inlezen {input_file}')
+    _filepath = input_file + '.parquet'
+    if os.path.exists(_filepath):
+        logit.debug(f'inlezen van {_filepath}')
+        if output_file_type != 'polars':
+            _df = pd.read_parquet(_filepath)
+            _astype_cols = {_i: bag_type_d[_i] for _i in list(_df.columns)}
+            _df = _df.astype(dtype=_astype_cols)
+        else:
+            _df = pl.read_parquet(_filepath)
+        # take only the cols in dataframe _bdict[_k]:
+    else:
+        _filepath = input_file + '.csv'
+        if os.path.exists(_filepath):
+            logit.debug(f'csv gevonden. inlezen van {_filepath}')
+            if output_file_type == 'pandas':
+                _df = pd.read_csv(_filepath,
+                                  dtype=bag_type_d,
+                                  keep_default_na=False)
+            else:
+                _df = pl.read_csv(_filepath,
+                                      dtype=bag_type_d,
+                                      keep_default_na=False)
+                
+        else:
+            sys.exit('Input panic: cant find' + _filepath)
+    # logit.debug(f'bestand {_filepath} gelezen')
+    logit.debug(f'dataframe heeft {_df.shape[0]} records')
+    # print('DEBUG:', _bdict[_k].info())
+    # print('DEBUG:', _bdict[_k].head())
+    return _df
+
+
 def save_df2file(df='vbo_df', outputfile='', file_ext='parquet', 
-                 includeindex=True, append=False, loglevel=20):
+                 includeindex=True, append=False, logit=logit):
     '''Bewaar dataframe df in outputfile in ext=parquet of csv formaat'''
     if file_ext == 'parquet':
-        aprint(loglevel, '\tBewaren in parquet formaat van', outputfile)
+        logit.debug(f'bewaren in parquet formaat van {outputfile} met append={append}')
         df.to_parquet(outputfile + '.parquet', index=includeindex, engine='fastparquet', append=append)
     else:
-        aprint(loglevel, '\tBewaren in csv formaat van', outputfile)
+        logit.debug(f'bewaren in csv formaat van {outputfile}')
         if append:
             _mode = 'a'
         else:
@@ -429,26 +577,65 @@ def anastatus(df, overgang, loglevel=10):
         return = df.query(querystr)
 '''
 
-def make_counter(loglevel, df, grouper, newname, cols):
-     ''' Add a column with name newname that is a counter 
-     for the column grouper.''' 
-     # make a new counter for vbovkid. call it newname
-     # tmp = df.groupby(grouper).cumcount()+1
-     # print('DEBUG', df.info())
-     # print('DEBUG', sortlist)
-     # tmp = df.sort_values(by=sortlist, axis=0)
+def make_counter(df, dfid, dfvkbg,
+                 old_counter='',
+                 new_counter='vboid', logit=logit):
+     ''' Maak een nieuwe column newname die de voorkomens vk telt van dfid.
+     dfid identificeert het bagobject. dfid + dfvkbg (voorkomen begindatum)
+     identificeren vk van dit object. Een vk kan dubbel voorkomen. 
+     Dan heeft het dezelfde dfid en vkbg
      
-     aprint(loglevel, '\t\t\tmake_counter: maak een nieuwe teller voor de vk')
-     _tmp = df.sort_values(by=cols, na_position='last')
-     _tmp = _tmp.groupby(grouper).cumcount()+1
-     df[newname] = _tmp.to_frame()
-     return df
+     voorbeeld:
+       vboid,vbovkid,vbovkbg,  vbovkeg,     status,     pndid,  numid   
+       vbo1, 1,      19980601, 20010201,    in_gebruik, pndid1, numid1
+       vbo1, 3,      20230401, 88888888,    in_gebruik, pndid1, numid1
+       vbo1, 3,      20230401, 88888888,    in_gebruik, pndid2, numid1
 
-def make_vkeg(loglevel, df, bob, future_date):
+    de vbovkid moet netjes gaan tellen 1, 2... let op dubbele vk:         
+       vboid,vbovkid,vbovkbg,  vbovkeg,     status,     pndid,  numid   
+       vbo1, 1,      19980601, 20010201,    in_gebruik, pndid1, numid1
+       vbo1, 2,      20230401, 88888888,    in_gebruik, pndid1, numid1
+       vbo1, 2,      20230401, 88888888,    in_gebruik, pndid2, numid1
+     
+     tussenstap maak uniek op vboid en vbovkbg:
+       vboid, vbovkbg,  
+       vbo1,  19980601
+       vbo1,  20230401
+         
+     voeg daarna de teller toe en koppel dan op vboid en vbovkbg
+     ''' 
+
+     _cols = [dfid, dfvkbg]
+     logit.debug('make_counter: maak een nieuwe teller voor de vk')
+     
+     # maak het df uit de tussenstap, zie voorbeeld hierboven
+     _df = df[_cols].sort_values(by=_cols, na_position='last')
+     _df = _df[~_df.duplicated(keep='first')]
+
+     # maak de teller
+     _tmp = _df.groupby(dfid).cumcount()+1
+     
+     # voeg de teller toe
+     
+     _df[new_counter] = _tmp.to_frame()
+     
+     # koppel de rest er weer bij
+     if old_counter == new_counter:
+         _df = pd.merge(_df, df.drop(columns=old_counter))
+     else:
+         _df = pd.merge(_df, df).sort_values(by=[dfid, new_counter])
+         
+         
+     # print(_df.info())
+     return _df # .astype(dtype={new_counter: np.short})
+
+def make_vkeg(df, bob, logit, df_type='pandas'):
     '''Maak de voorkomen einddatum geldigheid (vkeg), gegeven id en vkbg
     (voorkomen begindatum geldigheid) van een bob (bagobject).
     
     Conventies:
+        de kolom bob + 'vkeg' bestaat niet
+
         bob + 'id' is een kolomnaam in df en identificeert het bob
         bob + 'vkbg' is een kolomnaam in df
         bob + 'vkeg' wordt aangemaakt als vervanger van de bestaande in df
@@ -461,35 +648,51 @@ def make_vkeg(loglevel, df, bob, future_date):
     '''
 
     # init variabelen
-    _ll = loglevel
     _dfid = bob + 'id'
     _dfvkbg = bob + 'vkbg'
     _dfvkeg = bob + 'vkeg'
-    (_nrec, _nkey) = df_comp(loglevel=_ll, df=df, key_lst=[_dfid, _dfvkbg])
-
-    aprint(_ll, '\t\t\tmake_vkeg input: aantal', bob, 'records:', _nrec, '; aantal', bob+'vk:', _nkey)
-    aprint(_ll, '\t\t\tmake_vkeg 1: sorteer', bob, 'op', _dfid, _dfvkbg)
-    _df = df.sort_values(by=[_dfid, _dfvkbg])
+    
+    if df_type == 'pandas':
+        _nrec, _nvk = df_compare(df=df, vk_lst=[_dfid, _dfvkbg], logit=logit)
+    else:
+        (_nrec, _nvk) = dl_comp(dl=df, vk_lst=[_dfid, _dfvkbg], logit=logit)
+        
+    logit.debug(f'make_vkeg input: aantal {bob} records: {_nrec} aantal {bob}vk: {_nvk}')
+    # logit.debug(f'make_vkeg 1: sorteer {bob} op {_dfid}, {_dfvkbg}')
+    if df_type == 'pandas':
+        _df = df.sort_values(by=[_dfid, _dfvkbg])
+    else:
+        _df = df.sort([_dfid, _dfvkbg])
     # print(_df.info())
     
-    aprint(_ll, '\t\t\tmake_vkeg 2: neem voor', _dfvkeg, 'de', _dfvkbg, 'van het volgende record')
-    _df[_dfvkeg] = _df[_dfvkbg].shift(periods=-1)
-    # print(_df.head())
+    # logit.debug(f'make_vkeg 2: neem voor {_dfvkeg} de {_dfvkbg} van het volgende record')
+    if df_type == 'pandas':
+        _df[_dfvkeg] = _df[_dfvkbg].shift(periods=-1)
+    else:
+        _df = df.with_column(pl.col(_dfvkeg), pl.col(_dfvkbg).shift(-1))
+        print(_df.head())
 
-    aprint(_ll, '\t\t\tmake_vkeg 3: corrigeer de vbovkeg van het meest recente', bob, 'voorkomen')
-    aprint(_ll, '\t\t\t\t\tdit krijgt een datum in de toekomst:', future_date)
-    _idx = _df.groupby([_dfid])[_dfvkbg].transform(max) == _df[_dfvkbg]
-    _df.loc[_idx, _dfvkeg] = future_date
+    # logit.debug(f'make_vkeg 3: corrigeer de {bob}vkeg van het meest recente {bob} voorkomen')
+    if df_type == 'pandas':
+        _idx = _df.groupby([_dfid])[_dfvkbg].transform(max) == _df[_dfvkbg]
+    else:
+        _idx = _df.groupby([_dfid]).agg([_dfvkbg.max().alias('_dfvkbg_max')]).sort(_dfid).eq(_df[_dfvkbg])._cols[0]
+        
+    _df.loc[_idx, _dfvkeg] = FUTURE_DATE
 
-    aprint(_ll, '\t\t\tmake_vkeg 4: terugcasten van', _dfvkeg, 'naar int')
+
+
+    # logit.debug(f'make_vkeg 4: terugcasten van {_dfvkeg} naar int')
     _df = _df.astype({_dfvkeg:int})
 
-    (_nrec, _nkey) = df_comp(loglevel=_ll, df=df, key_lst=[_dfid, _dfvkbg], nrec=_nrec, nkey=_nkey, u_may_change=False)
+    (_nrec, _nvk) = df_compare(df=df, vk_lst=[_dfid, _dfvkbg], nrec=_nrec, 
+                             nvk=_nvk, u_may_change=False, logit=logit)
     
     return _df
 
 
-def merge_vk(loglevel, df, bob, future_date, cols):
+def merge_vk(df=pd.DataFrame(), bob='vbo', relevant_cols=[], 
+             logit=logit, df_type='pandas'):
     ''' Neem de voorkomens van df samen als voor een dfid de waarden van de
     relevante cols gelijk zijn. We noemen dit "gelijke opeenvolgende vk". Neem 
     de minimale dfvkbg van elke set gelijke vk. Maak nieuwe vk id in dfvkid2.
@@ -500,39 +703,86 @@ def merge_vk(loglevel, df, bob, future_date, cols):
         bob + 'vkeg' wordt aangemaakt als vervanger van de bestaande in df
         
     Stappen:
-        1. verwijder dubbele records vwb df[dfid + cols], neem minimale dfvkbg
+        1. verwijder dubbele records vwb de relevante kolommen zie voorbeeld
         2. maak nieuwe dfvkeg
         3. maak nieuwe tellers dfvkid2
         4. return nieuwe ingekorte df
-    '''
+ 
+    
+   # voorbeeld:
+       
+       je hebt identificerende kolommen en relevante kolommen. 
+       
+       identificerende kolommen:
+           vboid, vbovkid, vbovkbg, vbovkeg
+           om het voorkomen van een vboid te identificeren is vbovkbg voldoende
+        
+        relevante kolommen:
+           status, pndid, numid
+
+        
+       input is een vbo met vboid = vbo1 met 3 voorkomens (waarvan het laatste
+                                                           met twee panden)
+       vboid,vbovkid,vbovkbg,  vbovkeg,     status,     pndid,  numid   
+       vbo1, vkid1,  19980601, 20010201,    in_gebruik, pndid1, numid1
+       vbo1, vkid2,  20010201, 20230331,    in_gebruik, pndid1, numid1
+       vbo1, vkid3,  20230401, 88888888,    in_gebruik, pndid1, numid1
+       vbo1, vkid3,  20230401, 88888888,    in_gebruik, pndid2, numid1
+       
+
+
+       zoek naar dubbelen in de relevante kolommen (dus status, pndid en numid)
+       drop_duplicates dropt het tweede voorkomen met vkbg = 20010201
+
+       vboid,vbovkid,vbovkbg,  vbovkeg,     status,     pndid,  numid   
+       vbo1, vkid1,  19980601, 20010201,    in_gebruik, pndid1, numid1
+       vbo1, vkid3,  20230401, 88888888,    in_gebruik, pndid1, numid1
+       vbo1, vkid3,  20230401, 88888888,    in_gebruik, pndid2, numid1
+   '''
  
     # init variabelen
-    _ll = loglevel
     _dfid = bob + 'id'
+    _dfvkid = bob + 'vkid'
     _dfvkid2 = bob + 'vkid2'
     _dfvkbg = bob + 'vkbg'
     _dfvkeg = bob + 'vkeg'
     _vk = [_dfid, _dfvkbg]
-    _cols = [_dfid] + cols
-    _cols2 = _cols + [_dfvkbg]
-    (_nrec, _nkey) = df_comp(_ll, df, _vk)
-    aprint(_ll, '\t\tmerge_vk input: aantal', bob, 'records:', _nrec, '; aantal', bob+'vk:', _nkey)
-
-    aprint(_ll, '\t\tmerge_vk 1: verwijder dubbele opeenvolgende vk')
-    _df = df[_cols2].sort_values(by=[_dfid, _dfvkbg]).drop_duplicates(subset=_cols, keep='first')
-   
-    aprint(_ll, '\t\tmerge_vk 2: voeg', _dfvkeg, 'toe')
-    _df = make_vkeg(_ll, _df, bob, future_date)
+    _cols = relevant_cols + [_dfid]     # de relevante kolommen plus id van het object, zonder vkid of datums!
+    # _cols2 = _cols + [_dfvkbg] # idem maar met de begindatum van het voorkomen
     
-    aprint(_ll, '\t\tmerge_vk 3: maak een nieuwe vk teller', _dfvkid2)
-    _df = make_counter(_ll, _df, _dfid, _dfvkid2, [_dfid, _dfvkbg])
+    _nrec, _nvk = df_compare(df=df, vk_lst=_vk, logit=logit)
+    logit.info(f'start functie merge_vk met {_nrec} {bob} records en {_nvk} {bob} vk')
 
-    (_nrec1, _nkey1) = df_comp(_ll, _df, _vk, nrec=_nrec, nkey=_nkey, u_may_change=True)
 
-    aprint(_ll, '\t\tmerge_vk 4: ----------- perc vk:',
-           round(100 * (_nkey1/_nkey - 1), 1), '%')
+
+    logit.debug('merge_vk 1: verwijder dubbele opeenvolgende vk')
+    if df_type == 'pandas':
+        # vkeg is overbodig en wordt later opnieuw aangemaakt
+        _df = df.drop(columns=_dfvkeg)
+        _df = _df.sort_values(by=[_dfid, _dfvkbg])
+        _df = _df.drop_duplicates(subset=_cols, keep='first')
+        # _df = df[_cols2].sort_values(by=[_dfid, _dfvkbg]).drop_duplicates(subset=_cols, keep='first')
+    else:
+        logit.error('not implemented')
+        # _df = df[_cols2].sort([_dfid, _dfvkbg]).unique(subset=_cols, keep='first')
+ 
+    logit.debug(f'merge_vk 2: voeg {_dfvkeg} toe')
+    _df = make_vkeg(_df, bob, logit, df_type=df_type)
+    
+    logit.debug('merge_vk 3: maak een nieuwe vk teller')
+    _df = make_counter(df=_df, dfid=_dfid,
+                       old_counter=_dfvkid,
+                       new_counter=_dfvkid, 
+                       dfvkbg=_dfvkbg, logit=logit)
+    # print(_df.info())
+    _nrec1, _nvk1 = df_compare(df=_df, vk_lst=_vk, nrec=_nrec, nvk=_nvk,
+                               nvk_marge=0.1, logit=logit)
+
+    logit.info(f'merge_vk: perc afgenomen {bob}vk: {round(100 * (_nvk1/_nvk - 1), 1)} %')
 
     return _df
+
+
 
 def prev_month(month='testdata23'):
     '''For a month in format YYYYMM return the previous month.'''
@@ -605,12 +855,6 @@ def find_double_vk(df, bobid, bobvkid):
     return df.groupby([bobid, bobvkid]).size().to_frame('aantal').sort_values(by='aantal', ascending=False)
 
 
-def aprint(*args):
-    # _f = args.pop(0)
-    if args[0] >= 40:
-        print(*args[1:])
-
-
 def print_legenda():
     '''Print een paar veel voorkomende afkortingen.'''
     print(f'{"Legenda":~^80}')
@@ -621,15 +865,6 @@ def print_legenda():
     print(f'~\t{"n...:  aantal records in df":<38}',
           f'{"bob: bagobject":<38}')
     print(f'{"~":~>80}')
-
-
-def printkop(loglevel=20, kop='Header 1'):
-    _ll = loglevel
-    # _fmt = '-------------', kop, '-----------'
-    aprint(_ll, '')
-    aprint(_ll-10, '-------------------------------------------')
-    aprint(_ll, '----', kop)
-    aprint(_ll-10,'-------------------------------------------\n')
 
 
 def download_file(url):
@@ -647,10 +882,50 @@ def download_file(url):
 
 def make_month_lst(current_month, n):
     _current = str(current_month)
-    _month_lst = [_current]
+    _n = int(n)
+    desc_month_lst = [_current]
+    asc_month_lst = [_current]
     
-    for i in range(n-1):
+    for i in range(_n-1):
         _previous = prev_month(_current)
-        _month_lst.append(_previous)
+        desc_month_lst.append(_previous)
+        asc_month_lst.insert(0, _previous)
         _current = _previous
-    return _month_lst
+    return asc_month_lst
+
+def make_subdict(df, dict1):
+    '''Return subdictionary of dict1, containing only the cols in df.'''
+    return {_i: dict1[_i] for _i in list(df.columns)}
+
+'''
+def rename_wplgem2wpl(dir1=KOPPELVLAK2, maand='202305',
+                      file_ext=FILE_EXT, logit=logit):
+    Hernoem wplgem naar wpl (met extensie file_ext). 
+    Als wpl al bestaat hernoem wpl dan naar wpl_naam.
+    _wpl_naam = os.path.join(dir1, maand, 'wpl_naam.'+file_ext)
+    _wplgem = os.path.join(dir1, maand, 'wplgem.'+file_ext)
+    _wpl = os.path.join(dir1, maand, 'wpl.'+file_ext)
+    if os.path.exists(_wplgem):
+        if os.path.exists(_wpl_naam):
+            os.remove(_wpl_naam)
+        if os.path.exists(_wpl):
+            logit.debug('renaming wpl to wpl_naam')
+            os.rename(_wpl, _wpl_naam)
+        logit.debug('renaming wplgem to wpl')
+        os.rename(_wplgem, _wpl)
+'''
+def copy_wplgem2wpl(dir1=KOPPELVLAK2, maand='202305',
+                    file_ext=FILE_EXT, logit=logit):
+    '''Kopieer wplgem naar wpl (met extensie file_ext). 
+    Als wpl al bestaat hernoem wpl dan naar wpl_naam.'''
+    _wpl_naam = os.path.join(dir1, maand, 'wpl_naam.'+file_ext)
+    _wplgem = os.path.join(dir1, maand, 'wplgem.'+file_ext)
+    _wpl = os.path.join(dir1, maand, 'wpl.'+file_ext)
+    if os.path.exists(_wplgem):
+        if os.path.exists(_wpl_naam):
+            os.remove(_wpl_naam)
+        if os.path.exists(_wpl):
+            logit.debug('renaming wpl to wpl_naam')
+            os.rename(_wpl, _wpl_naam)
+        logit.debug('copying wplgem to wpl')
+        shutil.copyfile(_wplgem, _wpl)

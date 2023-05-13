@@ -98,55 +98,63 @@ import os
 import sys
 import pandas as pd
 import time
-import bag01_unzip
-
+import logging
 
 import baglib                # general functions user defined
-from config import OMGEVING, KOPPELVLAK0, KOPPELVLAK1, KOPPELVLAK2, NS, SHORT, status_dict, FUTURE_DATE, GEBRUIKSDOEL_DICT, COLS_DICT, BASISDIR, BAG_OBJECTEN
+from config import KOPPELVLAK0, KOPPELVLAK1, KOPPELVLAK2, NS, SHORT,\
+    STATUS_DICT, FUTURE_DATE, GEBRUIKSDOEL_DICT, COLS_DICT,\
+    BAG_OBJECTEN, LOGFILE, BATCH_SIZE, FILE_EXT, BAG_OBJECTEN
+from k0_unzip import k0_unzip
 
+# from k2_fixvk import k2_fixvk
 # --------------------------------------------------------------------------
 # ############### Define functions #################################
 # --------------------------------------------------------------------------
 
 # The main function:
 
-def k1_xml(maand, bagobject):
-    '''Zet xml bestanden van bagobject om in parquet'''
-    print('Zet xml bestanden van', bagobject, 'van maand', maand, 'om in parquet')    
+def k1_xml(bagobject, maand, logit):
+    '''Zet om: 
+        de xml bestanden van bagobject van kadaster in koppelvlak k1 van 
+        extractmaand maand 
+    naar:
+        parquet formaat in koppelvlak k2'''
+        
+    tic = time.perf_counter()
+    logit.info(f'start functie k1_xml met {bagobject} en {maand}')
+
+    # belangrijke parameter nu gebaseerd op 32 GB geheugen
+    batch_size = BATCH_SIZE
 
     # input
-    ll=40
     dir_k1_maand_bagobject = os.path.join(KOPPELVLAK1, maand, bagobject)
-    #output
+    logit.debug(f'zoek XML bestanden in {dir_k1_maand_bagobject}')
+    xml_files = os.listdir(dir_k1_maand_bagobject)
+
+    # output
     dir_k2_maand = os.path.join(KOPPELVLAK2, maand)
     file_k2_maand_bagobject = os.path.join(dir_k2_maand, bagobject)
-    file_k2_maand_bagobject_ext = file_k2_maand_bagobject + '.parquet'
+    file_k2_maand_bagobject_ext = file_k2_maand_bagobject + '.' + FILE_EXT
     
-    #params
-    batch_size = 400
-
-    baglib.make_dir(dir_k2_maand) # only make it if it doesn't exist yet
-     
-    baglib.aprint(ll, '\tZoek XML bestanden in', dir_k1_maand_bagobject)
-    xml_files = os.listdir(dir_k1_maand_bagobject)
-    
+    baglib.make_dirs(dir_k2_maand, logit) # only make it if it doesn't exist yet
     outp_lst_d = []  # list of dict containing output records
-    
     # remove if outputfile is already present
     if os.path.isfile(file_k2_maand_bagobject_ext):
-        baglib.aprint(ll+10, '\tRemoving', file_k2_maand_bagobject_ext)
+        logit.debug(f'removing {file_k2_maand_bagobject_ext}')
         os.remove(file_k2_maand_bagobject_ext)
 
+    # tellertjes
     input_bagobject_count = 0
     output_bagobject_count = 0
     file_count = 0
     batch_count = 0
     report_count = 0
     dubbel_gebruiksdoel_count = 0
+    
     vsl = {'vbo', 'sta', 'lig'}
 
-    baglib.aprint(ll+20, '\tAantal input xml bestanden:', str(len(xml_files)))
-
+    logit.debug(f'aantal input xml bestanden van {bagobject}: {len(xml_files)}')
+    
     for xml_file in xml_files:
         bagtree = ET.parse(os.path.join(dir_k1_maand_bagobject, xml_file))
         root = bagtree.getroot()
@@ -156,14 +164,13 @@ def k1_xml(maand, bagobject):
         file_count += 1
         batch_count += 1
         report_count += 1
-        baglib.aprint(ll-10, '\txml_file:', xml_file)
 
         # ######### Loop over bagobjects in one bag file       #####
 
         for level0 in root.iter(tag):   # level0 is the bagobject-tree
             input_bagobject_filecount += 1
             id1 = baglib.assigniffound(level0, ['Objecten:identificatie'], NS)
-            status = status_dict[
+            status = STATUS_DICT[
                 baglib.assigniffound(level0, ['Objecten:status'], NS)]
 
             vkid = baglib.assigniffound(level0, ['Objecten:voorkomen',
@@ -253,8 +260,6 @@ def k1_xml(maand, bagobject):
                 
                 gebruiksdoelen = level0.findall('Objecten:gebruiksdoel', NS)
                 if len(gebruiksdoelen) > 1:
-                    baglib.aprint(ll-20, 'Meerdere gebruiksdoelen. vboid:', id1, 'met',
-                                  gebruiksdoelen)
                     dubbel_gebruiksdoel_count += 1
 
 
@@ -263,7 +268,7 @@ def k1_xml(maand, bagobject):
                     try:
                         output_record[GEBRUIKSDOEL_DICT[gebruiksdoel.text]] = True
                     except KeyError:
-                        baglib.aprint(ll+40, 'gebruiksdoel', gebruiksdoel.text, 'niet gevonden')
+                        print('gebruiksdoel', gebruiksdoel.text, 'niet gevonden')
                                
                 
                 output_record['oppervlakte'] = \
@@ -372,62 +377,41 @@ def k1_xml(maand, bagobject):
 
         input_bagobject_count += input_bagobject_filecount
         output_bagobject_count += output_bagobject_filecount
-        if ll+20 >= 40:
-            print(".", end='')
 
-
-        if report_count == 100:
-            baglib.aprint(ll, file_count, 'of', len(xml_files))
-            report_count = 0
-        
         if batch_count == batch_size:
-            baglib.aprint(ll+20, 'tussendoor bewaren:', file_count, 'van', len(xml_files))
-
-
+            logit.debug(f'tussendoor bewaren: {file_count} van {len(xml_files)}')
             bob_df = pd.DataFrame.from_dict(outp_lst_d)
             bob_df = bob_df.reindex(columns=COLS_DICT[bagobject])
             append = os.path.exists(file_k2_maand_bagobject_ext)
-            baglib.aprint(ll, '\tappend mode:', append)
-
             baglib.save_df2file(df=bob_df[COLS_DICT[bagobject]],
                                 outputfile=file_k2_maand_bagobject,
                                 file_ext='parquet', includeindex=False,
-                                append=append, loglevel=ll)
+                                append=append, logit=logit)
 
             # dict2df2file(output_dict=outp_lst_d, outputfile=outputfile,
             #              cols=cols_dict[bagobject], file_ext=file_ext,
             #              loglevel=ll)
             batch_count = 0
             outp_lst_d = []
-            if ll+20 >= 40:
-                print('\t', end='')
-
             
     
     if outp_lst_d != []:
-        baglib.aprint(ll+20, 'laatste stukje bewaren:', file_count, 'van', len(xml_files))
         bob_df = pd.DataFrame.from_dict(outp_lst_d)
         bob_df = bob_df.reindex(columns=COLS_DICT[bagobject])
         append = os.path.exists(file_k2_maand_bagobject_ext)
-        baglib.aprint(ll, '\tappend mode:', append)
         baglib.save_df2file(df=bob_df[COLS_DICT[bagobject]],
                             outputfile=file_k2_maand_bagobject,
-                            file_ext='parquet', includeindex=False,
-                            append=append, loglevel=ll)
+                            file_ext=FILE_EXT, includeindex=False,
+                            append=append, logit=logit)
         
         
-        # dict2df2file(output_dict=outp_lst_d, outputfile=outputfile, 
-        #              cols=cols_dict[bagobject], file_ext=file_ext, loglevel=ll)
  
-    baglib.aprint(ll+10, '\n\tOutputfile:', bagobject + '.parquet',
-                  '\n\t\trecords in:\t' +
-             str(input_bagobject_count) + '\n\t\trecords aangemaakt: ' +
-             str(output_bagobject_count) + ' ' + bagobject)
+    logit.debug(f'outputfile: {bagobject}.{FILE_EXT}; records in: {input_bagobject_count};\
+               records aangemaakt: {output_bagobject_count} {bagobject}')
 
     if bagobject == 'vbo':
         if output_bagobject_count != 0:
-            baglib.aprint(ll+10, '\tGedeelte vbo met dubbel gebruiksdoel:',
-                  dubbel_gebruiksdoel_count / output_bagobject_count)
+            logit.debug(f'gedeelte vbo met dubbel gebruiksdoel: {dubbel_gebruiksdoel_count / output_bagobject_count}')
 
     '''
     baglib.aprint(ll+40, '\n*** bag_xml: hernoem bestand wpl naar wpl_naam\n')
@@ -439,11 +423,10 @@ def k1_xml(maand, bagobject):
 
 
     '''
-    
-    baglib.aprint(ll+10, '\t---- XML bestanden verwerkt voor bagobject',
-                  bagobject, '\n')
+    toc = time.perf_counter()
+    logit.info(f'einde k1_xml {bagobject}, {maand} in {(toc - tic)/60} min')
 
-
+    # return k2_fixvk
 
 
 
@@ -464,24 +447,160 @@ def middelpunt(float_lst):
     # baglib.aprint(ll+40, 'DEBUG2: _x _y: ', _x, _y)
     return (sum(_x)/len(_x), sum(_y)/len(_y))
 
+
+
+
+
+
+
+def k1_xmlgem(bagobject, maand, logit):
+    '''Zet het xml bestand voor de woonplaats-gemeente koppeling (dat in koppelvlak k1 staat)
+    om in een parquet bestand dat in koppelvlak k2 wordt gezet met de naam wplgem.parquet.
+    Input: xml bestanden in wplgem
+    Output: wplgem.parquet
+    '''
+
+    tic = time.perf_counter()
+    logit.info(f'start functie k1_xmlgem met {bagobject} en {maand}')
+
+    # input
+    if not bagobject == 'wplgem':
+        sys.exit('FOUT: k1_xml_gem werkt alleen met bagobject = wplgem')
+    # dir_k1_maand = os.path.join(KOPPELVLAK1, maand)
+    dir_k1_maand_bagobject = os.path.join(KOPPELVLAK1, maand, bagobject)
+    logit.debug(f'zoek XML bestanden in {dir_k1_maand_bagobject}')
+    xml_files = os.listdir(dir_k1_maand_bagobject)
+
+    # output
+    dir_k2_maand = os.path.join(KOPPELVLAK2, maand)
+    baglib.make_dirs(dir_k2_maand)
+    wplgem_file = os.path.join(KOPPELVLAK2, maand, bagobject)
+    # wplgem_file_ext = wplgem_file + '.parquet'
+
+    '''    
+    file_k2_maand_bagobject = os.path.join(dir_k2_maand, bagobject)
+    file_k2_maand_bagobject_ext = file_k2_maand_bagobject + '.' + FILE_EXT
+
+    INPUTDIR = os.path.join(koppelvlak1, maand)
+    OUTPUTDIR = os.path.join(koppelvlak2, maand)
+    baglib.make_dir(OUTPUTDIR)
+    baglib.aprint(ll+30, 'Huidige maand (verslagmaand + 1):', maand)
+    '''
+
+
+    # namespace stuff we have to deal with
+    ns = {'gwr-bestand': "www.kadaster.nl/schemas/lvbag/gem-wpl-rel/gwr-deelbestand-lvc/v20200601",
+          'selecties-extract': "http://www.kadaster.nl/schemas/lvbag/extract-selecties/v20200601",
+          'bagtypes': "www.kadaster.nl/schemas/lvbag/gem-wpl-rel/bag-types/v20200601",
+          'gwr-product': "www.kadaster.nl/schemas/lvbag/gem-wpl-rel/gwr-producten-lvc/v20200601",
+          'DatatypenNEN3610': "www.kadaster.nl/schemas/lvbag/imbag/datatypennen3610/v20200601"}
+
+    # ######### works only for wplgem                ###########
+
+    logit.debug(f'gemeente-woonplaats map bevat {len(xml_files)} bestand')
+    output_dict = []           # list of dict containing output records
+    input_bagobject_count = 0
+    output_bagobject_count = 0
+    file_count = 0
+    report_count = 0
+
+    # ######### Loop over files in a directory with same bag objects #####
+    for inputfile in xml_files:
+        bagtree = ET.parse(os.path.join(dir_k1_maand_bagobject, inputfile))
+        root = bagtree.getroot()
+        # tag = '{' + ns['gwr-product'] + '}' + short[bagobject]
+        tag = '{' + ns['gwr-product'] + '}' + 'GemeenteWoonplaatsRelatie'
+        input_bagobject_filecount = 0
+        output_bagobject_filecount = 0
+        file_count += 1
+        report_count += 1
+        logit.debug(f'inputfile: {inputfile}')
+        # ######### Loop over bagobjects in one bag file       #####
+        for level0 in root.iter(tag):   # level0 is the bagobject-tree
+            input_bagobject_filecount += 1
+            wpl = baglib.assigniffound(level0, ['gwr-product:gerelateerdeWoonplaats',
+                                                'gwr-product:identificatie'], ns)
+            gem = baglib.assigniffound(level0, ['gwr-product:gerelateerdeGemeente',
+                                                'gwr-product:identificatie'], ns)
+            status = STATUS_DICT[
+                baglib.assigniffound(level0, ['gwr-product:status'], ns)]
+    
+            date_str = baglib.assigniffound(level0,
+                                            ['gwr-product:tijdvakgeldigheid',
+                                             'bagtypes:begindatumTijdvakGeldigheid'],
+                                            ns)
+            vkbg = baglib.date2int(date_str)
+            date_str = baglib.assigniffound(level0, ['gwr-product:tijdvakgeldigheid',
+                                                     'bagtypes:einddatumTijdvakGeldigheid'],
+                                            ns, str(FUTURE_DATE))
+            vkeg = baglib.date2int(date_str)
+    
+            output_record = {'wplid':   wpl,
+                             'gemid':   gem,
+                             'wplstatus':  status,
+                             'wplvkbg':    vkbg,
+                             'wplvkeg':    vkeg}
+    
+            output_dict.append(output_record.copy())
+            output_bagobject_filecount += 1
+    
+        input_bagobject_count += input_bagobject_filecount
+        output_bagobject_count += output_bagobject_filecount
+        if report_count == 100:
+            logit.debug(f'{file_count} of {len(xml_files)}')
+            report_count = 0
+    df = pd.DataFrame.from_dict(output_dict)
+    df.index.name = 'idx'
+
+    
+    logit.debug('voeg wplvkid toe')
+    logit.debug('deze actie hoort thuis tussen koppelvlak 2 en 3, maar wordt hier uitgevoerd zodat ook dit bestand een vkid heeft, net als alle andere.')
+    # df = df.sort_values(['wplid', 'wplvkbg'])
+    df = baglib.make_counter(df=df, dfid='wplid', dfvkbg='wplvkbg',
+                             old_counter='',
+                             new_counter='wplvkid', logit=logit)
+    
+    logit.debug(f'outputfile: wplgem.parquet; records in: {input_bagobject_count}; records aangemaakt: {output_bagobject_count}')
+    
+    baglib.save_df2file(df=df, outputfile=wplgem_file, file_ext=FILE_EXT,
+                        append=False, includeindex=False, logit=logit)
+    # df.to_csv(outputfile, index=False)
+
+    toc = time.perf_counter()
+    logit.warning(f'einde k1_xmlgem {bagobject}, {maand} in {(toc - tic)/60} min')
+
+    # return k2_fixvk
+# --------------------------------------------------------------------------
+
+
+
+
 # --------------------------------------------------------------------------
 # ################ Main program ###########################
 # --------------------------------------------------------------------------
 
 if __name__ == '__main__':
     
-    ll = 40
-    file_ext = 'parquet'
-    # file_ext = 'csv'    
+    logging.basicConfig(
+        level=logging.DEBUG,
+        format="%(asctime)s [%(levelname)s] %(message)s",
+        handlers=[
+            logging.FileHandler(LOGFILE),
+            logging.StreamHandler()])    
+    logit = logging.getLogger()
+    logit.debug('Start k1_xml lokaal')
 
-    baglib.printkop(ll+40, OMGEVING)  
+    maand_lst = baglib.get_args(sys.argv, KOPPELVLAK0)
 
-    maand = baglib.get_arg1(sys.argv, KOPPELVLAK0)
-
-    for bagobject in BAG_OBJECTEN:
-        k1_xml(maand=maand,
-               bagobject=bagobject)
-    
+    for maand in maand_lst:
+        for bagobject in BAG_OBJECTEN:
+            dir_k1_maand_bagobject = os.path.join(KOPPELVLAK1, maand, bagobject)
+            if not os.path.exist(dir_k1_maand_bagobject):
+                baglib.info(f'geen xml bestanden in {dir_k1_maand_bagobject}. Probeer ze te unzippen')
+                for bagobject in BAG_OBJECTEN + ['wplgem']:
+                    k0_unzip(bagobject, maand, logit)
+                    k1_xml(bagobject, maand, logit)
+        k1_xmlgem('wplgem', maand, logit)
     
     
 
