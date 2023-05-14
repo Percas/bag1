@@ -175,6 +175,25 @@ def get_args(arg_lst=[], ddir=''):
                          + str(_dir_lst))
     return arg_lst[1:]
 
+def get_args2(args=[], arg1_in = [], args2_in=[]):
+    '''Controleer de argumenten args van een functie-aanroep obv de twee
+    controles arg1_in en args2_in. 
+    args[1] moet een functienaam zijn uit de lijst arg1_in
+    args[2] moet een lijst zijn waarvan elk element een subdirectory moet zijn van args2_in.'''
+        
+    # _functie_lst = [x.__name__ for x in arg1_in ]
+    _dir_lst = os.listdir(args2_in)
+    if len(args) <= 2:
+        sys.exit(f'Usage: {args[0]} <bag_functie>, <month>, where bag_functie in {arg1_in}, <month> in {args2_in}')
+
+    if arg1_in:
+        if not args[1] in arg1_in:
+            sys.exit(f'first argument {args[1]} of function {args[0]} not in {arg1_in}')
+    if args2_in:
+        for _arg in args[2:]:
+            if _arg not in _dir_lst:
+                sys.exit(f'second or more arguments of {args[0]} not in {_dir_lst}')
+    return args[1:]
 
 def diff_df(df1, df2):
     '''Return tuple: (dfboth, df1not2, df2not1).'''

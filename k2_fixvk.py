@@ -120,14 +120,15 @@ def k2_fixvk(maand, logit):
     dir_k3a_maand = os.path.join(KOPPELVLAK3a, maand)
     baglib.make_dirs(dir_k3a_maand, logit) # only make it if it doesn't exist yet
 
-    if not os.path.exists(os.path.join(KOPPELVLAK2, maand, 'wplgem.'+FILE_EXT)):
-        logit.warning(f'wplgem.{FILE_EXT} in koppelvlak 2 niet gevonden. Probeer af te leiden')
-        k1_xmlgem('wplgem', maand, logit)
-
     for bagobject in BAG_OBJECTEN:
         if not os.path.exists(os.path.join(KOPPELVLAK2, maand, bagobject+'.'+FILE_EXT)):
             logit.warning(f'{bagobject}.{FILE_EXT} in koppelvlak 2 niet gevonden. Probeer af te leiden')
             k1_xml(bagobject, maand, logit)
+
+    if not os.path.exists(os.path.join(KOPPELVLAK2, maand, 'wplgem.'+FILE_EXT)):
+        logit.warning(f'wplgem.{FILE_EXT} in koppelvlak 2 niet gevonden. Probeer af te leiden')
+        k1_xmlgem('wplgem', maand, logit)
+
     
     # We continue with wplgem as if it is the wpl file, because we need the
     # connection between wpl and gem
