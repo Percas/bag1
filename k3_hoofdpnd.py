@@ -54,11 +54,11 @@ def k3_hoofdpnd(maand, logit):
 
     # ######################################################################
     logit.debug('stap 0: inlezen')    
-    vbo_df = baglib.read_parquet(input_file=os.path.join(dir_k3a_maand, 'vbo'),
+    vbo_df = baglib.read_input(input_file=os.path.join(dir_k3a_maand, 'vbo'),
                               bag_type_d=BAG_TYPE_DICT,
                               output_file_type='pandas',
                               logit=logit)
-    pnd_df = baglib.read_parquet(input_file=os.path.join(dir_k3a_maand, 'pnd'),
+    pnd_df = baglib.read_input(input_file=os.path.join(dir_k3a_maand, 'pnd'),
                               bag_type_d=BAG_TYPE_DICT,
                               output_file_type='pandas',
                               logit=logit)

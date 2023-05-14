@@ -104,7 +104,7 @@ logit.info(f'gekozen percentage testdata vbo, pnd, num. Ruim: {FRAC}')
 # initi
 logit.info(f'selecteer ruim {FRAC} random records in num.{FILE_EXT}')
 
-init_num_sample = baglib.read_parquet(input_file=os.path.join(DIR02, current_month, 'num'),
+init_num_sample = baglib.read_input(input_file=os.path.join(DIR02, current_month, 'num'),
                                       bag_type_d=BAG_TYPE_DICT, output_file_type='pandas',
                                       logit=logit)['numid']
 init_num_sample = init_num_sample.sample(frac=FRAC)
@@ -130,10 +130,10 @@ def maak_sample_op_ont(bagobject, input_sample,
 
     # _prod_df = pd.read_csv(input_file_prod,
     #                  dtype=BAG_TYPE_DICT)
-    _prod_df = baglib.read_parquet(input_file=input_file_prod,
-                                   bag_type_d=BAG_TYPE_DICT,
-                                   output_file_type='pandas',
-                                   logit=logit)
+    _prod_df = baglib.read_input(input_file=input_file_prod,
+                                 bag_type_d=BAG_TYPE_DICT,
+                                 output_file_type='pandas',
+                                 logit=logit)
     logit.info(f'maken van het sample voor {bagobject}')
     _sample = pd.merge(_prod_df, input_sample, how='inner')
     logit.info(f'opslaan van het sample voor {bagobject}')

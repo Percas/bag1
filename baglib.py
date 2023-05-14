@@ -493,27 +493,25 @@ def read_dict_of_df(file_d={}, bag_type_d={}, logit=logit):
     return _bdict
 
 
-def read_parquet(input_file='', bag_type_d={}, output_file_type='pandas',
-                 logit=logit):
+def read_input(input_file='', bag_type_d={}, file_ext=FILE_EXT,
+               output_file_type='pandas', logit=logit):
     '''Read a parquet or csv file  and return a pandas or polars df. 
     If present read .parquet otherwise try csv. Default output is pandas.
     '''
     
     logit.debug(f'inlezen {input_file}')
-    _filepath = input_file + '.parquet'
+    _filepath = input_file + '.' + file_ext
     if os.path.exists(_filepath):
         logit.debug(f'inlezen van {_filepath}')
-        if output_file_type != 'polars':
-            _df = pd.read_parquet(_filepath)
-            _astype_cols = {_i: bag_type_d[_i] for _i in list(_df.columns)}
-            _df = _df.astype(dtype=_astype_cols)
+        if file_ext=='parquet':
+            if output_file_type != 'polars':
+                _df = pd.read_parquet(_filepath)
+                _astype_cols = {_i: bag_type_d[_i] for _i in list(_df.columns)}
+                _df = _df.astype(dtype=_astype_cols)
+            else:
+                _df = pl.read_parquet(_filepath)
+            # take only the cols in dataframe _bdict[_k]:
         else:
-            _df = pl.read_parquet(_filepath)
-        # take only the cols in dataframe _bdict[_k]:
-    else:
-        _filepath = input_file + '.csv'
-        if os.path.exists(_filepath):
-            logit.debug(f'csv gevonden. inlezen van {_filepath}')
             if output_file_type == 'pandas':
                 _df = pd.read_csv(_filepath,
                                   dtype=bag_type_d,
@@ -523,8 +521,8 @@ def read_parquet(input_file='', bag_type_d={}, output_file_type='pandas',
                                       dtype=bag_type_d,
                                       keep_default_na=False)
                 
-        else:
-            sys.exit('Input panic: cant find' + _filepath)
+    else:
+        sys.exit('Input panic: cant find' + _filepath)
     # logit.debug(f'bestand {_filepath} gelezen')
     logit.debug(f'dataframe heeft {_df.shape[0]} records')
     # print('DEBUG:', _bdict[_k].info())

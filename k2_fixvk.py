@@ -120,14 +120,10 @@ def k2_fixvk(maand, logit):
     dir_k3a_maand = os.path.join(KOPPELVLAK3a, maand)
     baglib.make_dirs(dir_k3a_maand, logit) # only make it if it doesn't exist yet
 
-    for bagobject in BAG_OBJECTEN:
+    for bagobject in BAG_OBJECTEN + ['wplgem']:
         if not os.path.exists(os.path.join(KOPPELVLAK2, maand, bagobject+'.'+FILE_EXT)):
             logit.warning(f'{bagobject}.{FILE_EXT} in koppelvlak 2 niet gevonden. Probeer af te leiden')
             k1_xml(bagobject, maand, logit)
-
-    if not os.path.exists(os.path.join(KOPPELVLAK2, maand, 'wplgem.'+FILE_EXT)):
-        logit.warning(f'wplgem.{FILE_EXT} in koppelvlak 2 niet gevonden. Probeer af te leiden')
-        k1_xmlgem('wplgem', maand, logit)
 
     
     # We continue with wplgem as if it is the wpl file, because we need the
@@ -184,7 +180,7 @@ def k2_fixvk(maand, logit):
     outputdir = os.path.join(KOPPELVLAK3a, maand)
     baglib.make_dirs(outputdir)
     outputfile = os.path.join(outputdir, 'vbo')
-    baglib.save_df2file(df=fijntype_df, outputfile=outputfile,
+    baglib.save_df2file(df=fijntype_df, outputfile=outputfile, file_ext=FILE_EXT,
                         includeindex=False, logit=logit)
 
     df = pd.DataFrame(ls_dict)
@@ -211,10 +207,11 @@ def fixvk_fijngrof(fijntype_df=pd.DataFrame(),
     df_type = 'pandas'
 
     if fijntype_df.empty: # als fijntype_df niet empty dan is dit eerder gebeurd
-        fijntype_df = baglib.read_parquet(input_file=os.path.join(KOPPELVLAK2, maand, fijntype),
-                                          bag_type_d=BAG_TYPE_DICT, 
-                                          output_file_type=df_type,
-                                          logit=logit)
+        fijntype_df = baglib.read_input(input_file=os.path.join(KOPPELVLAK2, maand, fijntype),
+                                        bag_type_d=BAG_TYPE_DICT, 
+                                        file_ext=FILE_EXT,
+                                        output_file_type=df_type,
+                                        logit=logit)
 
 
         # if fijntype == 'vbo':
@@ -236,10 +233,11 @@ def fixvk_fijngrof(fijntype_df=pd.DataFrame(),
 
 
     if groftype_df.empty:
-        groftype_df = baglib.read_parquet(input_file=os.path.join(KOPPELVLAK2,  maand, groftype),
-                                          bag_type_d=BAG_TYPE_DICT, 
-                                          output_file_type=df_type,
-                                          logit=logit)
+        groftype_df = baglib.read_input(input_file=os.path.join(KOPPELVLAK2,  maand, groftype),
+                                        bag_type_d=BAG_TYPE_DICT, 
+                                        file_ext=FILE_EXT,
+                                        output_file_type=df_type,
+                                        logit=logit)
         ls_dict[groftype]['0-ingelezen'] = groftype_df.shape[0]
 
         groftype_df = baglib.fix_eendagsvlieg(groftype_df, groftype+'vkbg',
@@ -268,7 +266,8 @@ def fixvk_fijngrof(fijntype_df=pd.DataFrame(),
     outputdir = os.path.join(KOPPELVLAK3a, maand)
     baglib.make_dirs(outputdir, logit=logit)
     outputfile = os.path.join(outputdir, groftype)
-    baglib.save_df2file(df=groftype_df, outputfile=outputfile,
+    baglib.save_df2file(df=groftype_df, outputfile=outputfile, 
+                        file_ext=FILE_EXT,
                         includeindex=False, logit=logit)
     
     
