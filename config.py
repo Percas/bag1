@@ -23,8 +23,8 @@ from multiprocessing import cpu_count
 OMGEVING = 'Ontwikkelomgeving'
 FUTURE_DATE = 88888888
 BATCH_SIZE = 500
-# FILE_EXT = 'parquet'
-FILE_EXT = 'csv'
+FILE_EXT = 'parquet'
+# FILE_EXT = 'csv'
 
 IN_VOORRAAD = ['v3', 'v4', 'v8', 'v6']
     

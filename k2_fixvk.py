@@ -114,7 +114,7 @@ def k2_fixvk(maand, logit):
     '''
         
     tic = time.perf_counter()
-    logit.info(f'start functie k2_fixvk met maand {maand}')
+    logit.info(f'start k2_fixvk({maand})')
 
     # output
     dir_k3a_maand = os.path.join(KOPPELVLAK3a, maand)
@@ -203,7 +203,7 @@ def fixvk_fijngrof(fijntype_df=pd.DataFrame(),
     Opm: de stappen t/m mergen hoeven alleen als ze nog niet eerder gedaan 
     zijn. Het is al eerder gedaan als het betreffende dataframe niet leeg is.'''
 
-    logit.info(f'start functie fixvk_fijngrof met fijntype {fijntype}, groftype {groftype}')
+    logit.info(f'start fixvk_fijngrof({maand}) met fijntype {fijntype}, groftype {groftype}')
     df_type = 'pandas'
 
     if fijntype_df.empty: # als fijntype_df niet empty dan is dit eerder gebeurd
@@ -221,11 +221,13 @@ def fixvk_fijngrof(fijntype_df=pd.DataFrame(),
 
         ls_dict[fijntype]['0-ingelezen'] = fijntype_df.shape[0]
 
+        logit.info(f'start fix_eendagsvlieg in {maand}')
         fijntype_df = baglib.fix_eendagsvlieg(fijntype_df, fijntype+'vkbg',
                                               fijntype+'vkeg', logit,
                                               df_type=df_type)
         ls_dict[fijntype]['1-eendagsvliegen'] = fijntype_df.shape[0]
         
+        logit.info(f'start merge_vk in {maand}')
         fijntype_df = baglib.merge_vk(df=fijntype_df, bob=fijntype,
                                       relevant_cols=RELEVANT_COLS_DICT[fijntype],
                                       logit=logit, df_type=df_type)
@@ -240,12 +242,14 @@ def fixvk_fijngrof(fijntype_df=pd.DataFrame(),
                                         logit=logit)
         ls_dict[groftype]['0-ingelezen'] = groftype_df.shape[0]
 
+        logit.info(f'start fix_eendagsvlieg in {maand}')
         groftype_df = baglib.fix_eendagsvlieg(groftype_df, groftype+'vkbg',
                                               groftype+'vkeg', logit,
                                               df_type=df_type)
         ls_dict[groftype]['1-eendagsvliegen'] = groftype_df.shape[0]
 
         # merge voorkomens        
+        logit.info(f'start merge_vk in {maand}')
         groftype_df = baglib.merge_vk(df=groftype_df, bob=groftype,
                                       relevant_cols=RELEVANT_COLS_DICT[groftype], 
                                       logit=logit)
@@ -254,7 +258,8 @@ def fixvk_fijngrof(fijntype_df=pd.DataFrame(),
 
 
     # splits voorkomens van fijntype tgv gebeurtenis in groftype
-     
+
+    logit.info(f'start vk_splitter in {maand}')
     fijntype_df = vksplitter(df=fijntype_df,
                              gf=groftype_df,
                              fijntype=fijntype,

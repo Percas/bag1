@@ -38,15 +38,12 @@ numid nemen (natuurlijk)
 
 
 import pandas as pd
-# import numpy as np
 import sys
 import os
 import baglib
 import time
 import shutil
-# from pathlib import Path
 from config import BAG_TYPE_DICT, LOGFILE, FILE_EXT, OMGEVING
-# import random
 import logging
 # import bag23_fix_vk
 # import bag33_hoofdpnd
@@ -58,8 +55,6 @@ import logging
 # #############################################################################
 
 tic = time.perf_counter()
-ll = 40 # loglevel
-file_ext = 'parquet'
 FRAC = 0.005
 aantal_extract_maanden = 4 # genereer testdata voor afgelopen n maanden
 
@@ -117,8 +112,6 @@ extract_maand_lst = baglib.make_month_lst(current_month, aantal_extract_maanden)
 logit.info(f'genereer testdata voor deze maanden: {extract_maand_lst}')
 
 
-# TEST_D = {'gemid': ['0160'],
-#           'vboid': ['0160010000062544']}
 
 def maak_sample_op_ont(bagobject, input_sample,
                        input_file_prod, output_file_ont,
@@ -128,8 +121,6 @@ def maak_sample_op_ont(bagobject, input_sample,
     
     logit.info(f'inlezen {bagobject}.{FILE_EXT}')
 
-    # _prod_df = pd.read_csv(input_file_prod,
-    #                  dtype=BAG_TYPE_DICT)
     _prod_df = baglib.read_input(input_file=input_file_prod,
                                  bag_type_d=BAG_TYPE_DICT,
                                  output_file_type='pandas',
@@ -137,13 +128,10 @@ def maak_sample_op_ont(bagobject, input_sample,
     logit.info(f'maken van het sample voor {bagobject}')
     _sample = pd.merge(_prod_df, input_sample, how='inner')
     logit.info(f'opslaan van het sample voor {bagobject}')
-    # _sample.to_csv(output_ont, index=False)
     baglib.save_df2file(df=_sample, outputfile=output_file_ont,
                         file_ext=FILE_EXT, includeindex=False, append=False, logit=logit)
-    logit.info(f'daadwerkelijkr grootte {bagobject} sample: {_sample.shape[0]/_prod_df.shape[0]}')
+    logit.info(f'daadwerkelijke grootte {bagobject} sample: {_sample.shape[0]/_prod_df.shape[0]}')
     return _sample
-
-
 
 
 logit.info('start de loop over de extract maanden')
@@ -159,17 +147,6 @@ for extract_maand in extract_maand_lst:
     baglib.make_dirs(ontk2dir)
     baglib.make_dirs(ontk3dir)
 
-    '''
-    INPUT_FILES_DICT = {'vbo': os.path.join(k2dir, 'vbo'),
-                        'pnd': os.path.join(k2dir, 'pnd'),
-                        'num': os.path.join(k2dir, 'num')}
-                        # 'vbovk_hoofdpndvk': os.path.join(k3dir,'vbovk_hoofdpndvk')}
-
-    OUTPUT_FILES_DICT = {'vbo': os.path.join(ontk2dir, 'vbo'),
-                         'pnd': os.path.join(ontk2dir, 'pnd'),
-                         'num': os.path.join(ontk2dir, 'num')}
-                         # 'vbovk_hoofdpndvk': os.path.join(ontk3dir,'vbovk_hoofdpndvk')}
-    '''
     
     vbovk = ['vboid', 'vbovkid']
     pndvk = ['pndid', 'pndvkid']
@@ -197,11 +174,6 @@ for extract_maand in extract_maand_lst:
                                     input_file_prod=os.path.join(DIR02, extract_maand, 'vbo'),
                                     output_file_ont=os.path.join(ONTDIR02, extract_maand, 'vbo'))
 
-    # baglib.debugprint(title='na het maken van het vbo sample',
-    #                   df=vbo_sample,
-    #                   colname='vboid',
-    #                   vals=TEST_D['vboid'],
-    #                   loglevel=40)
 
     # use the pnd in the vbo_sample to create the pnd sampl
     maak_sample_op_ont(bagobject='pnd',
@@ -210,27 +182,17 @@ for extract_maand in extract_maand_lst:
                        output_file_ont=os.path.join(ONTDIR02, extract_maand, 'pnd'))
 
 
-    # maak_sample_op_ont(bagobject='vbovk_hoofdpndvk',
-    #                    input_sample=vbo_sample['vboid'].drop_duplicates().rename('vboid'),
-    #                    input_file_prod=os.path.join(DIR3a, extract_maand, 'vbovk_hoofdpndvk'),
-    #                    output_file_ont=os.path.join(ONTDIR3a, extract_maand, 'vbovk_hoofdpndvk'))
-
-
-
+    maak_sample_op_ont(bagobject='vbovk_hoofdpndvk',
+                       input_sample=vbo_sample['vboid'].drop_duplicates().rename('vboid'),
+                       input_file_prod=os.path.join(DIR03, extract_maand, 'vbovk_hoofdpndvk'),
+                       output_file_ont=os.path.join(ONTDIR03, extract_maand, 'vbovk_hoofdpndvk'))
 
 
     logit.info('kopieer de rest van de bestanden\n')
     rest = ['sta', 'lig', 'opr', 'wpl']
     for r in rest:
         print('\t1-1 kopieren van', r, 'naar ontwikkelomgeving')
-        shutil.copy(os.path.join(k2dir, r + '.' + file_ext), ontk2dir)
-    
-    # bag23_fix_vk.bag_fix_vk(current_month=current_month,
-    #                         koppelvlak3=ONTDIR03,
-    #                         koppelvlak2=ONTDIR02,
-    #                         loglevel=ll)
-    # leidt voor elk vbo voorkomen (vbovk) een precies 1 pndvk af. Het hoofdpndvk
-
+        shutil.copy(os.path.join(k2dir, r + '.' + FILE_EXT), ontk2dir)
     
     
 toc = time.perf_counter()

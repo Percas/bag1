@@ -768,7 +768,7 @@ def merge_vk(df=pd.DataFrame(), bob='vbo', relevant_cols=[],
     # _cols2 = _cols + [_dfvkbg] # idem maar met de begindatum van het voorkomen
     
     _nrec, _nvk = df_compare(df=df, vk_lst=_vk, logit=logit)
-    logit.info(f'start functie merge_vk met {_nrec} {bob} records en {_nvk} {bob} vk')
+    logit.info(f'start merge_vk met {_nrec} {bob} records en {_nvk} {bob} vk')
 
 
 
