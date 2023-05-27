@@ -15,6 +15,7 @@ import time
 from multiprocessing import Queue, Process # , JoinableQueue
 # import multiprocessing
 from k0_unzip import k0_unzip
+from k0_unzip import k0_unzip_vastgoed_bestand
 from k1_xml import k1_xml
 from k2_fixvk import k2_fixvk
 from config import KOPPELVLAK0, BAG_OBJECTEN, LOGFILE, NR_WORKERS
@@ -23,6 +24,7 @@ import sys
 import logging
 
 bag_functie_dict = {
+    'k0_unzip_vastgoed_bestand': k0_unzip_vastgoed_bestand,
     'k0_unzip': k0_unzip,
     'k1_xml': k1_xml,
     'k2_fixvk': k2_fixvk}
