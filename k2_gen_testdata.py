@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Doel: maak testdata door een subset te nemen van vbo.csv, pnd.csv, num.csv 
-van x %, als volgt
+Doel: maak testdata in koppelvlak 2 door een subset te nemen van vbo.csv, 
+pnd.csv, num.csv van x %, als volgt
 
 1. neem x % num
 2. vbo die bij num horen
@@ -85,12 +85,10 @@ ONTDIR03 = os.path.join(ONTDATADIR, '3a-bewerkt')
 
 month_lst = os.listdir(DIR02)
 if len(sys.argv) <= 1:
-    sys.exit('Usage: bepaal-hoofdpnd <month>, where <month> in '
-             + str(month_lst))
+    sys.exit(f'Usage: k2_gen_testdata.py <month>, where <month> in {month_lst}')
 current_month = sys.argv[1]
 if current_month not in month_lst:
-    sys.exit('Usage: bepaal-hoofdpnd <month>, where <month> in '
-             + str(month_lst))
+    sys.exit(f'Usage: k2_gen_testdata.py <month>, where <month> in {month_lst}')
 
 logit.info(f'init: meest recente extract_maand: {current_month}')
 logit.info(f'gekozen percentage testdata vbo, pnd, num. Ruim: {FRAC}')

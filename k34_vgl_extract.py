@@ -14,7 +14,7 @@ Doel:
         
     
     Stappen:
-        0. maak een loop over de laatste 5 extract maanden; 
+        0. maak een loop over de laatste n extract maanden; 
 
         1. Lees voor maand vbo, num, opr, wpl in in koppelvlak 3
             lees ook maar de wpl-naam uit koppelvlak 2
@@ -83,15 +83,11 @@ def bag_vgl_extract(logit, maand='202305',
     microset_vbo_per_extract = {}
     vbo_met_impact_op_voorraad = pd.DataFrame()
 
-    # TEST_D is om in te zoomen op een bepaald bagobject voor test en debugging doeleinden     
-    # TEST_D = {'gemid': ['1903'],
-    #           'vboid': ['1948010040638437']}
-    
     # de uiteindelijke peildatum is de eerste van de maand van het oudste extract    
     peildatum = int(extract_maand_lst[0] + '01')
     
     logit.info(f'start de loop over de extract maanden {extract_maand_lst}\n\
-               met peildatum {peildatum}')
+               peildatum voor alle extracten is {peildatum}')
 
     for extract_maand in extract_maand_lst:
     
@@ -115,112 +111,68 @@ def bag_vgl_extract(logit, maand='202305',
                             'opr': os.path.join(input_dir, 'opr'),
                             'wpl': os.path.join(input_dir, 'wpl')}
                             # 'wpl_naam': os.path.join(K2DIR, 'wpl_naam.csv')}
-        
+
         vbovk = ['vboid', 'vbovkid']
-        numvk = ['numid', 'numvkid']
-        oprvk = ['oprid', 'oprvkid']
-        wplvk = ['wplid', 'wplvkid']
-        
-        KEY_DICT = {'vbo': vbovk,
-                    'num': numvk,
-                    'opr': oprvk,
-                    'wpl': wplvk}
-        
-        bd = {}         # dict with df with bagobject (vbo en pnd in this case)
-        nrec = {}
-        nkey = {}
-
-     
-       # #############################################################################
-        logit.info('stap 1. Inlezen van de inputbestanden')
-        bd = baglib.read_dict_of_df(file_d=INPUT_FILES_DICT, bag_type_d=BAG_TYPE_DICT, logit=logit)
-        for bob, vk in KEY_DICT.items():
-            (nrec[bob], nkey[bob]) = baglib.df_compare(df=bd[bob], vk_lst=vk, logit=logit)
-    
         
         # #############################################################################
-        logit.info('stap 2. Maak de koppeling vbo vk - gem vk')
-        
-        # selecteer benodigde kolommen en verwijdere dubbele voorkomens
-        logit.debug('2a. Verwijderen pndvk en daarna ontdubbelen van de vbovk')
-        
-        cols = ['pndid', 'pndvkid', 'oppervlakte', 'vbogmlx', 'vbogmly']
-        # cols = ['vboid', 'vbovkid', 'vbovkbg', 'vbovkeg', 'vbostatus', 'numid']
-        # print(bd['vbo'].info())
-        bd['vbo'] = bd['vbo'].drop(columns=cols).drop_duplicates()
-        # bd['vbo'] = bd['vbo'][cols].drop_duplicates()
-        (nrec['vbo'], nkey['vbo']) = baglib.df_compare(df=bd['vbo'], vk_lst=vbovk, nrec=nrec['vbo'], nvk=nkey['vbo'], nvk_marge=0, logit=logit)
-    
-        bd['vbo'] = pd.merge(bd['vbo'], bd['num'], how='left', on=numvk)
-        (nrec['vbo'], nkey['vbo']) = baglib.df_compare(df=bd['vbo'], vk_lst=vbovk, nrec=nrec['vbo'], nvk=nkey['vbo'], nvk_marge=0, logit=logit)
-        # print(bd['vbo'].head())
-        # logit.debug(f, bd['vbo'][bd['vbo']['postcode'].isna()].head())
-
-        cols = ['numvkbg', 'numvkeg', 'numstatus', 'huisnr', 'postcode', 'typeao']
-        bd['vbo'].drop(columns=cols, inplace=True)
-        (nrec['vbo'], nkey['vbo']) = baglib.df_compare(df=bd['vbo'], vk_lst=vbovk, nrec=nrec['vbo'], nvk=nkey['vbo'], nvk_marge=0, logit=logit)
-        
-        bd['vbo'] = pd.merge(bd['vbo'], bd['opr'], how='inner', on=oprvk)
-        cols = ['numid', 'numvkid', 'oprvkbg', 'oprvkeg', 'oprstatus', 'oprnaam', 'oprtype']
-        bd['vbo'].drop(columns=cols, inplace=True)
-        (nrec['vbo'], nkey['vbo']) = baglib.df_compare(df=bd['vbo'], vk_lst=vbovk, nrec=nrec['vbo'], nvk=nkey['vbo'], nvk_marge=0, logit=logit)
-        
-        bd['vbo'] = pd.merge(bd['vbo'], bd['wpl'], how='inner', on=wplvk)
-        cols = ['oprid', 'oprvkid', 'wplid', 'wplvkid', 'wplvkbg', 'wplvkeg', 'wplstatus']
-        bd['vbo'].drop(columns=cols, inplace=True)
-        (nrec['vbo'], nkey['vbo']) = baglib.df_compare(df=bd['vbo'], vk_lst=vbovk, nrec=nrec['vbo'], nvk=nkey['vbo'], nvk_marge=0, logit=logit)
-    
-    
-        # #############################################################################
-        logit.info('stap 3. Leidt de voorraad af')
-        
-        bd['vbo']['voorraad'] = bd['vbo']['vbostatus'].isin(IN_VOORRAAD)
-        (nrec['vbo'], nkey['vbo']) = baglib.df_compare(df=bd['vbo'], vk_lst=vbovk, nrec=nrec['vbo'], nvk=nkey['vbo'], nvk_marge=1.2, logit=logit)
-
+        logit.info('stap 1. Maak de koppeling vbo vk - gem vk')
+        vbo_df = koppel_gemvk(file_d=INPUT_FILES_DICT, bag_type_d=BAG_TYPE_DICT, logit=logit)
+        nrec, nvk = baglib.df_compare(df=vbo_df, vk_lst=vbovk, nvk_marge=1.2, logit=logit)
         
         # #############################################################################
-        logit.info(f'stap 4. Afleiden stand; Peildatum is {peildatum}')
-        # bd['vbo']['voorraad'] = bd['vbo']['vbostatus'].isin(IN_VOORRAAD)
-    
-        bd['vbo'] = baglib.select_vk_on_date(bd['vbo'], 'vbovkbg', 'vbovkeg', peildatum)
-        (nrec['vbo'], nkey['vbo']) = baglib.df_compare(df=bd['vbo'], vk_lst=vbovk, nrec=nrec['vbo'], nvk=nkey['vbo'], nvk_marge=1.2, logit=logit)
-        bd['vbo']['extract'] = extract_maand
-        bd['vbo']['peildatum'] = peildatum
-        
+        logit.info('stap 2. Leidt de voorraad af')
+        vbo_df['voorraad'] = vbo_df['vbostatus'].isin(IN_VOORRAAD)
+        nrec, nvk = baglib.df_compare(df=vbo_df, vk_lst=vbovk, nrec=nrec, nvk=nvk, nvk_marge=1.2, logit=logit)
 
         # #############################################################################
-        logit.info('stap 5. Aggregeer de vbo-s-in-voorraad naar gemeenten')
+        logit.info(f'stap 3. afleiden stand; Peildatum is {peildatum}')
+        vbo_df = baglib.select_vk_on_date(vbo_df, 'vbovkbg', 'vbovkeg', peildatum)
+        nrec, nvk = baglib.df_compare(df=vbo_df, vk_lst=vbovk, nrec=nrec, nvk=nvk, nvk_marge=1.2, logit=logit)
+        vbo_df['peildatum'] = peildatum
+        vbo_df['extract'] = extract_maand
+        
+        # #############################################################################
+        logit.info('stap 4. Aggregeer de vbo-s-in-voorraad naar gemeenten')
        
-        voorraad_extractmaand = bd['vbo'][bd['vbo']['voorraad']].\
+        voorraad_extractmaand = vbo_df[vbo_df['voorraad']].\
             groupby('gemid').size().to_frame(str(extract_maand)).reset_index()
     
-        # logit.info('stap 5a. Zoek VBO bij die gemeenten met (grote) verschillen')
+        logit.debug('bewaar microdata om de vbo-s te achterhalen die verschil veroorzaken ')
         cols = ['vboid', 'vbovkbg', 'gemid', 'vbostatus', 'voorraad', 'peildatum', 'extract']
-        microset_vbo_per_extract[extract_maand] = bd['vbo'][cols]
+        microset_vbo_per_extract[extract_maand] = vbo_df[cols]
 
-        
+
+        # #############################################################################
+        logit.info('stap 5. Vergelijk twee extractmaanden')
         if woning_voorraad.empty: # True als we de loop voor de eerste keer doorlopen
+            logit.info('in de eerste loop vergelijken we nog niets')
             woning_voorraad = voorraad_extractmaand
             promiel_diff = voorraad_extractmaand
             vorige_maand = extract_maand # vanaf de volgende loop is er een vorige maand
         else: # er is een vorige loop, dus ook een vorige_maand met bijbehorende microset_vbo
             woning_voorraad = pd.merge(woning_voorraad, voorraad_extractmaand)
+            logit.debug(f'{woning_voorraad.head()}')
             promiel_diff[extract_maand] = 1000 * (woning_voorraad[extract_maand] - woning_voorraad[vorige_maand]) / woning_voorraad[vorige_maand]
             # gem_lst_met_wijziging_in_voorraad = list(promiel_diff[promiel_diff[extract_maand]!=0]['gemid'])
+            
+            # maak een Series met gemid die een wijziging hebben in hun vbo voorraad:
             gem_met_wijziging_in_voorraad = promiel_diff[promiel_diff[extract_maand]!=0]['gemid']
+
             # logit.warning(f'in gemeenten {gem_lst_met_wijziging_in_voorraad} gebeurt het')
             # print(gem_met_wijziging_in_voorraad.info())
             # if gem_lst_met_wijziging_in_voorraad:
+                
+            # vind de vbo die de oorzaak zijn van de wijziging in voorraad in een gemeente
             if not gem_met_wijziging_in_voorraad.empty:
                 microset_vbo_concat = pd.concat([microset_vbo_per_extract[vorige_maand], microset_vbo_per_extract[extract_maand]])
                 changed_records = microset_vbo_concat[~microset_vbo_concat.duplicated(subset=['vboid', 'voorraad'], keep=False)]
                 lst_changed_vboid = list(changed_records['vboid'].unique())
                 logit.debug(f'in gemeenten {gem_met_wijziging_in_voorraad} wijzigt de voorraad')
                 logit.debug(f'dit wordt veroorzaakt door deze vboid {lst_changed_vboid}')
-                logit.warning(f'\n{promiel_diff[promiel_diff[extract_maand]!=0]}')
+                # logit.warning(f'\n{promiel_diff[promiel_diff[extract_maand]!=0]}')
                 changed_records = changed_records.sort_values(by=['vboid', 'extract'])
                 changed_records = pd.merge(changed_records, gem_met_wijziging_in_voorraad)
-                logit.warning(f'\n{changed_records}')
+                # logit.warning(f'\n{changed_records}')
                 if vbo_met_impact_op_voorraad.empty:
                     vbo_met_impact_op_voorraad = changed_records
                 else:
@@ -228,13 +180,13 @@ def bag_vgl_extract(logit, maand='202305',
                                                            changed_records])
                 # print(pd.merge(changed_records['vboid'].drop_duplicates(), microset_vbo_concat))
                 vorige_maand = extract_maand # vanaf de volgende loop is er een vorige maand
-            
+
         logit.info(f'einde loop voor maand {extract_maand}')
         
         
         
     # #############################################################################
-    logit.info('stap 6. Bewaren in koppelvlak 4')
+    logit.info('stap na de loop: aggregatie en analyse bewaren in koppelvlak 4')
     
     outputfile = os.path.join(output_dir, 'voorraad.csv')
     woning_voorraad.to_csv(outputfile, index=False)
@@ -244,71 +196,48 @@ def bag_vgl_extract(logit, maand='202305',
     
     outputfile = os.path.join(output_dir, 'vbo_met_impact_op_voorraad.csv')
     vbo_met_impact_op_voorraad.to_csv(outputfile, index=False)
-    '''
-    # #############################################################################
-    logit.info('stap 7. Start micro analyse')
-    
-    def diff_df(df1, df2, subset):
-        # Return tuple: (dfboth, df1not2, df2not1).
-        # print('\tdiff_idx_df: in beide, in 1 niet 2, in 2 niet 1:')
-        _df = pd.concat([df1, df2])
-        _dfboth = _df[~_df.duplicated(subset=subset, keep='first')]
-        _df = pd.concat([df1, _dfboth])
-        _df1not2 = _df[~_df.duplicated(subset=subset, keep=False)]
-        _df = pd.concat([df2, _dfboth])
-        _df2not1 = _df[~_df.duplicated(subset=subset, keep=False)]
-        return (_dfboth, _df1not2, _df2not1)
-   
-    
-    logit.info(f'*** Voor peildatum {peildatum} ***')
-    for prev_month, extract_maand in zip(extract_maand_lst, extract_maand_lst[1:]):
-        # logit.debug(fmicroset_vbo_per_extract[extract_maand].head())
-        
-        # concateneer twee opeenvolgende extracten met vbo standgegevens op peildatum
-        concat_df = pd.concat([microset_vbo_per_extract[prev_month], microset_vbo_per_extract[extract_maand]])
-
-        # print(concat_df.sort_values(by=['vboid', 'vbovkbg']).head(30))
-        
-        # print(f'\nvan {prev_month} op {extract_maand}:')
-        singles = concat_df[~concat_df.duplicated(subset=['vboid', 'vbovkbg', 'vbostatus'], keep=False)]
-        # print('singles:', singles)
-        # print()
-        # print(concat_df[concat_df['vboid']==TEST_D['vboid'][0]])
-        # check of vbo_status kan wijzigen, zonder dat het voorkomen afgesloten wordt
-        # bepaal eerst
-        
-        vbostatus_df = concat_df.groupby(['vboid', 'vbovkbg', 'vbostatus']).to_frame()
-        status_changed = vbostatus_df.groupby('vbo').size().to_frame('Aantal')
-        status_changed = status_changed[status_changed['Aantal']>1]
-        vbo_with_status_changed = pd.merge(status_changed, concat_df)
-
-        logit.info(f'** Van extract {prev_month} naar extract {extract_maand}')
-        logit.info(status_changed[status_changed['Aantal']>1])
-        
-
-        (both, df1not2, df2not1) = diff_df(microset_vbo_per_extract[extract_maand],
-                                           microset_vbo_per_extract[prev_month],
-                                           'vboid')
-
-
-        logit.info(f, '\n** Van extract', prev_month, 'naar extract', extract_maand)
-
-
-        if not df1not2.empty:
-            logit.info(f, 'vbo+ wel in extract', prev_month, 'niet in', extract_maand)
-            logit.info(f, df1not2)
-        else:
-            logit.info(f, 'vbo+ niet in extract_maand', prev_month, 'en wel in', extract_maand, ': geen')
-        if not df2not1.empty:
-            logit.info(f, 'vbo+ niet in extract', prev_month, 'wel in', extract_maand)
-            logit.info(f, df2not1)
-        else:
-            logit.info(f, 'vbo+ wel in extract_maand', prev_month, 'en niet in', extract_maand, ': geen')
-        '''
     
     toc = time.perf_counter()
-    logit.info(f'*** Einde bag_vbo_aggr in {(toc - tic)/60} min ***\n')
+    logit.info(f'*** Einde bag_vbl_extract in {(toc - tic)/60} min ***\n')
 
+
+# def koppel_gemvk(vbo_df, num_df, opr_df, wpl_df):
+def koppel_gemvk(file_d, bag_type_d, logit):
+    '''Koppel aan elk vbovk een gemvk.
+    Dit loopt via vbo - num - opr - wpl - gem.
+    Voorwaarde is dat de namen van de kolommen kloppen'''
+    
+    logit.info('maak de koppeling vbo vk - gem vk')
+    
+    _numvk = ['numid', 'numvkid']
+    _oprvk = ['oprid', 'oprvkid']
+    _wplvk = ['wplid', 'wplvkid']
+          
+
+    _vbo_df = baglib.read_input(input_file=file_d['vbo'], bag_type_d=bag_type_d, logit=logit)
+    _num_df = baglib.read_input(input_file=file_d['num'], bag_type_d=bag_type_d, logit=logit)
+    _opr_df = baglib.read_input(input_file=file_d['opr'], bag_type_d=bag_type_d, logit=logit)
+    _wpl_df = baglib.read_input(input_file=file_d['wpl'], bag_type_d=bag_type_d, logit=logit)
+
+    # selecteer benodigde kolommen en verwijdere dubbele voorkomens
+    logit.debug('verwijderen pndvk en daarna ontdubbelen van de vbovk')
+    
+    cols = ['pndid', 'pndvkid', 'oppervlakte', 'vbogmlx', 'vbogmly']
+    _vbo_df = _vbo_df.drop(columns=cols).drop_duplicates()
+    _vbo_df = pd.merge(_vbo_df, _num_df, how='left', on=_numvk)
+   
+    cols = ['numvkbg', 'numvkeg', 'numstatus', 'huisnr', 'postcode', 'typeao']
+    _vbo_df.drop(columns=cols, inplace=True)
+    _vbo_df = pd.merge(_vbo_df, _opr_df, how='inner', on=_oprvk)
+ 
+    cols = ['numid', 'numvkid', 'oprvkbg', 'oprvkeg', 'oprstatus', 'oprnaam', 'oprtype']
+    _vbo_df.drop(columns=cols, inplace=True)
+    _vbo_df = pd.merge(_vbo_df, _wpl_df, how='inner', on=_wplvk)
+
+    cols = ['oprid', 'oprvkid', 'wplid', 'wplvkid', 'wplvkbg', 'wplvkeg', 'wplstatus']
+    _vbo_df.drop(columns=cols, inplace=True)
+    
+    return _vbo_df
 
 # ########################################################################
 

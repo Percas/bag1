@@ -5,7 +5,7 @@ Functions used in different python scripts
 """
 # ################ import libraries ###############################
 import pandas as pd
-import polars as pl
+# import polars as pl
 import time
 import os
 import sys
@@ -230,7 +230,8 @@ def fix_eendagsvlieg(df, b_str, e_str, logit, df_type='pandas'):
     if df_type == 'pandas':
         return df[df[b_str] < df[e_str]]
     else:
-        return df.filter(pl.col(b_str) < pl.col(e_str))
+        pass
+        # return df.filter(pl.col(b_str) < pl.col(e_str))
 
 
 '''
@@ -509,7 +510,8 @@ def read_input(input_file='', bag_type_d={}, file_ext=FILE_EXT,
                 _astype_cols = {_i: bag_type_d[_i] for _i in list(_df.columns)}
                 _df = _df.astype(dtype=_astype_cols)
             else:
-                _df = pl.read_parquet(_filepath)
+                pass
+                # _df = pl.read_parquet(_filepath)
             # take only the cols in dataframe _bdict[_k]:
         else:
             if output_file_type == 'pandas':
@@ -517,9 +519,10 @@ def read_input(input_file='', bag_type_d={}, file_ext=FILE_EXT,
                                   dtype=bag_type_d,
                                   keep_default_na=False)
             else:
-                _df = pl.read_csv(_filepath,
-                                      dtype=bag_type_d,
-                                      keep_default_na=False)
+                pass
+                # _df = pl.read_csv(_filepath,
+                #                       dtype=bag_type_d,
+                #                       keep_default_na=False)
                 
     else:
         sys.exit('Input panic: cant find' + _filepath)
@@ -686,8 +689,9 @@ def make_vkeg(df, bob, logit, df_type='pandas'):
     if df_type == 'pandas':
         _df[_dfvkeg] = _df[_dfvkbg].shift(periods=-1)
     else:
-        _df = df.with_column(pl.col(_dfvkeg), pl.col(_dfvkbg).shift(-1))
-        print(_df.head())
+        pass
+        # _df = df.with_column(pl.col(_dfvkeg), pl.col(_dfvkbg).shift(-1))
+        # print(_df.head())
 
     # logit.debug(f'make_vkeg 3: corrigeer de {bob}vkeg van het meest recente {bob} voorkomen')
     if df_type == 'pandas':
@@ -811,16 +815,16 @@ def prev_month(month='testdata23'):
         else:
             return str(int(month) - 1)
 
-
+'''
 def find_missing_vk(bob, current, previous, vk, future_date, loglevel=20, test_d=[]):
-    '''Compare current df with previous df on vk.
+    Compare current df with previous df on vk.
     Controleer of afgesloten vk in previous ongewijzigd zijn in current.
     Aanpak:
         1. Neem de afgesloten vk in previous
         2. Check of deze ongewijzigd zijn in current
         3. print het aantal gewijzigde en return de gewijzigde als df
         
-    '''
+    
     _ll = loglevel
     aprint(_ll+20, '\n\tStart find_missing_vk' )
     # first get all closed vk of the previous month
@@ -853,7 +857,7 @@ def find_missing_vk(bob, current, previous, vk, future_date, loglevel=20, test_d
     aprint(_ll+20, '\tEnd find_missing_vk\n' )
     return _missing
 
-'''
+
 
 def diff_idx_df(df1, df2):
     # Return tuple: (dfboth, df1not2, df2not1).
@@ -865,8 +869,8 @@ def diff_idx_df(df1, df2):
     _df = pd.concat([df2, _dfboth])
     _df2not1 = _df[~_df.index.duplicated(keep=False)]
     return (_dfboth, _df1not2, _df2not1)
-'''
 
+'''
 def find_double_vk(df, bobid, bobvkid):
     '''Find the double voorkomen (vk) in df, identified by bobid, bobvkid.'''
     return df.groupby([bobid, bobvkid]).size().to_frame('aantal').sort_values(by='aantal', ascending=False)
