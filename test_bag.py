@@ -9,12 +9,16 @@ Created on Sun Apr 30 14:54:08 2023
 
 # import pytest
 # from fix_vkvk import fix_vk
-# import os, sys
+# import os
+
+
 import logging
 
 # from config import TESTDIR, KOPPELVLAK2, BAG_OBJECTEN, BAG_TYPE_DICT, DF_TYPE, RELEVANT_COLS_DICT
+import k0_unzip
 import baglib
 import k2_fixvk
+
 # import numpy as np
 # from pandas.testing import assert_frame_equal
 import pandas as pd
@@ -257,11 +261,27 @@ def test_fixvk_fijn_grof():
         print()
         print(out_df)
 
-
     assert(test_geslaagd)
 
 
+
+def test_maak_vastgoed_bestandsnaam1():
+        '''unzip een bestand in de map \\cbsp.nl\Productie\primair\WOVOR\Beheer\_Archief\INPUT
+        submap <jaar> van de vorm BAGNLDL-08MMYYYY.zip.'''
+
+        _input_month = 202302
+        _expected = r'\\cbsp.nl\Productie\primair\WOVOR\Beheer\_Archief\INPUT\2023\BAGNLDL-08022023.zip'
+        _output = k0_unzip.maak_vastgoed_bestandsnaam(_input_month)
+        print('expected:', _expected)
+        print('output:', _output)
+        assert(_expected == _output)
+        
+    
+    
+    
+    
 ''' klad aantekeningen:
+    test_maak_vastgoed_bestandsnaam1()
     test_fixvk_fijn_grof()
     print(expected_df.info())
     print(out_df.info())

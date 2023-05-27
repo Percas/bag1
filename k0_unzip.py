@@ -10,6 +10,7 @@ doel: uitpakken van de gezipte BAG XML bestanden van koppelvlak 0 naar koppelvla
 # ################ import libraries ###############################
 import sys
 import os
+from pathlib import PureWindowsPath
 import baglib
 import zipfile
 import time
@@ -36,6 +37,33 @@ def k0_download_and_unzip(url, maand, logit):
         logit.info('unzippen gedownloaded bestand gereed')
         # dir_k0_maand opnieuw lezen want nu staat er wel wat in de dir_k0_maand!
 
+def maak_vastgoed_bestandsnaam(maand):
+    '''unzip een bestand in de map \\cbsp.nl\Productie\primair\WOVOR\Beheer\_Archief\INPUT
+    submap <jaar> van de vorm BAGNLDL-08MMYYYY.zip.'''
+    _maand = str(maand)
+    if len(_maand) != 6:
+        sys.exit(f'yyyymm verwacht, maar kreeg {maand}')
+    _jaar = _maand[:4]
+    _zip_file = 'BAGNLDL-08' + _maand[-2:] + _jaar + '.zip'
+    return '\\\\cbsp.nl\\Productie\\primair\\WOVOR\\Beheer\\_Archief\\INPUT\\' +\
+        _jaar + '\\' + _zip_file
+
+    # return PureWindowsPath(os.path.join('cbsp.nl', 'Productie', 'primair',
+    #                                     'WOVOR', 'Beheer', '_Archief', 'INPUT',
+    #                                     _jaar, _zip_file))
+    
+
+def k0_unzip_vastgoed_bestand(maand, logit):
+    '''unzip een door team Vastgoed gedownload bestand en zet het resultaat
+    in koppelvlak0.'''
+    logit.info(f'start k0_unzip_vastgoed_bestand met maand {maand}')
+    te_unzippen_bestand = maak_vastgoed_bestandsnaam(maand)
+    unzip_dir = os.path.join(KOPPELVLAK0, str(maand))
+    baglib.make_dirs(unzip_dir, logit)
+    with zipfile.ZipFile(te_unzippen_bestand, 'r') as zip_ref:
+        zip_ref.extractall(unzip_dir)
+    logit.debug(f'bestand van maand {maand} bewaard in {unzip_dir}')
+    
 
 def k0_unzip(bagobject, maand, logit):
     '''Unzip bagobject bestand van kadaster voor gegeven maand.'''
