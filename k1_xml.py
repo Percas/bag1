@@ -113,8 +113,51 @@ from k0_unzip import k0_unzip
 
 # The main function:
 
+def k1_xml(bagobject, maand, logit):
+    '''Zet om: 
+        de xml bestanden van bagobject van kadaster in koppelvlak k1 van 
+        extractmaand maand 
+    naar:
+        parquet formaat in koppelvlak k2'''
+        
+    tic = time.perf_counter()
+    logit.info(f'start functie k1_xml met {bagobject} en {maand}')
+
+    # input
+    dir_k1_maand_bagobject = os.path.join(KOPPELVLAK1, maand, bagobject)
+
+    if not os.path.exists(dir_k1_maand_bagobject):
+        logit.info(f'geen xml bestanden in {dir_k1_maand_bagobject}. Probeer ze te unzippen')
+        k0_unzip(bagobject, maand, logit)
+    # logit.debug(f'zoek XML bestanden in {dir_k1_maand_bagobject}')
+    # output
+    dir_k2_maand = os.path.join(KOPPELVLAK2, maand)
+    file_k2_maand_bagobject = os.path.join(dir_k2_maand, bagobject)
+    file_k2_maand_bagobject_ext = file_k2_maand_bagobject + '.' + FILE_EXT
+    baglib.make_dirs(dir_k2_maand, logit) # only make it if it doesn't exist yet
+    # remove if outputfile is already present
+
+    if os.path.isfile(file_k2_maand_bagobject_ext):
+        logit.debug(f'removing {file_k2_maand_bagobject_ext}')
+        os.remove(file_k2_maand_bagobject_ext)
+
+    # de wplgem koppeling is niet van het kadaster zelf en heeft een afwijkend
+    # formaat. We nemen het soms mee als bagobject en soms niet.
+    if bagobject == 'wplgem':
+        k1_xmlgem(bagobject, inputdir=dir_k1_maand_bagobject,
+              outputfile=file_k2_maand_bagobject, logit=logit)
+    else:
+        k1_xmlbag(bagobject, inputdir=dir_k1_maand_bagobject,
+              outputfile=file_k2_maand_bagobject, logit=logit)
+        
+    toc = time.perf_counter()
+    logit.info(f'einde k1_xml {bagobject}, {maand} in {(toc - tic)/60} min')
+
     
 def k1_xmlbag(bagobject, inputdir, outputfile, logit):
+    '''Zet xml bestanden van alle bagobjecten (exclusief wplgem) om van
+    KV1 naar KV2.'''
+    
     # tellertjes
     input_bagobject_count = 0
     output_bagobject_count = 0
@@ -403,41 +446,6 @@ def k1_xmlbag(bagobject, inputdir, outputfile, logit):
 
 
 
-def k1_xml(bagobject, maand, logit):
-    '''Zet om: 
-        de xml bestanden van bagobject van kadaster in koppelvlak k1 van 
-        extractmaand maand 
-    naar:
-        parquet formaat in koppelvlak k2'''
-        
-    tic = time.perf_counter()
-    logit.info(f'start functie k1_xml met {bagobject} en {maand}')
-
-    # input
-    dir_k1_maand_bagobject = os.path.join(KOPPELVLAK1, maand, bagobject)
-    if not os.path.exists(dir_k1_maand_bagobject):
-        logit.info(f'geen xml bestanden in {dir_k1_maand_bagobject}. Probeer ze te unzippen')
-        k0_unzip(bagobject, maand, logit)
-    # logit.debug(f'zoek XML bestanden in {dir_k1_maand_bagobject}')
-    # output
-    dir_k2_maand = os.path.join(KOPPELVLAK2, maand)
-    file_k2_maand_bagobject = os.path.join(dir_k2_maand, bagobject)
-    file_k2_maand_bagobject_ext = file_k2_maand_bagobject + '.' + FILE_EXT
-    baglib.make_dirs(dir_k2_maand, logit) # only make it if it doesn't exist yet
-    # remove if outputfile is already present
-    if os.path.isfile(file_k2_maand_bagobject_ext):
-        logit.debug(f'removing {file_k2_maand_bagobject_ext}')
-        os.remove(file_k2_maand_bagobject_ext)
-
-    if bagobject == 'wplgem':
-        k1_xmlgem(bagobject, inputdir=dir_k1_maand_bagobject,
-              outputfile=file_k2_maand_bagobject, logit=logit)
-    else:
-        k1_xmlbag(bagobject, inputdir=dir_k1_maand_bagobject,
-              outputfile=file_k2_maand_bagobject, logit=logit)
-        
-    toc = time.perf_counter()
-    logit.info(f'einde k1_xml {bagobject}, {maand} in {(toc - tic)/60} min')
 
 
 def k1_xmlgem(bagobject, inputdir, outputfile, logit):

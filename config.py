@@ -24,6 +24,10 @@ OMGEVING = 'Ontwikkelomgeving'
 FUTURE_DATE = 88888888
 BATCH_SIZE = 500
 FILE_EXT = 'parquet'
+BAG_URL = 'https://service.pdok.nl/kadaster/adressen/atom/v1_0/downloads/lvbag-extract-nl.zip'
+BAG_VASTGOEDMAP = '\\\\cbsp.nl\\Productie\\primair\\WOVOR\\Beheer\\_Archief\\INPUT\\'
+
+
 # FILE_EXT = 'csv'
 
 IN_VOORRAAD = ['v3', 'v4', 'v8', 'v6']

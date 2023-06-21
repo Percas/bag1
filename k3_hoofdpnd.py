@@ -25,7 +25,7 @@ import sys
 import os
 import time
 import baglib
-from config import OMGEVING, KOPPELVLAK2, KOPPELVLAK3a, BAG_TYPE_DICT,  IN_VOORRAAD, FILE_EXT, LOGFILE
+from config import OMGEVING, KOPPELVLAK0, KOPPELVLAK3a, BAG_TYPE_DICT,  IN_VOORRAAD, FILE_EXT, LOGFILE
 from k2_fixvk import k2_fixvk
 import logging
 # ############### Define functions ################################
@@ -373,7 +373,7 @@ if __name__ == '__main__':
     logit.warning(OMGEVING)
     logit.setLevel(logging.INFO)
     
-    maand_lst = baglib.get_args(sys.argv, KOPPELVLAK2)
+    maand_lst = baglib.get_args(sys.argv, KOPPELVLAK0)
 
     for maand in maand_lst:
         k3_hoofdpnd(maand, logit)
