@@ -85,24 +85,25 @@ def get_main_bag_zip(maand, logit):
 
     with zipfile.ZipFile(bag_zip_file, 'r') as zip_ref:
         zip_ref.extractall(dir_k0_maand)
-        logit.info('zojuist uitgepakt BAG bestand verwijderen')
+        # logit.info('zojuist uitgepakt BAG bestand verwijderen')
         # os.remove(downloaded_file)
         logit.info('unzippen bestand gereed')
         # dir_k0_maand opnieuw lezen want nu staat er wel wat in de dir_k0_maand!
 
    
-def maak_vastgoed_bestandsnaam(maand):
+def maak_vastgoed_bestandsnaam(maand, logit):
     '''unzip een bestand in de map \\cbsp.nl\Productie\primair\WOVOR\Beheer\_Archief\INPUT
     submap <jaar> van de vorm BAGNLDL-08MMYYYY.zip.'''
     _maand = str(maand)
+    logit.info(f'start maak_vastgoed_bestandsnaam voor maand {maand}')
     if len(_maand) != 6:
         sys.exit(f'yyyymm verwacht, maar kreeg {maand}')
     _jaar = _maand[:4]
     _zip_file = 'BAGNLDL-08' + _maand[-2:] + _jaar + '.zip'
     # return '\\\\cbsp.nl\\Productie\\primair\\WOVOR\\Beheer\\_Archief\\INPUT\\' +\
     #     _jaar + '\\' + _zip_file
-    return BAG_VASTGOEDMAP + _jaar + '\\' + _zip_file
-
+    # return BAG_VASTGOEDMAP + _jaar + '\\' + _zip_file
+    return os.path.join(BAG_VASTGOEDMAP, _jaar, _zip_file)
 
 def k0_unzip_vastgoed_bestand(maand, logit):
     '''unzip een door team Vastgoed gedownload bestand en zet het resultaat
