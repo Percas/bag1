@@ -78,6 +78,7 @@ def get_main_bag_zip(maand, logit):
         bag_zip_file = maak_vastgoed_bestandsnaam(maand, logit)
         logit.info(f'{bag_zip_file} gevonden op het netwerk. Nu unzippen')
     else:
+        logit.info(f'niet gevonden BAG_VASTGOEDMAP {BAG_VASTGOEDMAP}')
         logit.info(f'probeer het bag input bestand van maand {maand} te downloaden')
         bag_zip_file = baglib.download_file(BAG_URL)
         logit.info(f'downloaden van {bag_zip_file} gereed. Nu unzippen')
