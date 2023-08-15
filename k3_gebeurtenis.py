@@ -2,93 +2,33 @@
 # -*- coding: utf-8 -*-
 
 '''
-In de BAG wordt de levenloop van een bag object (bob) gedefinieerd door een 
-rijtje opeenvolgende en aaneensluitende voorkomens (vk) met een begindatum 
-geldigheid (vkbg) en een einddatum geldigheid (vkeg).
 
-Een voorkomen van een bag object kan gekoppeld zijn aan een ander bag 
-object. Als voorbeeld:
-
-Een vbovk (verblijfsobject voorkomen) wordt aan een (of meerdere) pnd (pand) 
-of num (nummeraanduiding) gelinkt. 
-
-Dat is feitelijk onzorgvuldig omdat tijdens 
-de looptijd van een vbovk iets kan veranderen bij het gelinkte pnd of num,
-bijvoorbeeld het bouwjaar van het pand of de gemeente waarin het num ligt.
-
-Doel: Repareer de voorkomens van de 7 BAG objecten zodat bij een wezenlijke 
-verandering van het object ook daadwerkelijk een nieuw voorkomen van dat
-object gemaakt wordt. 
-
-Koppel hierna voorkomens aan voorkomens van het bovenliggende bagobject
-in plaats van plaats van voorkomens aan het bag object zelf.
-
-Voer daarnaast enkele andere reparatie werkzaamheden aan vk uit
-zoals in onderstaande stappen staat beschreven:
-
-Stappen:
-    Verwijder eendagsvliegen (vk die binnen een dag wijzigen)
-    Merge vk: merge vk als er feitelijk niets wijzigt tussen twee
-        opeenvolgende vk
-    Vksplitter: splits vk als er iets wijzigt met het gekoppelde Bag 
-    object (bob). Doe dit voor 
-            gem - prv (todo: gemeente - provincie)
-            wpl - gem (woonplaats)
-            opr - wpl (openbare ruimte)
-            num - opr (nummeraanduiding)
-            vbo - num (verblijfsobject)
-            vbo - pnd (nogmaals met vbo, maar dan met pnd)
-Resultaat:
-    voor elk van bovenstaande relaties koppelt een "onderliggend" vk aan een
-    "bovenliggend" vk. We noemen dit het fijntype en het groftype omdat het
-    fijntype qua looptijd altijd volledig binnen het groftype valt. Het 
-    resultaat heet ook wel een busbestand.
+Onderzoek voorkomens van (vooral) vbo:
     
-Voorbeeld voor vbo:
-    voor vbo onderscheiden we 6 soorten wijzigingen die een nieuw vk tot gevolg
-    kunnen hebben van dat vbo:
-    
-    1. Een pnd van dat vbo krijgt een nieuw vk
-    2. Een pnd van dat vbo wordt afgesloten en krijgt geen nieuw vk (todo)
-    3. De nummeraanduiding (num) van dat vbo krijgt een nieuw vk
-    4. De openbare ruimte (opr) van die num  krijgt een nieuw vk
-    5. De woonplaats (wpl) van die opr krijgt een nieuw vk
-    6. De gemeente (gem) van die wpl krijgt een nieuw vk (todo)
-
-Waarom doen we dit:
-    Als voorbeeld van 6. Als een vbo in een nieuwe gemeente komt te liggen, 
-    heeft dat impact op de statistische output. Om een consistent bus bestand 
-    van vbo te krijgen moet je dan een nieuw vbovk aanmaken (tenzij op die datum
-    al een nieuw vk begint)
-    
-Keuzen die we hierbij maken:
-    1. een vbo kan niet zonder pnd bestaan en een pnd niet zonder vbo
-    2. een vbo kan niet zonder num, kan niet zonder opr kan niet zonder
-        wpl kan niet zonder gemeente bestaan.
-
-Plaatjes vbo met twee panden:
-    het vbo begint met 4 vk en eindigt met 7:
-
 vbovk        1            2            3            4
 vbo1  o-----------oo-----------oo-----------oo---------->
-pnd1       o-----------oo------------------------------->
-pnd2                       o-----------o
 
-wordt
-
-vbovk2         1     2   3  4      5     6      7
-vbo1       o------oo---oo-oo---oo-----------oo---------->
-pnd1       o-----------oo------------------------------->
-pnd2                       o-----------o
-
-Ook als het pnd eindigt kan dat gevolgen hebben voor het vbo vk (zie het eind
-van pnd2. Dit is niet geimplementeerd.
+Stappen:
+    
+    1. koppel twee vbovk_df met elkaar waarbij je per vbo de einddatum
+    van het linker vbovk_df koppelt met de begindatum van het rechter.
+    2. noem de vier velden status, opp, pndid en numid van het linker vbovk_df
+    _oud en die van het rechter _nieuw.
+    3. cast deze velden naar str
+    4. voor elk van de vier als oud != nieuw, maak dan een vbo-gebeurtenis-
+    record aan met velden: 
+        vboid
+        datum_gebeurtenis
+        soort_gebeurtenis ['statuswijziging', ' opp-wijziging', ...]
+        waarde_oud
+        waarde_nieuw
+    
 
 '''
 
 # ################ import libraries ###############################
 import pandas as pd
-import numpy as np
+# import numpy as np
 import sys
 import os
 import time
@@ -96,12 +36,19 @@ import baglib
 from config import OMGEVING, KOPPELVLAK0, KOPPELVLAK2, KOPPELVLAK3a, BAG_OBJECTEN, BAG_TYPE_DICT, RELEVANT_COLS_DICT, FILE_EXT, LOGFILE
 import logging
 # from k02_bag import k02_bag
-from k1_xml import k1_xmlgem, k1_xml
+# from k1_xml import k1_xmlgem, k1_xml
 
 # ############### Define functions ################################
 
+
+def k3_gebeurtenis(maand, logit):
+    '''maak het vbo-gebeurtenisbestand voor maand op basis van het vbo.'''
+
+'''
+
+
 def k2_fixvk(maand, logit):
-    '''Repareer: 
+    Repareer: 
         de parquet bestanden in koppelvlak k2 van extractmaand maand 
     naar:
         parquet formaat in koppelvlak k3a-bewerkt
@@ -111,7 +58,7 @@ def k2_fixvk(maand, logit):
         2. het samennemen van gelijke voorkomens
         3. het splitsen van voorkomens als er iets gebeurd met het 
         bovenliggende bagobject (bijvoorbeeld vbo-pnd of vbo-num)
-    '''
+    
         
     tic = time.perf_counter()
     logit.info(f'start k2_fixvk({maand})')
@@ -198,10 +145,10 @@ def fixvk_fijngrof(fijntype_df=pd.DataFrame(),
                    maand='202304',
                    ls_dict={},
                    logit=logging.DEBUG):
-    '''Doe de stappen inlezen, eendagsvliegen fixen, mergen van vk, 
+    Doe de stappen inlezen, eendagsvliegen fixen, mergen van vk, 
     splitten van voorkomens en bewaren voor fijntype en groftype.
     Opm: de stappen t/m mergen hoeven alleen als ze nog niet eerder gedaan 
-    zijn. Het is al eerder gedaan als het betreffende dataframe niet leeg is.'''
+    zijn. Het is al eerder gedaan als het betreffende dataframe niet leeg is.
 
     logit.info(f'start fixvk_fijngrof({maand}) met fijntype {fijntype}, groftype {groftype}')
     df_type = 'pandas'
@@ -534,7 +481,7 @@ def vksplitter(df='vbo_df',
 
     return _df
 
-    
+'''
 # ########################################################################
 # ########################################################################
 
@@ -548,13 +495,13 @@ if __name__ == '__main__':
             logging.FileHandler(LOGFILE),
             logging.StreamHandler()])    
     logit = logging.getLogger()
-    logit.info('start k2_fixvk vanuit main')
+    logit.info('start k3_gebeurtenis vanuit main')
     logit.warning(OMGEVING)
     logit.setLevel(logging.DEBUG)
     
     maand_lst = baglib.get_args(sys.argv, KOPPELVLAK0)
 
     for maand in maand_lst:
-        k2_fixvk(maand, logit)
+        k3_gebeurtenis(maand, logit)
 
 
