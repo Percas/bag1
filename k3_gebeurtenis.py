@@ -3,19 +3,23 @@
 
 '''
 
-Onderzoek voorkomens van (vooral) vbo:
+Onderzoek voorkomens overgangen (gebeurtenissen) van vbo:
     
 vbovk        1            2            3            4
 vbo1  o-----------oo-----------oo-----------oo---------->
 
+Hoe: door twee opeenvolgende voorkomens aan elkaar te koppelen (1 - 2, 2 - 3 etc.) en de verschillen
+tussen deze twee op te slaan als een gebeurtenis.
+
 Stappen:
-    
-    1. koppel twee vbovk_df met elkaar waarbij je per vbo de einddatum
+
+    * verrijk vbo_df met gemeente en pandstatus + bouwjaar (via de hoofdpna vk koppeling)
+    * koppel twee vbovk_df met elkaar waarbij je per vbo de einddatum
     van het linker vbovk_df koppelt met de begindatum van het rechter.
-    2. noem de vier velden status, opp, pndid en numid van het linker vbovk_df
-    _oud en die van het rechter _nieuw.
-    3. cast deze velden naar str
-    4. voor elk van de vier als oud != nieuw, maak dan een vbo-gebeurtenis-
+    * noem daarbij de te vergelijken velden (zoals status, opp, pndid en numid)
+     van het linker vbovk_df _oud en die van het rechter _nieuw.
+    * cast deze velden naar str, zodat je ze in dezelfde kolom kunt opslaan.
+    * voor elk van de te vergelijken velden als oud != nieuw, maak dan een vbo-gebeurtenis-
     record aan met velden: 
         vboid
         datum_gebeurtenis
@@ -23,465 +27,201 @@ Stappen:
         waarde_oud
         waarde_nieuw
     
+    *. Dit overzicht van gebeurtenissen kan inzicht geven in het wat, het waar en
+     wanneer van gebeurtenissen per VBO of ander BAG object. Hierbij kun je denken aan:
 
+    - Wat is het percentage per type gebeurtenis? Ofwel: wat gebeurt er "het meest"
+    - Hoeveel gebeurtenissen zijn er gemiddeld per soort per gemeente? Ofwel: gebeurt er in bepaalde gemeenten meer
+      dan in andere?
+    - Hoe zijn de gebeurtenissen verdeeld over de tijd, per type gebeurtenis, zowel absoluut als t.o.v. de levenscyclus van het vbo
+    - Wat is de werkelijke betekenis van een bepaalde gebeurtenis, bijvoorbeeld als oppervlakte of pndid van een vbo wijzigt.
+      we willen hierbij vooral in staat zijn om adnministratieve correcties te negeren
+
+
+    * Resultaten
+    - analyse leert dat in Winterswijk relatief de meeste wijzigingen in oppervlakte van vbo's zijn.
+    Laten we eens een paar oppervlakte rijtjes gaan maken
 '''
 
+import logging
+import os.path
 # ################ import libraries ###############################
-import pandas as pd
 # import numpy as np
 import sys
-import os
 import time
+
+import pandas as pd
+
 import baglib
-from config import OMGEVING, KOPPELVLAK0, KOPPELVLAK2, KOPPELVLAK3a, BAG_OBJECTEN, BAG_TYPE_DICT, RELEVANT_COLS_DICT, FILE_EXT, LOGFILE
-import logging
+from config import OMGEVING, KOPPELVLAK0, KOPPELVLAK3a, FILE_EXT, BAG_TYPE_DICT, LOGFILE
+from k3_hoofdpnd import k3_hoofdpnd
+
 # from k02_bag import k02_bag
 # from k1_xml import k1_xmlgem, k1_xml
+
 
 # ############### Define functions ################################
 
 
-def k3_gebeurtenis(maand, logit):
-    '''maak het vbo-gebeurtenisbestand voor maand op basis van het vbo.'''
+def k3_gebeurtenis(maand, logit) -> pd.DataFrame:
+    '''maak het vbo-gebeurtenisbestand voor maand.'''
 
-'''
+    pd.set_option('display.max_columns', 15)
+    pd.set_option('display.width', 400)
 
-
-def k2_fixvk(maand, logit):
-    Repareer: 
-        de parquet bestanden in koppelvlak k2 van extractmaand maand 
-    naar:
-        parquet formaat in koppelvlak k3a-bewerkt
-        
-    De repatie-acties bestaan uit:
-        1. het verwijderen van eendagsvliegen 
-        2. het samennemen van gelijke voorkomens
-        3. het splitsen van voorkomens als er iets gebeurd met het 
-        bovenliggende bagobject (bijvoorbeeld vbo-pnd of vbo-num)
-    
-        
     tic = time.perf_counter()
-    logit.info(f'start k2_fixvk({maand})')
+    logit.info(f'start k3_gebeurtenis voor maand {maand}')
 
-    # output
-    dir_k3a_maand = os.path.join(KOPPELVLAK3a, maand)
-    baglib.make_dirs(dir_k3a_maand, logit) # only make it if it doesn't exist yet
+    # check of de benodigde input er is
+    if not os.path.exists(os.path.join(KOPPELVLAK3a, maand, 'vbo.' + FILE_EXT)):
+        logit.info(f'vbo.{FILE_EXT} niet gevonden, probeer af te leiden')
+        k3_hoofdpnd(maand, logit)
 
-    for bagobject in BAG_OBJECTEN + ['wplgem']:
-        if not os.path.exists(os.path.join(KOPPELVLAK2, maand, bagobject+'.'+FILE_EXT)):
-            logit.warning(f'{bagobject}.{FILE_EXT} in koppelvlak 2 niet gevonden. Probeer af te leiden')
-            k1_xml(bagobject, maand, logit)
+    # inlezen vd het hoofd df: vbo voorkomens
+    cols = ['vboid', 'vbovkid', 'vbovkbg', 'vbovkeg', 'pndid', 'pndvkid', 'numid', 'numvkid', 'oppervlakte', 'vbostatus']
+    vbo_df = baglib.read_input(input_file=os.path.join(KOPPELVLAK3a, maand, 'vbo'),
+                              bag_type_d=BAG_TYPE_DICT,
+                              output_file_type='pandas',
+                              logit=logit)[cols]
 
-    
-    # We continue with wplgem as if it is the wpl file, because we need the
-    # connection between wpl and gem
-    baglib.copy_wplgem2wpl(dir1=KOPPELVLAK2, maand=maand, file_ext=FILE_EXT, logit=logit)
-   
+    # verrijken van het vbo_df, eerst gemeenten (dit gaat in 4 stappen via num -> opr -> wpl -> gem)
+    cols = ['numid', 'numvkid', 'oprid', 'oprvkid']
+    num_df = baglib.read_input(input_file=os.path.join(KOPPELVLAK3a, maand, 'num'),
+                               bag_type_d=BAG_TYPE_DICT,
+                               output_file_type='pandas',
+                               logit=logit)[cols]
+    vbo_df = pd.merge(vbo_df, num_df).drop(['numid', 'numvkid'], axis=1)
+    del num_df
 
-    ls_dict = {}
-    bobs = ['vbo', 'pnd', 'wpl', 'num', 'opr']
-    for bob in bobs:
-        ls_dict[bob] = {}
-            
+    cols = ['oprid', 'oprvkid', 'wplid', 'wplvkid']
+    opr_df = baglib.read_input(input_file=os.path.join(KOPPELVLAK3a, maand, 'opr'),
+                               bag_type_d=BAG_TYPE_DICT,
+                               output_file_type='pandas',
+                               logit=logit)[cols]
+    vbo_df = pd.merge(vbo_df, opr_df).drop(['oprid', 'oprvkid'], axis=1)
+    del opr_df
 
-    # ####################################################################
-    # Aanroep van functie fixvk_fijngrof voor de verschillende combi's
-    # ####################################################################
-    
-    (fijntype_df, groftype_df, ls_dict) =\
-        fixvk_fijngrof(fijntype='opr',
-                       groftype='wpl',
-                       maand=maand,
-                       ls_dict=ls_dict, logit=logit)
+    cols = ['wplid', 'wplvkid', 'gemid']
+    wpl_df = baglib.read_input(input_file=os.path.join(KOPPELVLAK3a, maand, 'wpl'),
+                               bag_type_d=BAG_TYPE_DICT,
+                               output_file_type='pandas',
+                               logit=logit)[cols]
+    vbo_df = pd.merge(vbo_df, wpl_df).drop(['wplid', 'wplvkid'], axis=1)
+    del wpl_df
 
-    (fijntype_df, groftype_df, ls_dict) =\
-        fixvk_fijngrof(fijntype='num',
-                       groftype='opr',
-                       groftype_df=fijntype_df,
-                       maand=maand,
-                       ls_dict=ls_dict, logit=logit)
 
-    (fijntype_df, groftype_df, ls_dict) =\
-        fixvk_fijngrof(fijntype='vbo',
-                       groftype='num',
-                       groftype_df=fijntype_df,
-                       maand=maand,
-                       ls_dict=ls_dict, logit=logit)
-    
-    baglib.df_compare(fijntype_df, vk_lst=['vboid', 'vbovkid'],
-                      nrec_nvk_ratio_is_1=False, logit=logit)
+    # verrijken van het vbo_df met het hoofdpand om bouwjaar en pand status te krijgen:
+    cols = ['pndid', 'pndvkid', 'bouwjaar', 'pndstatus']
+    pnd_df = baglib.read_input(input_file=os.path.join(KOPPELVLAK3a, maand, 'pnd'),
+                               bag_type_d=BAG_TYPE_DICT,
+                               output_file_type='pandas',
+                               logit=logit)[cols]
+    vbo_df = pd.merge(vbo_df, pnd_df).drop(['pndid', 'pndvkid'], axis=1)
+    del pnd_df
 
-    (fijntype_df, groftype_df, ls_dict) =\
-        fixvk_fijngrof(fijntype='vbo',
-                       groftype='pnd',
-                       fijntype_df=fijntype_df,
-                       maand=maand,
-                       ls_dict=ls_dict, logit=logit)
-    
-    baglib.df_compare(fijntype_df, vk_lst=['vboid', 'vbovkid'],
-                      nrec_nvk_ratio_is_1=False, logit=logit)
 
-    # groftype wordt bewaard in de functie fixvk_fijngrof. vbo moet nog bewaard
-    # worden, want deze is nooit groftype
-    logit.debug('bewaren van vbo\n')
-    outputdir = os.path.join(KOPPELVLAK3a, maand)
-    baglib.make_dirs(outputdir)
-    outputfile = os.path.join(outputdir, 'vbo')
-    baglib.save_df2file(df=fijntype_df, outputfile=outputfile, file_ext=FILE_EXT,
+    # converteer die kolommen die we willen vergelijken naar string, zodat we ze alles in twee kolommen
+    # (oud en nieuw) kunnen opslaan samen met het soort gebeurtenis (dat de naam van de kolom krijgt met
+    # daarachter _geb)
+    cols_to_compare = ['vbostatus', 'oppervlakte', 'gemid', 'bouwjaar', 'pndstatus']
+    vbo_df[cols_to_compare] = vbo_df[cols_to_compare].astype('string')
+    compare_cols_oud = [s + '_oud' for s in cols_to_compare]
+    compare_cols_nieuw = [s + '_nieuw' for s in cols_to_compare]
+
+    # hernoem de kolommen van het linker dataframe naar oud en het rechter naar nieuw en koppel de twee (dezelfde)
+    # dataframes vbo_df. Dit noemen we de "ruwe_gebeurtenissen"
+    oud_vk_vbo_df = vbo_df.rename(columns=dict(zip(cols_to_compare, compare_cols_oud)))
+    nieuw_vk_vbo_df = vbo_df.rename(columns=dict(zip(cols_to_compare, compare_cols_nieuw)))
+    nieuw_vk_vbo_df['gemid'] = nieuw_vk_vbo_df['gemid_nieuw'] # om te kunnen aggregeren over gemeentecode
+
+    ruwe_gebeurtenissen = pd.merge(oud_vk_vbo_df[['vboid', 'vbovkeg'] + compare_cols_oud],
+                                   nieuw_vk_vbo_df[['vboid', 'vbovkbg', 'gemid'] + compare_cols_nieuw],
+                                   left_on =['vboid', 'vbovkeg'],
+                                   right_on=['vboid', 'vbovkbg']).drop_duplicates()
+
+
+    # vul een nieuw geubeurtenis dataframe met de paarsgewijze verschillen voor elk van de mogelijke gebeurtenissen
+    # die we willen vergelijken (in cols_to_compare)
+    gebeurtenis = pd.DataFrame()
+    for compare_col in cols_to_compare:
+        col_oud = compare_col + '_oud'
+        col_nieuw = compare_col + '_nieuw'
+        verschil_per_type_gebeurtenis = ruwe_gebeurtenissen[ruwe_gebeurtenissen[col_oud] != ruwe_gebeurtenissen[col_nieuw]][['vboid', 'vbovkbg', 'gemid', col_oud, col_nieuw]]
+        verschil_per_type_gebeurtenis['gebeurtenis'] = compare_col + '_geb'
+        verschil_per_type_gebeurtenis = verschil_per_type_gebeurtenis.rename(columns={col_oud: 'oud', col_nieuw: 'nieuw', 'vbovkbg': 'datum'})
+        gebeurtenis = pd.concat([gebeurtenis, verschil_per_type_gebeurtenis.copy()])
+    gebeurtenis['gebeurtenis'] = gebeurtenis['gebeurtenis'].astype('category')
+    geb_cols = [x + '_geb' for x in cols_to_compare]
+
+    # Analyseer de gebeurtenissen, maak een draaitabel met aantal gebeurtenissen per gemeente per type gebeurtenis
+    pivot = pd.pivot_table(data=gebeurtenis, values='nieuw', index='gemid', columns='gebeurtenis', aggfunc='count').reset_index()
+    # print(pivot.sample(n=10))
+
+    # het geeft meer inzicht als we het aantal gebeurtenissen bekijken t.o.v. het aantal vbo in een gemeente. Dit noemen
+    # we de gemeente grootte (gem_grootte)
+    # gem_grootte = ruwe_gebeurtenissen.groupby('gemid').size().reset_index(name='gem_grootte')
+    gem_grootte = vbo_df[['vboid', 'gemid']].groupby('gemid').size().reset_index(name='gem_grootte')
+    # print(gem_grootte.info())
+    pivot = pd.merge(pivot, gem_grootte)
+    for col in geb_cols:
+        col_perc = col + '_p'
+        pivot[col_perc] = round(100 * pivot[col] / pivot['gem_grootte'], 1)
+
+    # gem_naam.csv van de CBS site downloaden en in mapje plaatsen.
+    # we doen alles obv de gemeenten van 2023. Handmatige repair voor die gemeente met een komma in de naam
+    gem_naam_file = os.path.join(KOPPELVLAK3a, maand, 'gem_naam.csv')
+    gem_naam = pd.DataFrame()
+    if os.path.exists(gem_naam_file):
+        gem_naam = pd.read_csv(gem_naam_file, sep=',')
+    pivot['gemid'] = 'GM' + pivot['gemid']
+
+    if not gem_naam.empty:
+        # print(gem_naam.info())
+        # print(gem_naam)
+        pivot = pd.merge(pivot, gem_naam[['GemeentecodeGM', 'Gemeentenaam']], left_on='gemid', right_on='GemeentecodeGM').drop(columns=['GemeentecodeGM'])
+
+    # print(pivot.info())
+    print(pivot.sort_values(by='oppervlakte_geb_p', ascending=False).head())
+
+
+    # print(pivot.sort_values(by='oppervlakte_geb_p', ascending=False).head(40))
+    baglib.save_df2file(df=pivot.sort_values(by='oppervlakte_geb_p', ascending=False),
+                        outputfile=os.path.join(KOPPELVLAK3a, maand, 'vbo_gebeurtenis'), file_ext='csv',
                         includeindex=False, logit=logit)
 
-    df = pd.DataFrame(ls_dict)
-    df = df.div(df.iloc[0]).round(2)
-    logit.warning(f'af en toename aantallen records na elke stap\n{df}')
-    
-    toc = time.perf_counter()
-    logit.info(f'einde bag_fix_vk in {(toc - tic)/60} min')
+    '''
+    # maak rijtje oppervlakten per vbo:
+    # haal opeenvolgende gelijke eruit
+    opp_df = vbo_df[['vboid', 'oppervlakte']].sort_values(by='vboid').drop_duplicates(keep='first')
+    # voeg een tellertje toe dat het aantal oppervlaktewijzigingen per vbo telt (aantal_wijzig)
+    opp_df['aantal_wijzig'] = opp_df.groupby('vboid')['vboid'].transform('size')
+    # vbo's waarvan de oppervlakte nooit wijzigt gooien we eruit
+    opp_df = opp_df[opp_df['aantal_wijzig'] > 1]
+    # maak het oppervlakte rijtje
+    opp_df = opp_df.groupby(['vboid', 'aantal_wijzig'])['oppervlakte'].apply('-'.join).reset_index()
+    # opp_df.sort_values(by=['gemid', 'aantal_wijzig'], ascending=False, inplace=True)
+    print(opp_df.head())
+    #bewaren
+    # baglib.save_df2file(df=opp_df, outputfile=os.path.join(KOPPELVLAK3a, maand, 'vbo_opp_wijzigt'), file_ext='csv',
+    #                                                        includeindex=False, logit=logit)
 
-    
-def fixvk_fijngrof(fijntype_df=pd.DataFrame(),
-                   groftype_df=pd.DataFrame(),
-                   fijntype='vbo',
-                   groftype='pnd',
-                   maand='202304',
-                   ls_dict={},
-                   logit=logging.DEBUG):
-    Doe de stappen inlezen, eendagsvliegen fixen, mergen van vk, 
-    splitten van voorkomens en bewaren voor fijntype en groftype.
-    Opm: de stappen t/m mergen hoeven alleen als ze nog niet eerder gedaan 
-    zijn. Het is al eerder gedaan als het betreffende dataframe niet leeg is.
+    '''
+    # maak rijtjes per vbo:
 
-    logit.info(f'start fixvk_fijngrof({maand}) met fijntype {fijntype}, groftype {groftype}')
-    df_type = 'pandas'
-
-    if fijntype_df.empty: # als fijntype_df niet empty dan is dit eerder gebeurd
-        fijntype_df = baglib.read_input(input_file=os.path.join(KOPPELVLAK2, maand, fijntype),
-                                        bag_type_d=BAG_TYPE_DICT, 
-                                        file_ext=FILE_EXT,
-                                        output_file_type=df_type,
-                                        logit=logit)
-
-
-        # if fijntype == 'vbo':
-        #     # logit.warning('dbug dbug dubg dubg dubg')
-        #     baglib.df_compare(fijntype_df, vk_lst=['vboid', 'vbovkid'],
-        #                      nrec_nvk_ratio_is_1=False, logit=logit)
-
-        ls_dict[fijntype]['0-ingelezen'] = fijntype_df.shape[0]
-
-        logit.info(f'start fix_eendagsvlieg in {maand}')
-        fijntype_df = baglib.fix_eendagsvlieg(fijntype_df, fijntype+'vkbg',
-                                              fijntype+'vkeg', logit,
-                                              df_type=df_type)
-        ls_dict[fijntype]['1-eendagsvliegen'] = fijntype_df.shape[0]
-        
-        logit.info(f'start merge_vk in {maand}')
-        fijntype_df = baglib.merge_vk(df=fijntype_df, bob=fijntype,
-                                      relevant_cols=RELEVANT_COLS_DICT[fijntype],
-                                      logit=logit, df_type=df_type)
-        ls_dict[fijntype]['2-mergen-vk'] = fijntype_df.shape[0]
-
-
-    if groftype_df.empty:
-        groftype_df = baglib.read_input(input_file=os.path.join(KOPPELVLAK2,  maand, groftype),
-                                        bag_type_d=BAG_TYPE_DICT, 
-                                        file_ext=FILE_EXT,
-                                        output_file_type=df_type,
-                                        logit=logit)
-        ls_dict[groftype]['0-ingelezen'] = groftype_df.shape[0]
-
-        logit.info(f'start fix_eendagsvlieg in {maand}')
-        groftype_df = baglib.fix_eendagsvlieg(groftype_df, groftype+'vkbg',
-                                              groftype+'vkeg', logit,
-                                              df_type=df_type)
-        ls_dict[groftype]['1-eendagsvliegen'] = groftype_df.shape[0]
-
-        # merge voorkomens        
-        logit.info(f'start merge_vk in {maand}')
-        groftype_df = baglib.merge_vk(df=groftype_df, bob=groftype,
-                                      relevant_cols=RELEVANT_COLS_DICT[groftype], 
-                                      logit=logit)
-        ls_dict[groftype]['2-mergen-vk'] = groftype_df.shape[0]
-
-
-
-    # splits voorkomens van fijntype tgv gebeurtenis in groftype
-
-    logit.info(f'start vk_splitter in {maand}')
-    fijntype_df = vksplitter(df=fijntype_df,
-                             gf=groftype_df,
-                             fijntype=fijntype,
-                             groftype=groftype,
-                             logit=logit)
-    ls_dict[fijntype]['3-vk-splitter'] = fijntype_df.shape[0]
-    ls_dict[groftype]['3-vk-splitter'] = groftype_df.shape[0]
-
-    outputdir = os.path.join(KOPPELVLAK3a, maand)
-    baglib.make_dirs(outputdir, logit=logit)
-    outputfile = os.path.join(outputdir, groftype)
-    baglib.save_df2file(df=groftype_df, outputfile=outputfile, 
-                        file_ext=FILE_EXT,
-                        includeindex=False, logit=logit)
-    
-    
-    return (fijntype_df, groftype_df, ls_dict)
-
-
-
-    
-    
-def vksplitter(df='vbo_df',
-               gf='pnd_df',
-               fijntype='vbo',
-               groftype='pnd', 
-               logit=logging.DEBUG,
-               df_type='pandas'):
-    
-    # de volgende kolommen moeten bestaan voor fijntype en groftype:
-    dfid = fijntype + 'id'
-    dfvkbg = fijntype + 'vkbg'
-    dfvkeg = fijntype + 'vkeg'
-    dfvkid = fijntype + 'vkid'
-    gfid = groftype + 'id'
-    gfvkbg = groftype + 'vkbg'
-    gfvkeg = groftype + 'vkeg'
-    gfvkid = groftype + 'vkid'
-    dfgf_bg = fijntype + groftype + '_bg'
-    dfgf_eg = fijntype + groftype + '_eg'
-    # relatie = fijntype+'-'+groftype
-    
-    # deze kolom gaan we maken om de nieuwe vk te identificeren:
-    dfvkid2 = fijntype + 'vkid2'
-
-    # aantallen in de uitgangssituatie; neem [dfid, dfvkbg] als sleutel
-    # _nrec, _nkey = baglib.df_comp(df=df, key_lst=[dfid, dfvkbg], logit=logit)
-    _nrec, _nkey = baglib.df_compare(df=df, vk_lst=[dfid, dfvkbg], logit=logit)
-    # baglib.df_compare(df=df,
-    #                   vk_lst=[dfid, dfvkid], nrec_nvk_ratio_is_1=False,
-    #                   logit=logit)
-    
-    # initiele aantallen
-    _nrec1, _nkey1 = (_nrec, _nkey)
-    logit.info(f'*** start vksplitter met {_nrec1} {fijntype} records waarvan {_nkey1} voorkomens en groftype {groftype}')
-
-    
-    # #############################################################################
-    logit.debug('stap 1: bepaal interval waarop fijntype id en groftype id beide bestaan')
-    # #############################################################################
-
-    # logit.debug('1a. Bepaal de kleinste voorkomen begindatum van fijntype')
-    cols = [dfid, gfid, dfvkbg]
-    dfgf_bgeg = df[cols].groupby([dfid, gfid]).min()
-
-    # logit.debug('1b. voeg hier de grootste voorkomen einddatum van fijntype aan toe')
-    cols = [dfid, gfid, dfvkeg]
-    dfgf_bgeg = pd.merge(dfgf_bgeg, df[cols].groupby([dfid, gfid]).max(), on=[dfid, gfid]).reset_index()
-    
-    # logit.debug('1c. voeg hieraan toe de kleinste voorkomen begindatum van groftype')
-    cols = [gfid, gfvkbg, gfvkeg]
-    dfgf = pd.merge(dfgf_bgeg[[dfid, gfid]], gf[cols], on=gfid)
-    cols = [dfid, gfid, gfvkbg]
-    dfgf_bgeg = pd.merge(dfgf_bgeg, dfgf[cols].groupby([dfid,gfid]).min().reset_index(), on=[dfid, gfid])
-    
-    # logit.debug('1d. voeg hieraan toe de grootste voorkomen einddatum van groftype')
-    cols = [dfid, gfid, gfvkeg]
-    dfgf_bgeg = pd.merge(dfgf_bgeg, dfgf[cols].groupby([dfid,gfid]).max().reset_index(), on=[dfid, gfid])
-    
-    del dfgf
-    
-    # logit.debug('bepaal het maximum van beide voorkomen begindatums')
-    dfgf_bgeg[dfgf_bg] = dfgf_bgeg[[dfvkbg, gfvkbg]].max(axis=1)
-    dfgf_bgeg.drop([dfvkbg, gfvkbg], axis=1, inplace=True)
-
-    
-    # logit.debug('bepaal het minimum van beide voorkomen einddatums')
-    dfgf_bgeg[dfgf_eg] = dfgf_bgeg[[dfvkeg, gfvkeg]].min(axis=1)
-    dfgf_bgeg.drop([dfvkeg, gfvkeg], axis=1, inplace=True)
-
-    
-    # logit.debug('bepaal het interval waarop fijntype bestaat')
-    cols = [dfid, dfgf_bg, dfgf_eg]
-    df_bgeg = dfgf_bgeg[cols].groupby(dfid).agg({dfgf_bg: 'min', dfgf_eg: 'max'}).reset_index()
-    # print(df_bgeg)
-
-    del dfgf_bgeg
-    
-    # #############################################################################
-    logit.debug('stap 2: zet voorkomen begindatums van fijn en groftype bij elkaar in 1 kolom')
-    logit.debug('opmerking: het voorkomen id  van fijntype wordt gebruikt voor het imputeren later')
-    # #############################################################################
-
-    # de vkbg van fijntype
-    cols = [dfid, dfvkid, dfvkbg]
-    _df = df[cols].drop_duplicates()
-    
-    # de vkbg van groftype. hiervoor is een merge nodig omdat gfvkbg alleen in gf staat
-    _gf = pd.merge(gf[[gfid, gfvkbg]], 
-                   df[[dfid, gfid]].drop_duplicates(),
-                   how='inner', on=gfid)
-    
-    # hernoem de kolomnaam
-    cols = [dfid, gfvkbg]
-    _gf = _gf[cols].drop_duplicates().rename({gfvkbg: dfvkbg}, axis='columns')
-    
-    # zet alles bij elkaar en ontdubbel
-    _df = pd.concat([_df, _gf]).drop_duplicates(subset=[dfid, dfvkbg], keep='first')
-    
-    del _gf
-
-    # aantallen in de uitgangssituatie; [dfid, dfvkbg] nog steeds sleutel. marge mag zeker 50% zijn
-    # _nrec, _nkey = baglib.df_comp(df=_df, key_lst=[dfid, dfvkbg], nrec=_nrec, nkey=_nkey, toegestane_marge=0.5, logit=logit)
-    _nrec, _nkey = baglib.df_compare(df=_df, vk_lst=[dfid, dfvkbg], nrec=_nrec, nvk=_nkey, 
-                                     nvk_marge=1, logit=logit) #marge is 100%
-    
-
-
-    # #############################################################################
-    logit.debug('stap 3: zet de eerste dfvkid in een rij fid op 1 als deze Nan is (alleen als deze Nan is!)')
-    # #############################################################################
-    
-    # tmp_df gaat alle de records identificeren die op 1 gezet moeten worden.
-    cols = [dfid, dfvkbg]
-    _df.sort_values(by=cols, inplace=True)
-    tmp_df = _df[cols].groupby(dfid).first().reset_index()
-    # kolom tmp wordt gebruikt om te bepalen van welke records de dfvkid op 1
-    # gezet moet worden. Dit is zo als deze kolom de waarde True (of eigenlijk
-    # not nan heeft). Daarom: 
-    tmp_df['tmp'] = True
-    # doe een leftmerge met _df: _df heeft nu een kolom tmp die aangeeft of het 
-    # betreffende record op 1 gezet moet worden
-    colsid = [dfid, dfvkbg, dfvkid]
-    _df = pd.merge(_df[colsid], tmp_df, how='left', on=cols)
-    
-    
-    # aantallen mogen niet wijzigen met sleutel [dfid, dfvkbg]
-    # _nrec, _nkey = baglib.df_comp(df=_df, key_lst=[dfid, dfvkbg], nrec=_nrec, nkey=_nkey, toegestane_marge=0, logit=logit)
-    _nrec, _nkey = baglib.df_compare(df=_df, vk_lst=[dfid, dfvkbg], nrec=_nrec, nvk=_nkey, 
-                                     nvk_marge=0, logit=logit)
-
-    del tmp_df
-
-    # BUGfix: alleen op 1 zetten als de waarde van dfvkid gelijk aan Nan is, 
-    # als de vkid bijvoorbeeld 2 zou zijn, krijg je straks verkeerde 
-    # imputaties als je m nu op 1 gaat zetten.
-    # dit lossen we op door tmp op Nan te zetten als dfvkid gelijk is aan notna()
-    _df.loc[_df[dfvkid].notna(), 'tmp'] = np.nan
-    _df.loc[_df['tmp'].notna(), dfvkid] = 1
-    _df.drop(columns='tmp', inplace=True)
-    
-    # aantallen mogen niet wijzigen met sleutel [dfid, dfvkbg]
-    # _nrec, _nkey = baglib.df_comp(df=_df, key_lst=[dfid, dfvkbg], nrec=_nrec, nkey=_nkey, toegestane_marge=0, logit=logit)
-    _nrec, _nkey = baglib.df_compare(df=_df, vk_lst=[dfid, dfvkbg], nrec=_nrec, nvk=_nkey, 
-                                     nvk_marge=0, logit=logit)
-
-    # #############################################################################
-    logit.debug('stap 4: imputeren met forward fill ')
-    # #############################################################################
-    cols = [dfid, dfvkbg]
-    _df = _df.sort_values(by=cols, na_position='last')
-    _df.loc[:,dfvkid].iat[0] = 1 # if the first record in NaN, then fill gives an error
-    _df.loc[:,dfvkid] = _df.loc[:,dfvkid].ffill().astype({dfvkid:int})
-
-    # aantallen mogen niet wijzigen met sleutel [dfid, dfvkbg]. 
-    # _nrec, _nkey = baglib.df_comp(df=_df, key_lst=[dfid, dfvkbg], nrec=_nrec, nkey=_nkey, toegestane_marge=0, logit=logit)
-    _nrec, _nkey = baglib.df_compare(df=_df, vk_lst=[dfid, dfvkbg], nrec=_nrec, nvk=_nkey, 
-                                     nvk_marge=0, logit=logit)
-
-    # 4a. Verwijder de fijntype id die buiten de range van fijntype-groftype
-    # interval vallen. Als je dit eerder doet gaat het ffillen hierboven fout
-    # omdat je dan soms als eerste een Nan hebt als vooromen id
-    # #############################################################################
-    logit.debug('stap 5: verwijder fvkid die buiten de range van de relatie vallen')
-    # #############################################################################
-    _df = pd.merge(_df, df_bgeg, how='inner', on=dfid)
-    msk = _df[dfvkbg] >= _df[dfgf_bg]
-    _df = _df[msk]
-
-    del df_bgeg
-    _df.drop(columns=[dfgf_bg, dfgf_eg], inplace=True)    
-
-    # intervalrandjes gaan weg; aantal gaat kwart omlaag; sleutel [dfid, dfvkbg]
-    # _nrec, _nkey = baglib.df_comp(df=_df, key_lst=[dfid, dfvkbg], nrec=_nrec, nkey=_nkey, toegestane_marge=0.25, logit=logit)
-    _nrec, _nkey = baglib.df_compare(df=_df, vk_lst=[dfid, dfvkbg], nrec=_nrec, nvk=_nkey, 
-                                     nvk_marge=-0.25, logit=logit)
-
-    # #############################################################################
-    logit.debug('stap 6: maak een nieuwe voorkomen id aan (id2) en einddatum aan voor elke dfid')
-    # #############################################################################
-
-    _df = baglib.make_vkeg(_df, fijntype, logit)
-    _df = baglib.make_counter(df=_df, dfid=dfid, 
-                              old_counter=dfvkid,
-                              new_counter=dfvkid2, 
-                              dfvkbg=dfvkbg, logit=logit)
-    _nrec, _nkey = baglib.df_compare(df=_df, vk_lst=[dfid, dfvkbg], nrec=_nrec, nvk=_nkey, 
-                                     nvk_marge=0, logit=logit)
-    
-    # #############################################################################
-    logit.debug('stap 7: koppel groftype er weer bij')
-    # #############################################################################
-
-    # 7a koppel eerst aan alle voorkomens (dfid, dfvkid) het groftype id (met het fijntype dataframe uit de input)
-    cols = [dfid, dfvkid, gfid]
-    _df = pd.merge(_df, df[cols].drop_duplicates(), how='inner', on=[dfid, dfvkid])
-
-    # _df.drop(columns=dfvkid, inplace=True) kan hier nog niet. dfkvid nodig om bij te koppelen
-    # _df = _df.rename(columns={dfvkid2: dfvkid})
-    _df['midden'] = (_df[dfvkbg] + _df[dfvkeg] ) * 0.5
-    _nrec, _nkey = baglib.df_compare(df=_df, vk_lst=[dfid, dfvkbg], nrec=_nrec, nvk=_nkey, 
-                                     nvk_marge=0, logit=logit)
-
-    # efficient met geheugen anders crasht ie bij vbo-pnd met 32GB
-    _astype_cols = {_i: BAG_TYPE_DICT[_i] for _i in list(_df.columns)}
-    _df = _df.astype(dtype=_astype_cols)
-
-    
-    logit.debug('7b: koppel alle vk van groftype bij')
-    # 7b koppel hier alle voorkomens van groftype id bij
-    # opmerking: dit kost wat geheugen!
-    cols = [gfid, gfvkid, gfvkbg, gfvkeg]
-    _df = pd.merge(_df, gf[cols], how='inner', on=gfid)
-    _nrec, _nkey = baglib.df_compare(df=_df, vk_lst=[dfid, dfvkbg], nrec=_nrec, nvk=_nkey, 
-                                     nvk_marge=3, logit=logit)
-   
-
-    logit.debug('7c: filter zodat het midden van een fijntype binnen groftype valt')
-    # 7c filter zodat het midden van een fijntype vk binnen een groftype vk valt
-    # Dit kan nu dankzij het splitsen van het fijntype (hier hebben we het om gedaan)
-    msk = (_df[gfvkbg] < _df['midden']) & (_df['midden'] < _df[gfvkeg])
-    cols = [dfid, dfvkid, dfvkid2, gfid, gfvkid, dfvkbg, dfvkeg]
-    _df = _df[msk][cols]
-    _nrec, _nkey = baglib.df_compare(df=_df, vk_lst=[dfid, dfvkbg], nrec=_nrec, nvk=_nkey, 
-                                     nvk_marge=3, logit=logit)
-
-
-    # #############################################################################
-    logit.debug('stap 8: koppel de andere kolommen van f erbij (op fid, fvkid)')
-    # #############################################################################
-
-    # _ = baglib.df_compare(df.drop([gfid, dfvkbg, dfvkeg], axis=1).drop_duplicates(),
-    baglib.df_compare(df=df,
-                      vk_lst=[dfid, dfvkid],
-                      logit=logit)
-
-
-    _df = pd.merge(_df,
-                   df.drop([gfid, dfvkbg, dfvkeg], axis=1).drop_duplicates(),
-                   how='inner',
-                   left_on=[dfid, dfvkid],
-                   right_on=[dfid, dfvkid])
-
-    _nrec, _nkey = baglib.df_compare(df=_df, vk_lst=[dfid, dfvkbg], nrec=_nrec, nvk=_nkey, 
-                                     nvk_marge=0, logit=logit)
-
-    logit.info(f'*** einde vksplitter, wijziging in {fijntype} vk: {round(100 * (_nkey/_nkey1 - 1), 1)} %')
-
-
-    _df.drop(columns=dfvkid, inplace=True)
-    _df = _df.rename(columns={dfvkid2: dfvkid})
-
-    return _df
-
-'''
+    vbo_df.sort_values(by=['vboid', 'vbovkid'], inplace=True)
+    # print(vbo_df.info())
+    alle_rijtjes = vbo_df['vboid'].drop_duplicates()
+    # print(alle_rijtjes.head())
+    for col in cols_to_compare:
+        logit.debug(f'comparing {col}')
+        # haal opeenvolgende eruit als ze gelijk zijn
+        rijtje_df = vbo_df[['vboid', col]].drop_duplicates(subset=['vboid', col], keep='first')
+        # voeg een tellertje toe dat het aantal col-wijzigingen per vbo telt (aantal_col)
+        rijtje_df['aantal_'+col] = rijtje_df.groupby('vboid')['vboid'].transform('size')
+        # maak het rijtje
+        rijtje_df = rijtje_df.groupby(['vboid', 'aantal_'+col])[col].apply('-'.join).reset_index()
+        alle_rijtjes = pd.merge(alle_rijtjes, rijtje_df)
+    print(alle_rijtjes.head())
 # ########################################################################
 # ########################################################################
 

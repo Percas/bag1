@@ -280,10 +280,6 @@ def K3_inliggend(maand, logit):
     logit.debug(f'+40, '\n*** Einde bag_hoofdpnd in', (toc - tic)/60, 'min ***\n')
     '''
 
-
-    
-   
-    
 def prio_pnd(df=pd.DataFrame(),
              in_voorraad_points=10000,
              in_voorraad=['v3', 'v4', 'v8', 'v6'],
