@@ -123,13 +123,18 @@ def k1_xml(bagobject, maand, logit):
     tic = time.perf_counter()
     logit.info(f'start functie k1_xml met {bagobject} en {maand}')
 
+
     # input
     dir_k1_maand_bagobject = os.path.join(KOPPELVLAK1, maand, bagobject)
-
-    if not os.path.exists(dir_k1_maand_bagobject):
+    xml_files = os.listdir(dir_k1_maand_bagobject)
+    # if not os.path.exists(dir_k1_maand_bagobject):
+    if len(xml_files) == 0:
         logit.info(f'geen xml bestanden in {dir_k1_maand_bagobject}. Probeer ze te unzippen')
         k0_unzip(bagobject, maand, logit)
+        xml_files = os.listdir(dir_k1_maand_bagobject)
     # logit.debug(f'zoek XML bestanden in {dir_k1_maand_bagobject}')
+
+
     # output
     dir_k2_maand = os.path.join(KOPPELVLAK2, maand)
     file_k2_maand_bagobject = os.path.join(dir_k2_maand, bagobject)
@@ -141,20 +146,22 @@ def k1_xml(bagobject, maand, logit):
         logit.debug(f'removing {file_k2_maand_bagobject_ext}')
         os.remove(file_k2_maand_bagobject_ext)
 
+
     # de wplgem koppeling is niet van het kadaster zelf en heeft een afwijkend
     # formaat. We nemen het soms mee als bagobject en soms niet.
     if bagobject == 'wplgem':
-        k1_xmlgem(bagobject, inputdir=dir_k1_maand_bagobject,
+        k1_xmlgem(bagobject, inputdir=dir_k1_maand_bagobject, xml_files=xml_files,
               outputfile=file_k2_maand_bagobject, logit=logit)
     else:
-        k1_xmlbag(bagobject, inputdir=dir_k1_maand_bagobject,
-              outputfile=file_k2_maand_bagobject, logit=logit)
+        k1_xmlbag(bagobject, inputdir=dir_k1_maand_bagobject, xml_files=xml_files,
+                  outputfile=file_k2_maand_bagobject, logit=logit)
         
     toc = time.perf_counter()
     logit.info(f'einde k1_xml {bagobject}, {maand} in {(toc - tic)/60} min')
 
     
-def k1_xmlbag(bagobject, inputdir, outputfile, logit):
+# def k1_xmlbag(bagobject, inputdir, outputfile, logit):
+def k1_xmlbag(bagobject, inputdir, xml_files, outputfile, logit):
     '''Zet xml bestanden van alle bagobjecten (exclusief wplgem) om van
     KV1 naar KV2.'''
     
@@ -168,12 +175,12 @@ def k1_xmlbag(bagobject, inputdir, outputfile, logit):
     
     vsl = {'vbo', 'sta', 'lig'}
 
-    xml_files = os.listdir(inputdir)
+    # xml_files = os.listdir(inputdir)
     outp_lst_d = []  # list of dict containing output records
     file_k2_maand_bagobject = outputfile
     file_k2_maand_bagobject_ext = file_k2_maand_bagobject + '.' + FILE_EXT
 
-    logit.debug(f'aantal input xml bestanden van {bagobject}: {len(xml_files)}')
+    logit.debug(f'k1_xmlbag: aantal input xml bestanden van {bagobject}: {len(xml_files)}')
     
     for xml_file in xml_files:
         bagtree = ET.parse(os.path.join(inputdir, xml_file))
@@ -448,7 +455,7 @@ def k1_xmlbag(bagobject, inputdir, outputfile, logit):
 
 
 
-def k1_xmlgem(bagobject, inputdir, outputfile, logit):
+def k1_xmlgem(bagobject, inputdir, xml_files, outputfile, logit):
     '''Zet het xml bestand voor de woonplaats-gemeente koppeling (dat in koppelvlak k1 staat)
     om in een parquet bestand dat in koppelvlak k2 wordt gezet met de naam wplgem.parquet.
     Input: xml bestanden in wplgem
@@ -464,7 +471,7 @@ def k1_xmlgem(bagobject, inputdir, outputfile, logit):
 
     # ######### works only for wplgem                ###########
 
-    xml_files = os.listdir(inputdir)
+    # xml_files = os.listdir(inputdir)
     
     logit.debug(f'gemeente-woonplaats map bevat {len(xml_files)} bestand')
     output_dict = []           # list of dict containing output records

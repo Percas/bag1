@@ -137,8 +137,12 @@ def k3_hoofdpnd(maand, logit):
 
     cols = ['vboid', 'vbovkid', 'vbovkbg', 'vbovkeg', 'vbostatus', 'pndid', 'pndvkid', 'pndstatus']
 
+    vbo_df.sort_values(by=vbovk, inplace=True)
+
+    print(vbo_df[vbo_df['vbovkbg']==vbo_df['vbovkeg']])
+
     baglib.save_df2file(df=vbo_df[cols],
-                        outputfile=os.path.join(dir_k3a_maand, 'vbovk_hoofdpndvk'), 
+                        outputfile=os.path.join(dir_k3a_maand, 'vbovk_hoofdpndvk'), includeindex=False,
                         file_ext=FILE_EXT, append=False, logit=logit)
 
     

@@ -14,7 +14,7 @@ import shutil
 import logging
 import numpy as np
 import requests
-from config import FUTURE_DATE, KOPPELVLAK2, FILE_EXT, LOGFILE
+from config import FUTURE_DATE, KOPPELVLAK2, FILE_EXT, LOGFILE, BAG_TYPE_DICT
 
 ################## Init logger #########################################
 logging.basicConfig(
@@ -494,7 +494,7 @@ def read_dict_of_df(file_d={}, bag_type_d={}, logit=logit):
     return _bdict
 
 
-def read_input(input_file='', bag_type_d={}, file_ext=FILE_EXT,
+def read_input(input_file='', bag_type_d=BAG_TYPE_DICT, file_ext=FILE_EXT,
                output_file_type='pandas', logit=logit):
     '''Read a parquet or csv file  and return a pandas or polars df. 
     If present read .parquet otherwise try csv. Default output is pandas.

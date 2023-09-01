@@ -183,6 +183,8 @@ def k2_fixvk(maand, logit):
     baglib.save_df2file(df=fijntype_df, outputfile=outputfile, file_ext=FILE_EXT,
                         includeindex=False, logit=logit)
 
+    # print(fijntype_df[fijntype_df['vbovkbg']==fijntype_df['vbovkeg']])
+
     df = pd.DataFrame(ls_dict)
     df = df.div(df.iloc[0]).round(2)
     logit.warning(f'af en toename aantallen records na elke stap\n{df}')
@@ -213,19 +215,15 @@ def fixvk_fijngrof(fijntype_df=pd.DataFrame(),
                                         output_file_type=df_type,
                                         logit=logit)
 
-
-        # if fijntype == 'vbo':
-        #     # logit.warning('dbug dbug dubg dubg dubg')
-        #     baglib.df_compare(fijntype_df, vk_lst=['vboid', 'vbovkid'],
-        #                      nrec_nvk_ratio_is_1=False, logit=logit)
+        # print(fijntype_df[fijntype_df[fijntype + 'vkbg'] == fijntype_df[fijntype + 'vkeg']].head())
 
         ls_dict[fijntype]['0-ingelezen'] = fijntype_df.shape[0]
 
-        logit.info(f'start fix_eendagsvlieg in {maand}')
-        fijntype_df = baglib.fix_eendagsvlieg(fijntype_df, fijntype+'vkbg',
-                                              fijntype+'vkeg', logit,
-                                              df_type=df_type)
-        ls_dict[fijntype]['1-eendagsvliegen'] = fijntype_df.shape[0]
+        # logit.info(f'start fix_eendagsvlieg in {maand}')
+        # fijntype_df = baglib.fix_eendagsvlieg(fijntype_df, fijntype+'vkbg',
+        #                                       fijntype+'vkeg', logit,
+        #                                       df_type=df_type)
+        # ls_dict[fijntype]['1-eendagsvliegen'] = fijntype_df.shape[0]
         
         logit.info(f'start merge_vk in {maand}')
         fijntype_df = baglib.merge_vk(df=fijntype_df, bob=fijntype,
@@ -233,6 +231,7 @@ def fixvk_fijngrof(fijntype_df=pd.DataFrame(),
                                       logit=logit, df_type=df_type)
         ls_dict[fijntype]['2-mergen-vk'] = fijntype_df.shape[0]
 
+        # print(fijntype_df[fijntype_df[fijntype + 'vkbg'] == fijntype_df[fijntype + 'vkeg']].head())
 
     if groftype_df.empty:
         groftype_df = baglib.read_input(input_file=os.path.join(KOPPELVLAK2,  maand, groftype),
@@ -242,11 +241,11 @@ def fixvk_fijngrof(fijntype_df=pd.DataFrame(),
                                         logit=logit)
         ls_dict[groftype]['0-ingelezen'] = groftype_df.shape[0]
 
-        logit.info(f'start fix_eendagsvlieg in {maand}')
-        groftype_df = baglib.fix_eendagsvlieg(groftype_df, groftype+'vkbg',
-                                              groftype+'vkeg', logit,
-                                              df_type=df_type)
-        ls_dict[groftype]['1-eendagsvliegen'] = groftype_df.shape[0]
+        # logit.info(f'start fix_eendagsvlieg in {maand}')
+        # groftype_df = baglib.fix_eendagsvlieg(groftype_df, groftype+'vkbg',
+        #                                       groftype+'vkeg', logit,
+        #                                       df_type=df_type)
+        # ls_dict[groftype]['1-eendagsvliegen'] = groftype_df.shape[0]
 
         # merge voorkomens        
         logit.info(f'start merge_vk in {maand}')
@@ -267,6 +266,8 @@ def fixvk_fijngrof(fijntype_df=pd.DataFrame(),
                              logit=logit)
     ls_dict[fijntype]['3-vk-splitter'] = fijntype_df.shape[0]
     ls_dict[groftype]['3-vk-splitter'] = groftype_df.shape[0]
+
+    # print(fijntype_df[fijntype_df[fijntype + 'vkbg'] == fijntype_df[fijntype + 'vkeg']].head())
 
     outputdir = os.path.join(KOPPELVLAK3a, maand)
     baglib.make_dirs(outputdir, logit=logit)
@@ -298,20 +299,16 @@ def vksplitter(df='vbo_df',
     gfvkbg = groftype + 'vkbg'
     gfvkeg = groftype + 'vkeg'
     gfvkid = groftype + 'vkid'
+
+    # deze kolommen maken we aan (tijdelijk)
     dfgf_bg = fijntype + groftype + '_bg'
     dfgf_eg = fijntype + groftype + '_eg'
-    # relatie = fijntype+'-'+groftype
-    
     # deze kolom gaan we maken om de nieuwe vk te identificeren:
     dfvkid2 = fijntype + 'vkid2'
 
     # aantallen in de uitgangssituatie; neem [dfid, dfvkbg] als sleutel
-    # _nrec, _nkey = baglib.df_comp(df=df, key_lst=[dfid, dfvkbg], logit=logit)
     _nrec, _nkey = baglib.df_compare(df=df, vk_lst=[dfid, dfvkbg], logit=logit)
-    # baglib.df_compare(df=df,
-    #                   vk_lst=[dfid, dfvkid], nrec_nvk_ratio_is_1=False,
-    #                   logit=logit)
-    
+
     # initiele aantallen
     _nrec1, _nkey1 = (_nrec, _nkey)
     logit.info(f'*** start vksplitter met {_nrec1} {fijntype} records waarvan {_nkey1} voorkomens en groftype {groftype}')
@@ -376,12 +373,18 @@ def vksplitter(df='vbo_df',
     cols = [dfid, gfvkbg]
     _gf = _gf[cols].drop_duplicates().rename({gfvkbg: dfvkbg}, axis='columns')
     
-    # zet alles bij elkaar en ontdubbel
+    # zet alles bij elkaar en ontdubbel. hierdoor verdwijnen ook eendagsvliegen...
     _df = pd.concat([_df, _gf]).drop_duplicates(subset=[dfid, dfvkbg], keep='first')
-    
+
+    # branch: verwijder die dfvkbg in _gf, die al in _df staan:
+    # not implemented
+    # branch: ontdubbel niet. hierdoor blijven de eendagsvliegen bestaan (is de bedoeling)
+    # aandachtspunt is het koppelen op vkbg. Dit is geen unieke sleutel meer nu
+    # _df = pd.concat([_df, _gf])
+
     del _gf
 
-    # aantallen in de uitgangssituatie; [dfid, dfvkbg] nog steeds sleutel. marge mag zeker 50% zijn
+    # aantallen in de uitgangssituatie; [dfid, dfvkbg] nog steeds sleutel [branch: nee dus]. marge mag zeker 50% zijn
     # _nrec, _nkey = baglib.df_comp(df=_df, key_lst=[dfid, dfvkbg], nrec=_nrec, nkey=_nkey, toegestane_marge=0.5, logit=logit)
     _nrec, _nkey = baglib.df_compare(df=_df, vk_lst=[dfid, dfvkbg], nrec=_nrec, nvk=_nkey, 
                                      nvk_marge=1, logit=logit) #marge is 100%
@@ -441,7 +444,7 @@ def vksplitter(df='vbo_df',
 
     # 4a. Verwijder de fijntype id die buiten de range van fijntype-groftype
     # interval vallen. Als je dit eerder doet gaat het ffillen hierboven fout
-    # omdat je dan soms als eerste een Nan hebt als vooromen id
+    # omdat je dan soms als eerste een Nan hebt als voorkomen id
     # #############################################################################
     logit.debug('stap 5: verwijder fvkid die buiten de range van de relatie vallen')
     # #############################################################################

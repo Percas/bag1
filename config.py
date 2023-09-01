@@ -23,7 +23,7 @@ from multiprocessing import cpu_count
 OMGEVING = 'Ontwikkelomgeving'
 FUTURE_DATE = 88888888
 BATCH_SIZE = 500
-FILE_EXT = 'parquet'
+FILE_EXT = 'csv'
 BAG_URL = 'https://service.pdok.nl/kadaster/adressen/atom/v1_0/downloads/lvbag-extract-nl.zip'
 BAG_VASTGOEDMAP = '\\\\cbsp.nl\\Productie\\primair\\WOVOR\\Beheer\\_Archief\\INPUT\\'
 

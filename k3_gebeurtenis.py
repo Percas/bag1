@@ -53,7 +53,7 @@ import time
 import pandas as pd
 
 import baglib
-from config import OMGEVING, KOPPELVLAK0, KOPPELVLAK3a, FILE_EXT, BAG_TYPE_DICT, LOGFILE
+from config import OMGEVING, KOPPELVLAK0, KOPPELVLAK3a, KOPPELVLAK2, FILE_EXT, BAG_TYPE_DICT, LOGFILE
 from k3_hoofdpnd import k3_hoofdpnd
 
 # from k02_bag import k02_bag
@@ -120,7 +120,7 @@ def k3_gebeurtenis(maand, logit) -> pd.DataFrame:
     del pnd_df
 
 
-    # converteer die kolommen die we willen vergelijken naar string, zodat we ze alles in twee kolommen
+    # converteer die kolommen die we willen vergelijken naar string, zodat we ze alle in twee kolommen
     # (oud en nieuw) kunnen opslaan samen met het soort gebeurtenis (dat de naam van de kolom krijgt met
     # daarachter _geb)
     cols_to_compare = ['vbostatus', 'oppervlakte', 'gemid', 'bouwjaar', 'pndstatus']
@@ -205,7 +205,7 @@ def k3_gebeurtenis(maand, logit) -> pd.DataFrame:
     # baglib.save_df2file(df=opp_df, outputfile=os.path.join(KOPPELVLAK3a, maand, 'vbo_opp_wijzigt'), file_ext='csv',
     #                                                        includeindex=False, logit=logit)
 
-    '''
+    
     # maak rijtjes per vbo:
 
     vbo_df.sort_values(by=['vboid', 'vbovkid'], inplace=True)
@@ -221,7 +221,23 @@ def k3_gebeurtenis(maand, logit) -> pd.DataFrame:
         # maak het rijtje
         rijtje_df = rijtje_df.groupby(['vboid', 'aantal_'+col])[col].apply('-'.join).reset_index()
         alle_rijtjes = pd.merge(alle_rijtjes, rijtje_df)
-    print(alle_rijtjes.head())
+    print(alle_rijtjes.sample(n=30))
+    '''
+
+    vbo_df = baglib.read_input(input_file=os.path.join(KOPPELVLAK2, maand, 'vbo'), file_ext='parquet')
+    print(vbo_df.info())
+    alle_rijtjes = vbo_df['vboid'].drop_duplicates()
+    # print(alle_rijtjes.head())
+    for col in cols_to_compare:
+        logit.debug(f'comparing {col}')
+        # haal opeenvolgende eruit als ze gelijk zijn
+        rijtje_df = vbo_df[['vboid', col]].drop_duplicates(subset=['vboid', col], keep='first')
+        # voeg een tellertje toe dat het aantal col-wijzigingen per vbo telt (aantal_col)
+        rijtje_df['aantal_' + col] = rijtje_df.groupby('vboid')['vboid'].transform('size')
+        # maak het rijtje
+        rijtje_df = rijtje_df.groupby(['vboid', 'aantal_' + col])[col].apply('-'.join).reset_index()
+        alle_rijtjes = pd.merge(alle_rijtjes, rijtje_df)
+    print(alle_rijtjes.sample(n=30))
 # ########################################################################
 # ########################################################################
 
