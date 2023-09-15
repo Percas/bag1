@@ -457,7 +457,7 @@ def k1_xmlbag(bagobject, inputdir, xml_files, outputfile, logit):
 
 def k1_xmlgem(bagobject, inputdir, xml_files, outputfile, logit):
     '''Zet het xml bestand voor de woonplaats-gemeente koppeling (dat in koppelvlak k1 staat)
-    om in een parquet bestand dat in koppelvlak k2 wordt gezet met de naam wplgem.parquet.
+    om in een parquet/csv bestand dat in koppelvlak k2 wordt gezet met de naam wplgem.parquet.
     Input: xml bestanden in wplgem
     Output: wplgem.parquet
     '''

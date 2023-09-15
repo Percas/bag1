@@ -224,7 +224,8 @@ def k3_gebeurtenis(maand, logit) -> pd.DataFrame:
     print(alle_rijtjes.sample(n=30))
     '''
 
-    vbo_df = baglib.read_input(input_file=os.path.join(KOPPELVLAK2, maand, 'vbo'), file_ext='parquet')
+    # vbo_df = baglib.read_input(input_file=os.path.join(KOPPELVLAK2, maand, 'vbo'), file_ext=FILE_EXT)
+    # vbo_df[cols_to_compare] = vbo_df[cols].astype(str)
     print(vbo_df.info())
     alle_rijtjes = vbo_df['vboid'].drop_duplicates()
     # print(alle_rijtjes.head())
@@ -237,7 +238,7 @@ def k3_gebeurtenis(maand, logit) -> pd.DataFrame:
         # maak het rijtje
         rijtje_df = rijtje_df.groupby(['vboid', 'aantal_' + col])[col].apply('-'.join).reset_index()
         alle_rijtjes = pd.merge(alle_rijtjes, rijtje_df)
-    print(alle_rijtjes.sample(n=30))
+    print(alle_rijtjes[cols_to_compare].sample(n=30))
 # ########################################################################
 # ########################################################################
 
