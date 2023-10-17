@@ -35,6 +35,7 @@ IN_VOORRAAD = ['v3', 'v4', 'v8', 'v6']
 BASISDIR = os.path.join('..', 'data')
 TESTDIR = 'testdata'
 
+KOPPELVLAK_ALG = os.path.join(BASISDIR, 'algemeen')
 KOPPELVLAK0 = os.path.join(BASISDIR, '00-inkomend')
 KOPPELVLAK1 = os.path.join(BASISDIR, '01-uitgepakt')
 KOPPELVLAK2 = os.path.join(BASISDIR, '02-gestandaardiseerd')
@@ -74,7 +75,9 @@ RELEVANT_COLS_DICT = {'vbo': ['vbostatus', 'numid', 'oppervlakte' , 'pndid',
                       'pnd': ['pndstatus', 'bouwjaar', 'docnr', 'docdd', 'pndgmlx', 'pndgmly'],
                       'num': ['numstatus', 'huisnr', 'postcode', 'typeao', 'oprid'],
                       'opr': ['oprstatus', 'oprnaam', 'oprtype', 'wplid'],
-                      'wpl': ['wplstatus', 'gemid']}
+                      # 'wpl': ['wplstatus', 'gemid'],
+                      'wpl': ['gemid', 'gem_naam', 'pvid', 'pv_naam', 'ldid', 'ld_naam']}
+                      # 'wpl': ['gemid', 'pvid', 'ldid']}
 
 
 
@@ -142,8 +145,13 @@ BAG_TYPE_DICT = {'vboid': 'string',
                  'stagmlx': float,
                  'stagmly': float,
                  'prio': float,
-                 'midden': float,
-                 'inliggend': np.uintc                 
+                 'midden': 'float32',
+                 'inliggend': np.uintc,
+                 'gem_naam': 'category',
+                 'pvid': 'category',
+                 'pv_naam': 'category',
+                 'ldid': 'category',
+                 'ld_naam': 'category'
                  }
 
 STATUS_DICT = {

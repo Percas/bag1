@@ -36,6 +36,7 @@ def k0_unzip(bagobject, maand, logit):
     if aantal_unzip == 0:
         logit.info('geen te unzippen bestanden gevonden. zoek main_bag_zip bestand...')
         get_main_bag_zip(maand, logit)
+        unzip_files = os.listdir(dir_k0_maand)
 
     #output
     dir_k1_maand = os.path.join(KOPPELVLAK1, str(maand))

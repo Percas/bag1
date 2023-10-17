@@ -199,12 +199,12 @@ def test_fixvk_fijn_grof():
     # testdoel fid4: het vbovk heeft twee panden met verschillende begindatum
     
     fijn_df = pd.DataFrame( {
-        'vboid':   ['fid1',   'fid2',  'fid3'   , 'fid4',   'fid4'],
-        'vbovkid': [1,        1,        2       , 1,        1],
-        'vbovkbg': [20130101, 20160202, 20190303, 20110906, 20110906],
-        'vbovkeg': [88888888, 88888888, 88888888, 88888888, 88888888],
-        'pndid':   ['gid1',   'gid2',   'gid2',   'gid1',   'gid2'],
-        'vboveld': ['a',      'b',      'c',      'd',      'd']
+        'vboid':   ['fid1',   'fid2',  'fid3'],
+        'vbovkid': [1,        1,        2],
+        'vbovkbg': [20130101, 20160202, 20190303],
+        'vbovkeg': [88888888, 88888888, 88888888],
+        'pndid':   ['gid1',   'gid2',   'gid2'],
+        'vboveld': ['a',      'b',      'c']
         })
 
     grof_df = pd.DataFrame( {
@@ -213,15 +213,19 @@ def test_fixvk_fijn_grof():
         'pndvkbg': [20130101, 20160202, 20190303],
         'pndvkeg': [20160202, 88888888, 88888888],
         })
-    
+    # excpected behaviour of vboid's fid1 to fid4:
+    # fid1 split because of gid1 split
+    # fid2 unchanged
+    # fid3 reset counter vbovkid
+
     expected_df = pd.DataFrame( {
-        'vboid':   ['fid1',   'fid1',   'fid2'  , 'fid3',   'fid4',   'fid4',  'fid4',    'fid4'],
-        'vbovkid': [1,        2,        1,        1,        1,        2,        3,        3],
-        'vbovkbg': [20130101, 20160202, 20190303, 20190303, 20130101, 20160202, 20190303, 20190303],
-        'vbovkeg': [20160202, 88888888, 88888888, 88888888, 20160202, 20190303, 88888888, 88888888],
-        'pndid':   ['gid1',   'gid1',   'gid2'  , 'gid2',   'gid1',   'gid1',   'gid1',   'gid2'],
-        'pndvkid': [1,        2,        1,        1,         1,       2,        2,        1],
-        'vboveld': ['a',      'a',      'b'     , 'c',       'd',     'd',      'd',      'd']
+        'vboid':   ['fid1',   'fid1',   'fid2'  , 'fid3'],
+        'vbovkid': [1,        2,        1,        1],
+        'vbovkbg': [20130101, 20160202, 20190303, 20190303],
+        'vbovkeg': [20160202, 88888888, 88888888, 88888888],
+        'pndid':   ['gid1',   'gid1',   'gid2'  , 'gid2'],
+        'pndvkid': [1,        2,        1,        1],
+        'vboveld': ['a',      'a',      'b'     , 'c']
         })
 
     expected_df = expected_df.astype(dtype={'vbovkid': np.short,
@@ -263,6 +267,80 @@ def test_fixvk_fijn_grof():
 
     assert(test_geslaagd)
 
+
+def test_fixvk_fijn_grof2():
+    '''test the function make_counter in baglib if old_counter!=new_counter.'''
+
+    # --- 1. maak de input en de verwachte output
+    # ------------------------------------------------
+
+    # testdoel fid: complexe vbo-pnd koppeling
+
+    fijn_df = pd.DataFrame({
+        'vboid':   ['fid4',        'fid4'],
+        'vbovkid': [1,             1],
+        'vbovkbg': [20110906,      20110906],
+        'vbovkeg': [88888888,      88888888],
+        'pndid':   ['gid1',        'gid2'],
+        'vboveld': ['d',           'd']
+    })
+
+    grof_df = pd.DataFrame({
+        'pndid':   ['gid1',   'gid1',   'gid2'],
+        'pndvkid': [1,        2,        1, ],
+        'pndvkbg': [20130101, 20160202, 20190303],
+        'pndvkeg': [20160202, 88888888, 88888888],
+    })
+
+    # fid4 with gid1: split in two because of gid2 split
+
+    expected_df = pd.DataFrame({
+        'vboid':   ['fid4',   'fid4',   'fid4',   'fid4'],
+        'vbovkid': [1,        2,        3,        3],
+        'vbovkbg': [20130101, 20160202, 20190303, 20190303],
+        'vbovkeg': [20160202, 20190303, 88888888, 88888888],
+        'pndid':   ['gid1',   'gid1',   'gid1',   'gid2'],
+        'pndvkid': [1,        2,        2,        1],
+        'vboveld': ['d',      'd',      'd',      'd']
+    })
+
+    expected_df = expected_df.astype(dtype={'vbovkid': np.short,
+                                            'vbovkbg': np.uintc,
+                                            'vbovkeg': np.uintc})
+    ls_dict = {}
+    bobs = ['vbo', 'pnd']
+    for bob in bobs:
+        ls_dict[bob] = {}
+
+    # --- 2. berekenening output met functie make_counter
+    # ------------------------------------------------
+    logger.debug('making a new counter for wpl')
+    out_df, _, _ = k2_fixvk.fixvk_fijngrof(fijntype_df=fijn_df,
+                                           groftype_df=grof_df,
+                                           fijntype='vbo',
+                                           groftype='pnd',
+                                           maand='202401',
+                                           logit=logger, ls_dict=ls_dict)
+
+    # --- 3. Controleer of de verwachte output gelijk is aan de gemaakt output
+    # --------------------------------------
+
+    out_df = out_df.sort_values(by=['vboid', 'vbovkbg']).reset_index(drop=True)
+    expected_df = expected_df.sort_values(by=['vboid', 'vbovkbg']).reset_index(drop=True)
+    cols = list(out_df.columns)
+    test_geslaagd = expected_df[cols].equals(out_df[cols])
+
+    # debuggen van de testcase
+    if not test_geslaagd:
+        print('expected output and output')
+        print(expected_df.info())
+        print(out_df.info())
+        print('\nexpected output and output')
+        print(expected_df)
+        print()
+        print(out_df)
+
+    assert (test_geslaagd)
 
 
 def test_maak_vastgoed_bestandsnaam1():

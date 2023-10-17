@@ -68,7 +68,7 @@ def k3_hoofdpnd(maand, logit):
     cols =  ['vboid', 'vbovkid',  'pndid', 'pndvkid', 'vbovkbg', 'vbovkeg', 'vbostatus', 'vbogmlx', 'vbogmly']
     vbo_df = vbo_df[cols] # .astype(dtype=BAG_TYPE_DICT)
     nrec, nkey = baglib.df_compare(vbo_df, vk_lst=vbovk, nrec_nvk_ratio_is_1=False, logit=logit)
-
+    # print(vbo_df[vbo_df.duplicated()].head())
 
     # ######################################################################
     logit.debug('stap 1. verwijder eendagsvliegen')
@@ -98,7 +98,8 @@ def k3_hoofdpnd(maand, logit):
     nrec, nkey = baglib.df_compare(df=vbo_df, vk_lst=vbovk, nrec=nrec, nvk=nkey, 
                                    nrec_nvk_ratio_is_1=False,
                                    nvk_marge=0.1, logit=logit)
-
+    tmp_df = vbo_df.drop_duplicates()
+    logit.debug(f'numer of unique records: {tmp_df.shape[0]}')
     # ######################################################################
     logit.debug('stap 3. bepaal prio voor pndvk: welke is het best om te koppelen')
     
@@ -131,7 +132,7 @@ def k3_hoofdpnd(maand, logit):
 
 
     # ######################################################################
-    logit.debug('stap 4. bewaren in koppelvlak3: vbovk -> hoofdpndvk met {str(doel2_vbovk_u)} records')
+    logit.debug(f'stap 4. bewaren in koppelvlak3: vbovk -> hoofdpndvk')
     # if doel2_vbovk_u > 20000000:
     #     logit.debug(f'+30, 'Dit gaat even duren...')
 
@@ -139,7 +140,7 @@ def k3_hoofdpnd(maand, logit):
 
     vbo_df.sort_values(by=vbovk, inplace=True)
 
-    print(vbo_df[vbo_df['vbovkbg']==vbo_df['vbovkeg']])
+    # print(vbo_df[vbo_df['vbovkbg']==vbo_df['vbovkeg']])
 
     baglib.save_df2file(df=vbo_df[cols],
                         outputfile=os.path.join(dir_k3a_maand, 'vbovk_hoofdpndvk'), includeindex=False,
@@ -363,7 +364,7 @@ if __name__ == '__main__':
     
 
     logging.basicConfig(
-        level=logging.INFO,
+        level=logging.DEBUG,
         format="%(asctime)s [%(levelname)s] %(message)s",
         handlers=[
             logging.FileHandler(LOGFILE),
@@ -371,7 +372,7 @@ if __name__ == '__main__':
     logit = logging.getLogger()
     logit.info('start k3_hoofdpnd vanuit main')
     logit.warning(OMGEVING)
-    logit.setLevel(logging.INFO)
+    logit.setLevel(logging.DEBUG)
     
     maand_lst = baglib.get_args(sys.argv, KOPPELVLAK0)
 

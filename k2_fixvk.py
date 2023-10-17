@@ -93,7 +93,7 @@ import sys
 import os
 import time
 import baglib
-from config import OMGEVING, KOPPELVLAK0, KOPPELVLAK2, KOPPELVLAK3a, BAG_OBJECTEN, BAG_TYPE_DICT, RELEVANT_COLS_DICT, FILE_EXT, LOGFILE
+from config import OMGEVING, KOPPELVLAK_ALG, KOPPELVLAK0, KOPPELVLAK2, KOPPELVLAK3a, BAG_OBJECTEN, BAG_TYPE_DICT, RELEVANT_COLS_DICT, FILE_EXT, LOGFILE
 import logging
 # from k02_bag import k02_bag
 from k1_xml import k1_xmlgem, k1_xml
@@ -128,8 +128,20 @@ def k2_fixvk(maand, logit):
     
     # We continue with wplgem as if it is the wpl file, because we need the
     # connection between wpl and gem
-    baglib.copy_wplgem2wpl(dir1=KOPPELVLAK2, maand=maand, file_ext=FILE_EXT, logit=logit)
-   
+    # baglib.copy_wplgem2wpl(dir1=KOPPELVLAK2, maand=maand, file_ext=FILE_EXT, logit=logit)
+    # we use the wpl.csv file in de algemeen directory based on the
+    # woonplaats - gemeente - provincie - landsdeel relation in
+    # https://opendata.cbs.nl/statline/portal.html?_la=nl&_catalog=CBS&tableId=85516NED&_theme=239
+    # manual actions:
+    #   1. collected the woonplaatsen for the years 2016, 2017, 2018, ... 2023
+    #   2. added wplvkbg and wplvkeg (woonplaats voorkomen begindatum geldigheid)
+    # note that we trim leading and trailing spaces
+    wpl_df = pd.read_csv(os.path.join(KOPPELVLAK_ALG, 'wpl.csv'), dtype=str)
+    for col in wpl_df.columns:
+        wpl_df[col] = wpl_df[col].str.strip()
+    print(wpl_df.head())
+    baglib.save_df2file(df=wpl_df, outputfile=os.path.join(KOPPELVLAK2, maand, 'wpl'), file_ext=FILE_EXT,
+                        includeindex=False, logit=logit)
 
     ls_dict = {}
     bobs = ['vbo', 'pnd', 'wpl', 'num', 'opr']
@@ -435,13 +447,14 @@ def vksplitter(df='vbo_df',
     cols = [dfid, dfvkbg]
     _df = _df.sort_values(by=cols, na_position='last')
     _df.loc[:,dfvkid].iat[0] = 1 # if the first record in NaN, then fill gives an error
-    _df.loc[:,dfvkid] = _df.loc[:,dfvkid].ffill().astype({dfvkid:int})
+    _df.loc[:,dfvkid] = _df.loc[:,dfvkid].ffill()
 
     # aantallen mogen niet wijzigen met sleutel [dfid, dfvkbg]. 
     # _nrec, _nkey = baglib.df_comp(df=_df, key_lst=[dfid, dfvkbg], nrec=_nrec, nkey=_nkey, toegestane_marge=0, logit=logit)
     _nrec, _nkey = baglib.df_compare(df=_df, vk_lst=[dfid, dfvkbg], nrec=_nrec, nvk=_nkey, 
                                      nvk_marge=0, logit=logit)
 
+    # print(_df.info())
     # 4a. Verwijder de fijntype id die buiten de range van fijntype-groftype
     # interval vallen. Als je dit eerder doet gaat het ffillen hierboven fout
     # omdat je dan soms als eerste een Nan hebt als voorkomen id
@@ -471,7 +484,10 @@ def vksplitter(df='vbo_df',
                               dfvkbg=dfvkbg, logit=logit)
     _nrec, _nkey = baglib.df_compare(df=_df, vk_lst=[dfid, dfvkbg], nrec=_nrec, nvk=_nkey, 
                                      nvk_marge=0, logit=logit)
-    
+
+    # _df = _df.astype({dfvkid: np.uintc})
+    print(_df.loc[_df[dfid]=='106010000015444'])
+    # print(_df.info())
     # #############################################################################
     logit.debug('stap 7: koppel groftype er weer bij')
     # #############################################################################
@@ -483,13 +499,15 @@ def vksplitter(df='vbo_df',
     # _df.drop(columns=dfvkid, inplace=True) kan hier nog niet. dfkvid nodig om bij te koppelen
     # _df = _df.rename(columns={dfvkid2: dfvkid})
     _df['midden'] = (_df[dfvkbg] + _df[dfvkeg] ) * 0.5
-    _nrec, _nkey = baglib.df_compare(df=_df, vk_lst=[dfid, dfvkbg], nrec=_nrec, nvk=_nkey, 
+    # print(_df.info())
+    _nrec, _nkey = baglib.df_compare(df=_df, vk_lst=[dfid, dfvkbg], nrec=_nrec, nvk=_nkey,
                                      nvk_marge=0, logit=logit)
 
     # efficient met geheugen anders crasht ie bij vbo-pnd met 32GB
     _astype_cols = {_i: BAG_TYPE_DICT[_i] for _i in list(_df.columns)}
+    print(_astype_cols)
     _df = _df.astype(dtype=_astype_cols)
-
+    print(_df.info())
     
     logit.debug('7b: koppel alle vk van groftype bij')
     # 7b koppel hier alle voorkomens van groftype id bij
@@ -534,6 +552,7 @@ def vksplitter(df='vbo_df',
 
     _df.drop(columns=dfvkid, inplace=True)
     _df = _df.rename(columns={dfvkid2: dfvkid})
+    print(df.loc[df[dfid]=='106010000015444'])
 
     return _df
 

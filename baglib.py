@@ -600,7 +600,7 @@ def anastatus(df, overgang, loglevel=10):
 def make_counter(df, dfid, dfvkbg,
                  old_counter='',
                  new_counter='vboid', logit=logit):
-     ''' Maak een nieuwe column newname die de voorkomens vk telt van dfid.
+     ''' Maak een nieuwe column new_counter die de voorkomens vk telt van dfid.
      dfid identificeert het bagobject. dfid + dfvkbg (voorkomen begindatum)
      identificeren vk van dit object. Een vk kan dubbel voorkomen. 
      Dan heeft het dezelfde dfid en vkbg
@@ -637,11 +637,13 @@ def make_counter(df, dfid, dfvkbg,
      
      # voeg de teller toe
      
-     _df[new_counter] = _tmp.to_frame()
+     _df[new_counter] = _tmp.to_frame().astype(np.uintc)
      
      # koppel de rest er weer bij
-     if old_counter == new_counter:
-         _df = pd.merge(_df, df.drop(columns=old_counter))
+     # if old_counter == new_counter:
+     #     _df = pd.merge(_df, df.drop(columns=old_counter))
+     if new_counter in df.columns:
+         _df = pd.merge(_df, df.drop(columns=new_counter))
      else:
          _df = pd.merge(_df, df).sort_values(by=[dfid, new_counter])
          
@@ -704,7 +706,7 @@ def make_vkeg(df, bob, logit, df_type='pandas'):
 
 
     # logit.debug(f'make_vkeg 4: terugcasten van {_dfvkeg} naar int')
-    _df = _df.astype({_dfvkeg:int})
+    _df = _df.astype({_dfvkeg:np.uintc})
 
     (_nrec, _nvk) = df_compare(df=df, vk_lst=[_dfid, _dfvkbg], nrec=_nrec, 
                              nvk=_nvk, u_may_change=False, logit=logit)

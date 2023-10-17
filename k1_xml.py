@@ -118,7 +118,7 @@ def k1_xml(bagobject, maand, logit):
         de xml bestanden van bagobject van kadaster in koppelvlak k1 van 
         extractmaand maand 
     naar:
-        parquet formaat in koppelvlak k2'''
+        parquet (of csv, zie FILE_EXT) formaat in koppelvlak k2'''
         
     tic = time.perf_counter()
     logit.info(f'start functie k1_xml met {bagobject} en {maand}')
@@ -126,8 +126,10 @@ def k1_xml(bagobject, maand, logit):
 
     # input
     dir_k1_maand_bagobject = os.path.join(KOPPELVLAK1, maand, bagobject)
-    xml_files = os.listdir(dir_k1_maand_bagobject)
     # if not os.path.exists(dir_k1_maand_bagobject):
+    baglib.make_dirs(dir_k1_maand_bagobject, logit)
+    xml_files = os.listdir(dir_k1_maand_bagobject)
+
     if len(xml_files) == 0:
         logit.info(f'geen xml bestanden in {dir_k1_maand_bagobject}. Probeer ze te unzippen')
         k0_unzip(bagobject, maand, logit)
