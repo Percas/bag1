@@ -2,10 +2,12 @@
 # -*- coding: utf-8 -*-
 """
 Created on June 11, 2022
+Updated Oct 2023
 
-Purpose: make the levenscyclus file for VBO: 
-    vbovk met bouwjaar en typeinliggend
-    restriction: vbovk must be in IN_VOORRAAD
+Doel: maak een levenscyclus bestand met vbo voorkomens, waarin je voor elk voorkomen bepaalt:
+    bouwjaar (obv het gekoppelde hoofdpand voorkomen)
+    inliggendheid (met zijn hoevelen het vbovk in een hoofdpand liggen)
+    in_voorraad (of het vbovk de juiste status heeft)
 
 stappen:
     
@@ -42,9 +44,7 @@ from config import OMGEVING, DIR03, BAG_TYPE_DICT
 
 # ############### Define functions ################################
 
-def bag_levcycl(current_month='testdata23',
-                koppelvlak3=os.path.join('..', 'data', '03-bewerkte-data'),
-                loglevel=20):
+def k3_levcycl(maand='testdata23', ):
     '''Maak het levenscyclus bestand met VBO voorkomens, waarin het bouwjaar,
     inliggend, voorraad en alle mogelijke woonfuncties van dit vbovk zijn
     afgeleid.'''
@@ -204,14 +204,25 @@ def bag_levcycl(current_month='testdata23',
     baglib.aprint(ll+40, '\n*** Einde bag_levcycl in', (toc - tic)/60, 'min ***\n')
 
 
+# --------------------------------------------------------------------------
+# ################ Main program ###########################
+# --------------------------------------------------------------------------
+
 if __name__ == '__main__':
 
-    ll = 40
-    baglib.printkop(ll+40, OMGEVING)
-    current_month = baglib.get_arg1(sys.argv, DIR03)
-    baglib.printkop(ll+30, 'Lokale aanroep')
-    bag_levcycl(current_month=current_month,
-                koppelvlak3=DIR03,
-                loglevel=ll)
+    logging.basicConfig(
+        level=logging.DEBUG,
+        format="%(asctime)s [%(levelname)s] %(message)s",
+        handlers=[
+            logging.FileHandler(LOGFILE),
+            logging.StreamHandler()])
+    logit = logging.getLogger()
+    logit.debug('Start k3_levcycl lokaal')
+
+    maand_lst = baglib.get_args(sys.argv, KOPPELVLAK0)
+
+    for maand in maand_lst:
+            k3_levcycl(maand, logit)
+
 
 

@@ -53,7 +53,7 @@ import time
 import pandas as pd
 
 import baglib
-from config import OMGEVING, KOPPELVLAK0, KOPPELVLAK3a, KOPPELVLAK2, FILE_EXT, BAG_TYPE_DICT, LOGFILE
+from config import OMGEVING, KOPPELVLAK0, KOPPELVLAK3a, FILE_EXT, BAG_TYPE_DICT, LOGFILE
 from k3_hoofdpnd import k3_hoofdpnd
 
 # from k02_bag import k02_bag
@@ -101,7 +101,7 @@ def k3_gebeurtenis(maand, logit) -> pd.DataFrame:
     vbo_df = pd.merge(vbo_df, opr_df).drop(['oprid', 'oprvkid'], axis=1)
     del opr_df
 
-    cols = ['wplid', 'wplvkid', 'gemid']
+    cols = ['wplid', 'wplvkid', 'gemid', 'gem_naam']
     wpl_df = baglib.read_input(input_file=os.path.join(KOPPELVLAK3a, maand, 'wpl'),
                                bag_type_d=BAG_TYPE_DICT,
                                output_file_type='pandas',
@@ -118,7 +118,7 @@ def k3_gebeurtenis(maand, logit) -> pd.DataFrame:
                                logit=logit)[cols]
     vbo_df = pd.merge(vbo_df, pnd_df).drop(['pndid', 'pndvkid'], axis=1)
     del pnd_df
-
+    logit.debug(f'vbo_df.head():\n{vbo_df.head()}')
 
     # converteer die kolommen die we willen vergelijken naar string, zodat we ze alle in twee kolommen
     # (oud en nieuw) kunnen opslaan samen met het soort gebeurtenis (dat de naam van de kolom krijgt met
@@ -127,6 +127,7 @@ def k3_gebeurtenis(maand, logit) -> pd.DataFrame:
     vbo_df[cols_to_compare] = vbo_df[cols_to_compare].astype('string')
     compare_cols_oud = [s + '_oud' for s in cols_to_compare]
     compare_cols_nieuw = [s + '_nieuw' for s in cols_to_compare]
+
 
     # hernoem de kolommen van het linker dataframe naar oud en het rechter naar nieuw en koppel de twee (dezelfde)
     # dataframes vbo_df. Dit noemen we de "ruwe_gebeurtenissen"
@@ -138,6 +139,8 @@ def k3_gebeurtenis(maand, logit) -> pd.DataFrame:
                                    nieuw_vk_vbo_df[['vboid', 'vbovkbg', 'gemid'] + compare_cols_nieuw],
                                    left_on =['vboid', 'vbovkeg'],
                                    right_on=['vboid', 'vbovkbg']).drop_duplicates()
+    logit.debug(f'ruwe_gebeurtenissen.head():\n{ruwe_gebeurtenissen.head()}')
+
 
 
     # vul een nieuw geubeurtenis dataframe met de paarsgewijze verschillen voor elk van de mogelijke gebeurtenissen
@@ -152,6 +155,10 @@ def k3_gebeurtenis(maand, logit) -> pd.DataFrame:
         gebeurtenis = pd.concat([gebeurtenis, verschil_per_type_gebeurtenis.copy()])
     gebeurtenis['gebeurtenis'] = gebeurtenis['gebeurtenis'].astype('category')
     geb_cols = [x + '_geb' for x in cols_to_compare]
+    logit.debug(f'gebeurtenis.sample(n=10):\n{gebeurtenis.sample(n=10)}')
+    gebeurtenis.sort_values(by=['gemid', 'vboid', 'datum'], inplace=True)
+    baglib.save_df2file(df=gebeurtenis, outputfile=os.path.join(KOPPELVLAK3a, maand, 'vbo_gebeurtenis'), file_ext='csv',
+                        includeindex=False, logit=logit)
 
     # Analyseer de gebeurtenissen, maak een draaitabel met aantal gebeurtenissen per gemeente per type gebeurtenis
     pivot = pd.pivot_table(data=gebeurtenis, values='nieuw', index='gemid', columns='gebeurtenis', aggfunc='count').reset_index()
@@ -186,7 +193,7 @@ def k3_gebeurtenis(maand, logit) -> pd.DataFrame:
 
     # print(pivot.sort_values(by='oppervlakte_geb_p', ascending=False).head(40))
     baglib.save_df2file(df=pivot.sort_values(by='oppervlakte_geb_p', ascending=False),
-                        outputfile=os.path.join(KOPPELVLAK3a, maand, 'vbo_gebeurtenis'), file_ext='csv',
+                        outputfile=os.path.join(KOPPELVLAK3a, maand, 'gem_gebeurtenis'), file_ext='csv',
                         includeindex=False, logit=logit)
 
     '''

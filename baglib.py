@@ -494,8 +494,8 @@ def read_dict_of_df(file_d={}, bag_type_d={}, logit=logit):
     return _bdict
 
 
-def read_input(input_file='', bag_type_d=BAG_TYPE_DICT, file_ext=FILE_EXT,
-               output_file_type='pandas', logit=logit):
+def read_input(input_file: object = '', bag_type_d: object = BAG_TYPE_DICT, file_ext: object = FILE_EXT,
+               output_file_type: object = 'pandas', logit: object = logit) -> object:
     '''Read a parquet or csv file  and return a pandas or polars df. 
     If present read .parquet otherwise try csv. Default output is pandas.
     '''
